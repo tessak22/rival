@@ -1,0 +1,40 @@
+:root {
+  color-scheme: dark;
+  --bg: #090d12;
+  --panel: #111821;
+  --text: #d7e3f4;
+  --muted: #95a7c0;
+  --accent: #5cb3ff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  background: radial-gradient(circle at 20% 20%, #0f1721 0, var(--bg) 55%);
+  color: var(--text);
+}
+
+.home {
+  min-height: 100vh;
+  display: grid;
+  place-content: center;
+  gap: 0.5rem;
+  text-align: center;
+}
+
+.home h1 {
+  margin: 0;
+  font-size: clamp(2rem, 6vw, 3.5rem);
+  letter-spacing: 0.04em;
+}
+
+.home p {
+  margin: 0;
+  color: var(--muted);
+}

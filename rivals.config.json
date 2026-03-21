@@ -1,0 +1,9 @@
+{
+  "competitors": [],
+  "schedule": "0 9 * * 1-5",
+  "manual_stale_days": 30,
+  "notifications": {
+    "email": [],
+    "slack_webhook": ""
+  }
+}
