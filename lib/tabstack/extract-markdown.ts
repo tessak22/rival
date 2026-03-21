@@ -1,4 +1,4 @@
-import type { ExtractMarkdownResponse } from "@tabstack/sdk/resources/extract";
+import type { ExtractMarkdownParams, ExtractMarkdownResponse } from "@tabstack/sdk/resources/extract";
 
 import { logger, type LoggerCallMetadata, type TabstackEffort } from "@/lib/logger";
 import { getTabstackClient, toGeoTarget, toSdkEffort } from "@/lib/tabstack/client";
@@ -41,18 +41,18 @@ export type ExtractMarkdownInput = {
 
 export async function extractMarkdown(input: ExtractMarkdownInput): Promise<ExtractMarkdownResponse> {
   const client = getTabstackClient();
-  const geoTarget = toGeoTarget(input.geoTarget);
+  const geoTargetParam = toGeoTarget(input.geoTarget);
   const expectedFields = input.includeMetadata ? ["content", "url", "metadata"] : ["content", "url"];
+  const requestPayload: ExtractMarkdownParams = {
+    url: input.url,
+    effort: toSdkEffort(input.effort),
+    nocache: input.nocache,
+    geo_target: geoTargetParam,
+    metadata: input.includeMetadata ?? false
+  };
 
   return logger.call(
-    () =>
-      client.extract.markdown({
-        url: input.url,
-        effort: toSdkEffort(input.effort),
-        nocache: input.nocache,
-        geo_target: geoTarget,
-        metadata: input.includeMetadata ?? false
-      }),
+    () => client.extract.markdown(requestPayload),
     {
       competitorId: input.competitorId,
       pageId: input.pageId,
@@ -60,7 +60,7 @@ export async function extractMarkdown(input: ExtractMarkdownInput): Promise<Extr
       url: input.url,
       effort: input.effort,
       nocache: input.nocache,
-      geoTarget: geoTarget?.country,
+      geoTarget: geoTargetParam?.country,
       isDemo: input.isDemo,
       fallback: input.fallback,
       expectedFields
