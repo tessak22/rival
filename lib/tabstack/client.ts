@@ -21,7 +21,7 @@ export function getTabstackClient(): TabstackClient {
     return cachedClient;
   }
 
-  if (process.env.NODE_ENV !== "production" && globalForTabstack.tabstackClient) {
+  if (globalForTabstack.tabstackClient) {
     cachedClient = globalForTabstack.tabstackClient;
     return globalForTabstack.tabstackClient;
   }
@@ -39,10 +39,7 @@ export function getTabstackClient(): TabstackClient {
   });
 
   cachedClient = client;
-
-  if (process.env.NODE_ENV !== "production") {
-    globalForTabstack.tabstackClient = client;
-  }
+  globalForTabstack.tabstackClient = client;
 
   return client;
 }
@@ -57,6 +54,10 @@ export function toSdkEffort(effort: RivalEffort): SdkEffort {
       return "max";
     case "low":
       return "standard";
+    default: {
+      const unreachable: never = effort;
+      throw new Error(`Unsupported Rival effort value: ${String(unreachable)}`);
+    }
   }
 }
 
