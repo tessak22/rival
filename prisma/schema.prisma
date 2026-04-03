@@ -1,0 +1,144 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // Prisma 7 datasource URL is configured in prisma.config.ts
+}
+
+model Competitor {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String
+  slug              String    @unique
+  baseUrl           String    @map("base_url")
+  manualData        Json?     @map("manual_data")
+  manualLastUpdated DateTime? @map("manual_last_updated") @db.Timestamptz(6)
+  threatLevel       String?   @map("threat_level")
+  intelligenceBrief Json?     @map("intelligence_brief")
+  briefGeneratedAt  DateTime? @map("brief_generated_at") @db.Timestamptz(6)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  pages         CompetitorPage[]
+  deepDives     DeepDive[]
+  apiLogs       ApiLog[]
+  notifications Notification[]
+
+  @@map("competitors")
+}
+
+model CompetitorPage {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  competitorId String   @map("competitor_id") @db.Uuid
+  label        String
+  url          String
+  type         String
+  geoTarget    String?  @map("geo_target")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  competitor Competitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+  scans      Scan[]
+  apiLogs    ApiLog[]
+
+  @@index([competitorId])
+  @@index([competitorId, type])
+  @@map("competitor_pages")
+}
+
+model Scan {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pageId         String   @map("page_id") @db.Uuid
+  scannedAt      DateTime @default(now()) @map("scanned_at") @db.Timestamptz(6)
+  endpointUsed   String   @map("endpoint_used")
+  rawResult      Json?    @map("raw_result")
+  markdownResult String?  @map("markdown_result")
+  summary        String?
+  hasChanges     Boolean  @default(false) @map("has_changes")
+  diffSummary    String?  @map("diff_summary")
+
+  page          CompetitorPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  notifications Notification[]
+
+  @@index([pageId])
+  @@index([scannedAt])
+  @@map("scans")
+}
+
+model DeepDive {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  competitorId String   @map("competitor_id") @db.Uuid
+  mode         String
+  query        String
+  result       Json?
+  citations    Json?
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  competitor Competitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+
+  @@index([competitorId])
+  @@index([createdAt])
+  @@map("deep_dives")
+}
+
+model ApiLog {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  competitorId      String?  @map("competitor_id") @db.Uuid
+  pageId            String?  @map("page_id") @db.Uuid
+  calledAt          DateTime @default(now()) @map("called_at") @db.Timestamptz(6)
+  endpoint          String
+  url               String?
+  effort            String?
+  nocache           Boolean?
+  geoTarget         String?  @map("geo_target")
+  mode              String?
+  status            String
+  fallbackTriggered Boolean  @default(false) @map("fallback_triggered")
+  fallbackReason    String?  @map("fallback_reason")
+  fallbackEndpoint  String?  @map("fallback_endpoint")
+  resultQuality     String?  @map("result_quality")
+  missingFields     String[] @default([]) @map("missing_fields")
+  pageNotFound      Boolean  @default(false) @map("page_not_found")
+  contentBlocked    Boolean  @default(false) @map("content_blocked")
+  schemaMismatch    Boolean  @default(false) @map("schema_mismatch")
+  rawError          String?  @map("raw_error")
+  durationMs        Int      @default(0) @map("duration_ms")
+  isDemo            Boolean  @default(false) @map("is_demo")
+
+  competitor Competitor?     @relation(fields: [competitorId], references: [id], onDelete: SetNull)
+  page       CompetitorPage? @relation(fields: [pageId], references: [id], onDelete: SetNull)
+
+  @@index([competitorId])
+  @@index([pageId])
+  @@index([calledAt])
+  @@index([endpoint])
+  @@index([status])
+  @@map("api_logs")
+}
+
+model Notification {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  competitorId String   @map("competitor_id") @db.Uuid
+  scanId       String?  @map("scan_id") @db.Uuid
+  channel      String
+  recipient    String
+  sentAt       DateTime @default(now()) @map("sent_at") @db.Timestamptz(6)
+  payload      Json?
+
+  competitor Competitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+  scan       Scan?      @relation(fields: [scanId], references: [id], onDelete: SetNull)
+
+  @@index([competitorId])
+  @@index([scanId])
+  @@index([sentAt])
+  @@map("notifications")
+}
+
+model DemoScan {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ipHash    String   @map("ip_hash")
+  scannedAt DateTime @default(now()) @map("scanned_at") @db.Timestamptz(6)
+
+  @@index([ipHash])
+  @@index([ipHash, scannedAt])
+  @@map("demo_scans")
+}

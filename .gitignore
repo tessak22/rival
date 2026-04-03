@@ -12,3 +12,6 @@ dist/
 
 coverage/
 *.tsbuildinfo
+
+# Local personal notes (Notion export/import)
+notes-local/
