@@ -51,6 +51,7 @@ const BLOCKED_PATTERNS = [
   /login required/i,
   /sign in to continue/i
 ];
+const SIGNAL_TEXT_FIELDS = ["error", "message", "status", "statusText", "title", "detail", "reason"];
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -136,7 +137,7 @@ function qualityFromPayload(payload: unknown, expectedFields: string[]): LoggedR
         : "full";
 
   const schemaMismatch =
-    Object.keys(payload).length > 0 && expectedFields.every((field) => !(field in payload));
+    quality !== "empty" && Object.keys(payload).length > 0 && expectedFields.every((field) => !(field in payload));
 
   return {
     quality,
@@ -165,6 +166,41 @@ function stringifyUnknown(value: unknown): string {
   } catch {
     return String(value);
   }
+}
+
+function signalTextFromResult(result: unknown): string {
+  if (typeof result === "string") {
+    return result;
+  }
+
+  if (result instanceof Error) {
+    return `${result.name}: ${result.message}`;
+  }
+
+  if (!isPlainObject(result)) {
+    return "";
+  }
+
+  const texts: string[] = [];
+
+  for (const field of SIGNAL_TEXT_FIELDS) {
+    const value = result[field];
+    if (typeof value === "string") {
+      texts.push(value);
+    }
+  }
+
+  const payload = firstObjectPayload(result);
+  if (isPlainObject(payload) && payload !== result) {
+    for (const field of SIGNAL_TEXT_FIELDS) {
+      const value = payload[field];
+      if (typeof value === "string") {
+        texts.push(value);
+      }
+    }
+  }
+
+  return texts.join(" ");
 }
 
 async function writeLog(params: {
@@ -211,6 +247,10 @@ async function safeWriteLog(params: Parameters<typeof writeLog>[0]): Promise<voi
     await writeLog(params);
   } catch (logError) {
     console.error("Failed to persist api_logs record", logError);
+    process.emitWarning("Failed to persist api_logs record", {
+      code: "RIVAL_API_LOG_WRITE_FAILED",
+      detail: stringifyUnknown(logError)
+    });
   }
 }
 
@@ -236,7 +276,7 @@ export const logger = {
           ? "empty"
           : "success";
 
-      const text = stringifyUnknown(result);
+      const text = signalTextFromResult(result);
       const pageNotFound = evaluated.pageNotFound || detectSignal(NOT_FOUND_PATTERNS, text);
       const contentBlocked = evaluated.contentBlocked || detectSignal(BLOCKED_PATTERNS, text);
 
