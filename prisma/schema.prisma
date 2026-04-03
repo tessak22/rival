@@ -4,6 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  // Prisma 7 datasource URL is configured in prisma.config.ts
 }
 
 model Competitor {
