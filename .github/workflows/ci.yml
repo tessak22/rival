@@ -7,8 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  quality:
-    name: Quality checks
+  fast-checks:
+    name: Format, Lint & TypeScript
     runs-on: ubuntu-latest
 
     steps:
@@ -30,8 +30,27 @@ jobs:
       - name: TypeScript
         run: npm run typecheck
 
+  slow-checks:
+    name: Tests & Build
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://user:pass@localhost:5432/rival?schema=public
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Prisma Generate
+        run: npx prisma generate
+
       - name: Tests
-        run: npm test
+        run: npm run test:coverage
 
       - name: Build
         run: npm run build

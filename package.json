@@ -33,7 +33,6 @@
     "@types/react-dom": "^19.2.2",
     "@vitest/coverage-v8": "^2.1.8",
     "eslint": "^10.2.0",
-    "eslint-config-next": "^16.2.2",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.8.1",
     "typescript": "^5.9.3",
