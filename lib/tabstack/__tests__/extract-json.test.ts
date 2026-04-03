@@ -23,6 +23,7 @@ vi.mock("@/lib/tabstack/client", () => ({
 
 describe("extractJson", () => {
   beforeEach(() => {
+    vi.resetModules();
     jsonMock.mockReset();
     loggerCallMock.mockClear();
     getTabstackClientMock.mockReturnValue({ extract: { json: jsonMock } });
@@ -121,5 +122,22 @@ describe("extractJson", () => {
         nocache: true
       })
     ).rejects.toThrow("jsonSchema.required must be an array of strings");
+  });
+
+  it("passes isDemo flag through to logger metadata", async () => {
+    const { extractJson } = await import("@/lib/tabstack/extract-json");
+
+    await extractJson({
+      url: "https://example.com/demo",
+      jsonSchema: { type: "object", properties: { name: { type: "string" } } },
+      effort: "low",
+      nocache: false,
+      isDemo: true
+    });
+
+    expect(loggerCallMock).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({ isDemo: true })
+    );
   });
 });

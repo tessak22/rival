@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/client";
+import { isPlainObject } from "@/lib/utils/types";
 
 export type TabstackEndpoint =
   | "extract/json"
@@ -52,10 +53,6 @@ const BLOCKED_PATTERNS = [
   /sign in to continue/i
 ];
 const SIGNAL_TEXT_FIELDS = ["error", "message", "status", "statusText", "title", "detail", "reason"];
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function isTrulyEmpty(value: unknown): boolean {
   if (value === null || value === undefined) {
@@ -136,6 +133,9 @@ function qualityFromPayload(payload: unknown, expectedFields: string[]): LoggedR
         ? "partial"
         : "full";
 
+  // schemaMismatch: the response had data but none of the expected fields exist as keys,
+  // indicating the extraction schema doesn't match the actual page structure.
+  // Skipped when quality is "empty" because an empty result is already captured above.
   const schemaMismatch =
     quality !== "empty" && Object.keys(payload).length > 0 && expectedFields.every((field) => !(field in payload));
 
@@ -246,7 +246,6 @@ async function safeWriteLog(params: Parameters<typeof writeLog>[0]): Promise<voi
   try {
     await writeLog(params);
   } catch (logError) {
-    console.error("Failed to persist api_logs record", logError);
     process.emitWarning("Failed to persist api_logs record", {
       code: "RIVAL_API_LOG_WRITE_FAILED",
       detail: stringifyUnknown(logError)

@@ -13,6 +13,16 @@ export default defineConfig({
   test: {
     environment: "node",
     clearMocks: true,
-    restoreMocks: true
+    restoreMocks: true,
+    isolate: true,
+    coverage: {
+      provider: "v8",
+      thresholds: {
+        lines: 80,
+        functions: 80,
+        branches: 80,
+        statements: 80
+      }
+    }
   }
 });

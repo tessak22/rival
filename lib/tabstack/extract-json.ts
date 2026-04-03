@@ -2,6 +2,7 @@ import type { ExtractJsonResponse } from "@tabstack/sdk/resources/extract";
 
 import { logger, type LoggerCallMetadata, type TabstackEffort } from "@/lib/logger";
 import { getTabstackClient, toGeoTarget, toSdkEffort } from "@/lib/tabstack/client";
+import { isPlainObject } from "@/lib/utils/types";
 
 /**
  * Tabstack `/extract/json` module.
@@ -48,10 +49,6 @@ export type ExtractJsonInput<Schema extends JsonSchemaShape> = {
   fallback?: LoggerCallMetadata["fallback"];
   expectedFields?: string[];
 };
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function schemaTopLevelFields(schema: unknown): string[] {
   if (!schema || typeof schema !== "object") {

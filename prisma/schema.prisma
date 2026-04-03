@@ -101,7 +101,7 @@ model ApiLog {
   contentBlocked    Boolean  @default(false) @map("content_blocked")
   schemaMismatch    Boolean  @default(false) @map("schema_mismatch")
   rawError          String?  @map("raw_error")
-  durationMs        Int?     @map("duration_ms")
+  durationMs        Int      @default(0) @map("duration_ms")
   isDemo            Boolean  @default(false) @map("is_demo")
 
   competitor Competitor?     @relation(fields: [competitorId], references: [id], onDelete: SetNull)
@@ -125,7 +125,7 @@ model Notification {
   payload      Json?
 
   competitor Competitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
-  scan       Scan?      @relation(fields: [scanId], references: [id])
+  scan       Scan?      @relation(fields: [scanId], references: [id], onDelete: SetNull)
 
   @@index([competitorId])
   @@index([scanId])

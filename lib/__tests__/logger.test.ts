@@ -19,7 +19,7 @@ describe("logger.call", () => {
     apiLogCreateMock.mockResolvedValue({});
     emitWarningMock.mockReset();
     vi.spyOn(process, "emitWarning").mockImplementation(emitWarningMock as typeof process.emitWarning);
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.resetModules();
   });
 
   it("logs success with full quality when all expected fields exist", async () => {
@@ -148,6 +148,51 @@ describe("logger.call", () => {
 
     expect(result).toEqual({ data: { content: "ok", url: "https://x.test" } });
     expect(emitWarningMock).toHaveBeenCalled();
+  });
+
+  it("flags schemaMismatch when payload is non-object with expectedFields", async () => {
+    const { logger } = await import("@/lib/logger");
+
+    await logger.call(
+      () => Promise.resolve({ data: "just a string" }),
+      {
+        endpoint: "extract/json",
+        expectedFields: ["tiers", "has_free_tier"]
+      }
+    );
+
+    expect(apiLogCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          schemaMismatch: true,
+          resultQuality: "partial"
+        })
+      })
+    );
+  });
+
+  it("does not flag schemaMismatch when quality is empty (all expected fields missing)", async () => {
+    const { logger } = await import("@/lib/logger");
+
+    // Even though the payload has keys that don't match expectedFields,
+    // quality resolves to "empty" because all expected fields are missing,
+    // and schemaMismatch is skipped for empty results.
+    await logger.call(
+      () => Promise.resolve({ data: { unrelated_key: "value" } }),
+      {
+        endpoint: "extract/json",
+        expectedFields: ["tiers", "has_free_tier"]
+      }
+    );
+
+    expect(apiLogCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          resultQuality: "empty",
+          schemaMismatch: false
+        })
+      })
+    );
   });
 
   it("detects not-found and blocked signals from message text fields", async () => {

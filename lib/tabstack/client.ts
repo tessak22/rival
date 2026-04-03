@@ -1,3 +1,25 @@
+/**
+ * Tabstack SDK client wrapper.
+ *
+ * What it does:
+ * - Provides a singleton Tabstack SDK instance shared across all endpoint modules.
+ * - Maps Rival-level effort labels (`low`/`high`) to SDK values (`standard`/`max`).
+ * - Normalizes and validates geo-target country codes.
+ *
+ * Cost tier:
+ * - N/A — this module does not make API calls directly.
+ *
+ * When to use vs alternatives:
+ * - Always import `getTabstackClient()` from here instead of constructing `new Tabstack(...)`.
+ * - Never use raw `fetch` against Tabstack endpoints.
+ *
+ * Key parameters:
+ * - `TABSTACK_API_KEY` env var (required): authenticates all SDK calls.
+ * - Timeout: 120s, maxRetries: 2 (configured once here).
+ *
+ * Fallback behavior:
+ * - No fallback — throws if the API key is missing.
+ */
 import Tabstack from "@tabstack/sdk";
 
 export type RivalEffort = "low" | "high";
@@ -8,21 +30,9 @@ type TabstackClient = InstanceType<typeof Tabstack>;
 const globalForTabstack = globalThis as unknown as {
   tabstackClient?: TabstackClient;
 };
-let cachedClient: TabstackClient | undefined;
 
-/**
- * Shared Tabstack SDK client for the entire app.
- *
- * Centralizing this client enforces one integration path across all endpoint modules,
- * keeps auth/config in a single place, and prevents accidental raw fetch usage.
- */
 export function getTabstackClient(): TabstackClient {
-  if (cachedClient) {
-    return cachedClient;
-  }
-
   if (globalForTabstack.tabstackClient) {
-    cachedClient = globalForTabstack.tabstackClient;
     return globalForTabstack.tabstackClient;
   }
 
@@ -38,7 +48,6 @@ export function getTabstackClient(): TabstackClient {
     maxRetries: 2
   });
 
-  cachedClient = client;
   globalForTabstack.tabstackClient = client;
 
   return client;
