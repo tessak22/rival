@@ -8,6 +8,7 @@ type TabstackClient = InstanceType<typeof Tabstack>;
 const globalForTabstack = globalThis as unknown as {
   tabstackClient?: TabstackClient;
 };
+let cachedClient: TabstackClient | undefined;
 
 /**
  * Shared Tabstack SDK client for the entire app.
@@ -16,7 +17,12 @@ const globalForTabstack = globalThis as unknown as {
  * keeps auth/config in a single place, and prevents accidental raw fetch usage.
  */
 export function getTabstackClient(): TabstackClient {
-  if (globalForTabstack.tabstackClient) {
+  if (cachedClient) {
+    return cachedClient;
+  }
+
+  if (process.env.NODE_ENV !== "production" && globalForTabstack.tabstackClient) {
+    cachedClient = globalForTabstack.tabstackClient;
     return globalForTabstack.tabstackClient;
   }
 
@@ -32,7 +38,11 @@ export function getTabstackClient(): TabstackClient {
     maxRetries: 2
   });
 
-  globalForTabstack.tabstackClient = client;
+  cachedClient = client;
+
+  if (process.env.NODE_ENV !== "production") {
+    globalForTabstack.tabstackClient = client;
+  }
 
   return client;
 }
@@ -41,8 +51,13 @@ export function getTabstackClient(): TabstackClient {
  * Rival-level effort labels are explicit in scanner and logs (`low`/`high`).
  * The Tabstack SDK currently uses `min`/`standard`/`max`, so we map here.
  */
-export function toSdkEffort(effort: RivalEffort): "standard" | "max" {
-  return effort === "high" ? "max" : "standard";
+export function toSdkEffort(effort: RivalEffort): SdkEffort {
+  switch (effort) {
+    case "high":
+      return "max";
+    case "low":
+      return "standard";
+  }
 }
 
 export function toGeoTarget(countryCode?: string | null): { country: string } | undefined {
