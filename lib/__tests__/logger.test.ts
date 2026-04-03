@@ -25,14 +25,11 @@ describe("logger.call", () => {
   it("logs success with full quality when all expected fields exist", async () => {
     const { logger } = await import("@/lib/logger");
 
-    const result = await logger.call(
-      () => Promise.resolve({ data: { content: "hello", url: "https://x.test" } }),
-      {
-        endpoint: "extract/markdown",
-        expectedFields: ["content", "url"],
-        nocache: true
-      }
-    );
+    const result = await logger.call(() => Promise.resolve({ data: { content: "hello", url: "https://x.test" } }), {
+      endpoint: "extract/markdown",
+      expectedFields: ["content", "url"],
+      nocache: true
+    });
 
     expect(result).toEqual({ data: { content: "hello", url: "https://x.test" } });
     expect(apiLogCreateMock).toHaveBeenCalledWith(
@@ -50,13 +47,10 @@ describe("logger.call", () => {
   it("logs empty quality when payload has no expected content", async () => {
     const { logger } = await import("@/lib/logger");
 
-    await logger.call(
-      () => Promise.resolve({ data: {} }),
-      {
-        endpoint: "extract/json",
-        expectedFields: ["tiers", "pricing_transparent"]
-      }
-    );
+    await logger.call(() => Promise.resolve({ data: {} }), {
+      endpoint: "extract/json",
+      expectedFields: ["tiers", "pricing_transparent"]
+    });
 
     expect(apiLogCreateMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -73,13 +67,10 @@ describe("logger.call", () => {
   it("logs partial quality and missing fields", async () => {
     const { logger } = await import("@/lib/logger");
 
-    await logger.call(
-      () => Promise.resolve({ data: { tiers: ["starter"] } }),
-      {
-        endpoint: "extract/json",
-        expectedFields: ["tiers", "has_free_tier"]
-      }
-    );
+    await logger.call(() => Promise.resolve({ data: { tiers: ["starter"] } }), {
+      endpoint: "extract/json",
+      expectedFields: ["tiers", "has_free_tier"]
+    });
 
     expect(apiLogCreateMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -95,14 +86,11 @@ describe("logger.call", () => {
   it("marks fallback status when fallback is triggered", async () => {
     const { logger } = await import("@/lib/logger");
 
-    await logger.call(
-      () => Promise.resolve({ data: { content: "x", url: "https://x.test" } }),
-      {
-        endpoint: "extract/markdown",
-        expectedFields: ["content", "url"],
-        fallback: { triggered: true, reason: "empty result", endpoint: "automate" }
-      }
-    );
+    await logger.call(() => Promise.resolve({ data: { content: "x", url: "https://x.test" } }), {
+      endpoint: "extract/markdown",
+      expectedFields: ["content", "url"],
+      fallback: { triggered: true, reason: "empty result", endpoint: "automate" }
+    });
 
     expect(apiLogCreateMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -120,10 +108,10 @@ describe("logger.call", () => {
     const { logger } = await import("@/lib/logger");
 
     await expect(
-      logger.call(
-        () => Promise.reject(new Error("network down")),
-        { endpoint: "generate", expectedFields: ["summary"] }
-      )
+      logger.call(() => Promise.reject(new Error("network down")), {
+        endpoint: "generate",
+        expectedFields: ["summary"]
+      })
     ).rejects.toThrow("network down");
 
     expect(apiLogCreateMock).toHaveBeenCalledWith(
@@ -141,10 +129,10 @@ describe("logger.call", () => {
     const { logger } = await import("@/lib/logger");
     apiLogCreateMock.mockRejectedValueOnce(new Error("db unavailable"));
 
-    const result = await logger.call(
-      () => Promise.resolve({ data: { content: "ok", url: "https://x.test" } }),
-      { endpoint: "extract/markdown", expectedFields: ["content", "url"] }
-    );
+    const result = await logger.call(() => Promise.resolve({ data: { content: "ok", url: "https://x.test" } }), {
+      endpoint: "extract/markdown",
+      expectedFields: ["content", "url"]
+    });
 
     expect(result).toEqual({ data: { content: "ok", url: "https://x.test" } });
     expect(emitWarningMock).toHaveBeenCalled();
@@ -153,13 +141,10 @@ describe("logger.call", () => {
   it("flags schemaMismatch when payload is non-object with expectedFields", async () => {
     const { logger } = await import("@/lib/logger");
 
-    await logger.call(
-      () => Promise.resolve({ data: "just a string" }),
-      {
-        endpoint: "extract/json",
-        expectedFields: ["tiers", "has_free_tier"]
-      }
-    );
+    await logger.call(() => Promise.resolve({ data: "just a string" }), {
+      endpoint: "extract/json",
+      expectedFields: ["tiers", "has_free_tier"]
+    });
 
     expect(apiLogCreateMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -177,13 +162,10 @@ describe("logger.call", () => {
     // Even though the payload has keys that don't match expectedFields,
     // quality resolves to "empty" because all expected fields are missing,
     // and schemaMismatch is skipped for empty results.
-    await logger.call(
-      () => Promise.resolve({ data: { unrelated_key: "value" } }),
-      {
-        endpoint: "extract/json",
-        expectedFields: ["tiers", "has_free_tier"]
-      }
-    );
+    await logger.call(() => Promise.resolve({ data: { unrelated_key: "value" } }), {
+      endpoint: "extract/json",
+      expectedFields: ["tiers", "has_free_tier"]
+    });
 
     expect(apiLogCreateMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -198,10 +180,9 @@ describe("logger.call", () => {
   it("detects not-found and blocked signals from message text fields", async () => {
     const { logger } = await import("@/lib/logger");
 
-    await logger.call(
-      () => Promise.resolve({ message: "404 not found - access denied" }),
-      { endpoint: "extract/markdown" }
-    );
+    await logger.call(() => Promise.resolve({ message: "404 not found - access denied" }), {
+      endpoint: "extract/markdown"
+    });
 
     expect(apiLogCreateMock).toHaveBeenCalledWith(
       expect.objectContaining({

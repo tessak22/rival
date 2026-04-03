@@ -1,13 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { jsonMock, loggerCallMock, getTabstackClientMock, toGeoTargetMock, toSdkEffortMock } =
-  vi.hoisted(() => ({
-    jsonMock: vi.fn(),
-    loggerCallMock: vi.fn(async (fn: () => Promise<unknown>) => fn()),
-    getTabstackClientMock: vi.fn(),
-    toGeoTargetMock: vi.fn(),
-    toSdkEffortMock: vi.fn()
-  }));
+const { jsonMock, loggerCallMock, getTabstackClientMock, toGeoTargetMock, toSdkEffortMock } = vi.hoisted(() => ({
+  jsonMock: vi.fn(),
+  loggerCallMock: vi.fn(async (fn: () => Promise<unknown>) => fn()),
+  getTabstackClientMock: vi.fn(),
+  toGeoTargetMock: vi.fn(),
+  toSdkEffortMock: vi.fn()
+}));
 
 vi.mock("@/lib/logger", () => ({
   logger: {
@@ -59,7 +58,8 @@ describe("extractJson", () => {
       geo_target: { country: "GB" }
     });
 
-    expect(loggerCallMock).toHaveBeenCalledWith(expect.any(Function),
+    expect(loggerCallMock).toHaveBeenCalledWith(
+      expect.any(Function),
       expect.objectContaining({ endpoint: "extract/json", expectedFields: ["tiers", "has_free_tier"] })
     );
   });
@@ -77,7 +77,8 @@ describe("extractJson", () => {
       nocache: false
     });
 
-    expect(loggerCallMock).toHaveBeenLastCalledWith(expect.any(Function),
+    expect(loggerCallMock).toHaveBeenLastCalledWith(
+      expect.any(Function),
       expect.objectContaining({ expectedFields: ["open_roles", "total_count"] })
     );
   });
@@ -93,7 +94,8 @@ describe("extractJson", () => {
       nocache: true
     });
 
-    expect(loggerCallMock).toHaveBeenLastCalledWith(expect.any(Function),
+    expect(loggerCallMock).toHaveBeenLastCalledWith(
+      expect.any(Function),
       expect.objectContaining({ expectedFields: ["forced_field"] })
     );
   });
@@ -135,9 +137,6 @@ describe("extractJson", () => {
       isDemo: true
     });
 
-    expect(loggerCallMock).toHaveBeenCalledWith(
-      expect.any(Function),
-      expect.objectContaining({ isDemo: true })
-    );
+    expect(loggerCallMock).toHaveBeenCalledWith(expect.any(Function), expect.objectContaining({ isDemo: true }));
   });
 });

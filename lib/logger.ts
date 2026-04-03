@@ -26,12 +26,7 @@
 import { prisma } from "@/lib/db/client";
 import { isPlainObject } from "@/lib/utils/types";
 
-export type TabstackEndpoint =
-  | "extract/json"
-  | "extract/markdown"
-  | "generate"
-  | "automate"
-  | "research";
+export type TabstackEndpoint = "extract/json" | "extract/markdown" | "generate" | "automate" | "research";
 
 export type TabstackStatus = "success" | "fallback" | "empty" | "error";
 export type ResultQuality = "full" | "partial" | "empty";
@@ -152,11 +147,7 @@ function qualityFromPayload(payload: unknown, expectedFields: string[]): LoggedR
   });
 
   const quality: ResultQuality =
-    missingFields.length === expectedFields.length
-      ? "empty"
-      : missingFields.length > 0
-        ? "partial"
-        : "full";
+    missingFields.length === expectedFields.length ? "empty" : missingFields.length > 0 ? "partial" : "full";
 
   // schemaMismatch: the response had data but none of the expected fields exist as keys,
   // indicating the extraction schema doesn't match the actual page structure.

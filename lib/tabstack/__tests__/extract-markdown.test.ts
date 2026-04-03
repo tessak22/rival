@@ -1,12 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const {
-  markdownMock,
-  loggerCallMock,
-  getTabstackClientMock,
-  toGeoTargetMock,
-  toSdkEffortMock
-} = vi.hoisted(() => ({
+const { markdownMock, loggerCallMock, getTabstackClientMock, toGeoTargetMock, toSdkEffortMock } = vi.hoisted(() => ({
   markdownMock: vi.fn(),
   loggerCallMock: vi.fn(async (fn: () => Promise<unknown>) => fn()),
   getTabstackClientMock: vi.fn(),
@@ -90,7 +84,8 @@ describe("extractMarkdown", () => {
       nocache: false
     });
 
-    expect(loggerCallMock).toHaveBeenLastCalledWith(expect.any(Function),
+    expect(loggerCallMock).toHaveBeenLastCalledWith(
+      expect.any(Function),
       expect.objectContaining({ expectedFields: ["content", "url"] })
     );
   });

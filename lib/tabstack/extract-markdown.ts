@@ -51,19 +51,16 @@ export async function extractMarkdown(input: ExtractMarkdownInput): Promise<Extr
     metadata: input.includeMetadata ?? false
   };
 
-  return logger.call(
-    () => client.extract.markdown(requestPayload),
-    {
-      competitorId: input.competitorId,
-      pageId: input.pageId,
-      endpoint: "extract/markdown",
-      url: input.url,
-      effort: input.effort,
-      nocache: input.nocache,
-      geoTarget: geoTargetParam?.country,
-      isDemo: input.isDemo,
-      fallback: input.fallback,
-      expectedFields
-    }
-  );
+  return logger.call(() => client.extract.markdown(requestPayload), {
+    competitorId: input.competitorId,
+    pageId: input.pageId,
+    endpoint: "extract/markdown",
+    url: input.url,
+    effort: input.effort,
+    nocache: input.nocache,
+    geoTarget: geoTargetParam?.country,
+    isDemo: input.isDemo,
+    fallback: input.fallback,
+    expectedFields
+  });
 }

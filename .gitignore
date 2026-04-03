@@ -15,3 +15,6 @@ coverage/
 
 # Local personal notes (Notion export/import)
 notes-local/
+
+# Polyscope workspace context
+.context/
