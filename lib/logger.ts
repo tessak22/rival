@@ -1,3 +1,28 @@
+/**
+ * Tabstack API experience logger.
+ *
+ * What it does:
+ * - Wraps every Tabstack SDK call, measuring duration and evaluating result quality.
+ * - Persists a structured `api_logs` row per call (endpoint, status, quality, signals).
+ * - Detects page-not-found / content-blocked signals from response text.
+ * - Computes `schemaMismatch` and `missingFields` as a schema quality feedback loop.
+ *
+ * Cost tier:
+ * - N/A — this module does not call the Tabstack API directly; it wraps calls made
+ *   by endpoint modules (`extract-markdown`, `extract-json`, etc.).
+ *
+ * When to use vs alternatives:
+ * - Every Tabstack call MUST go through `logger.call()` (per CLAUDE.md).
+ * - Never write to `api_logs` outside this module.
+ *
+ * Key parameters:
+ * - `LoggerCallMetadata`: endpoint, url, effort, nocache, geoTarget, expectedFields, etc.
+ * - `expectedFields` drives quality scoring and missing-field detection.
+ *
+ * Fallback behavior:
+ * - If log persistence fails, `process.emitWarning` is emitted but the wrapped call
+ *   still returns successfully — logging never blocks the primary data path.
+ */
 import { prisma } from "@/lib/db/client";
 import { isPlainObject } from "@/lib/utils/types";
 
