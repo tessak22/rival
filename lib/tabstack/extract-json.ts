@@ -36,7 +36,7 @@ type JsonSchemaShape = {
   required?: string[];
 };
 
-export type ExtractJsonInput<Schema extends object> = {
+export type ExtractJsonInput<Schema extends JsonSchemaShape> = {
   competitorId?: string | null;
   pageId?: string | null;
   url: string;
@@ -70,10 +70,24 @@ function schemaTopLevelFields(schema: unknown): string[] {
   return Object.keys(shaped.properties);
 }
 
-export async function extractJson<Schema extends object>(
+function validateJsonSchema(schema: JsonSchemaShape): void {
+  if (schema.properties !== undefined && !isPlainObject(schema.properties)) {
+    throw new Error("jsonSchema.properties must be an object when provided");
+  }
+
+  if (
+    schema.required !== undefined &&
+    (!Array.isArray(schema.required) || !schema.required.every((field) => typeof field === "string"))
+  ) {
+    throw new Error("jsonSchema.required must be an array of strings when provided");
+  }
+}
+
+export async function extractJson<Schema extends JsonSchemaShape>(
   input: ExtractJsonInput<Schema>
 ): Promise<ExtractJsonResponse> {
   const client = getTabstackClient();
+  validateJsonSchema(input.jsonSchema);
   const geoTarget = toGeoTarget(input.geoTarget);
   const expectedFields = input.expectedFields ?? schemaTopLevelFields(input.jsonSchema);
 
