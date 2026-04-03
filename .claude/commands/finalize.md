@@ -31,7 +31,7 @@ Look for these patterns in the files we touched:
 
 1. **False starts**: Commented-out alternative implementations, functions superseded by a better approach, imports no longer needed
 
-2. **Experimental remnants**: Debug logging/console statements added during development, temporary variables or flags used for testing approaches, hardcoded test values
+2. **Experimental remnants**: Debug logging/console statements added during development, temporary variables or flags used for testing approaches, hardcoded test values. **Note:** Structured logging in `lib/logger.ts` (e.g., `writeLog` calls, `api_logs` writes) is intentional product code — do not remove it.
 
 3. **Duplicated logic**: Multiple ways of doing the same thing where we settled on one
 

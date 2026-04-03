@@ -30,10 +30,11 @@ Check which audits you ran for this PR. See `.claude/AUDIT_GUIDE.md` for when ea
 
 ---
 
-## Testing
+## Validation
 
-- [ ] Tests pass locally (`npm test`)
-- [ ] Build passes (`npm run build`)
+- [ ] `npm run typecheck` passes
+- [ ] `npm test` passes
+- [ ] `npm run build` passes
 - [ ] Manually tested the affected feature
 
 ## Notes for Reviewer

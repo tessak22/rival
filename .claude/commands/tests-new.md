@@ -52,7 +52,7 @@ For each gap identified:
 5. **Cover the happy path first**, then edge cases and errors
 
 **Rival-specific priorities:**
-- `lib/logger.ts`: Test that a `partial` result correctly identifies and records `missing_fields`
+- `lib/logger.ts`: Test via the public `logger.call()` interface — verify that a `partial` result correctly identifies and records `missing_fields`. Do not test internal helpers directly; they are not exported.
 - `lib/tabstack/` modules: Test that `fallback_triggered` is set correctly when primary extraction fails
 - Scanner: Test that `nocache: true` is passed on all scheduled scan calls
 - Error paths: Test that failed Tabstack calls still write a record to `api_logs` with status `error`
