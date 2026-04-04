@@ -11,9 +11,15 @@ export function stringifyUnknown(value: unknown): string {
     return value;
   }
 
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return String(value);
-  }
+  // Use a WeakSet replacer to handle circular references rather than catching
+  // the throw — this preserves full object content instead of falling back to
+  // the unhelpful "[object Object]" that String() produces for complex values.
+  const seen = new WeakSet();
+  return JSON.stringify(value, (_key, val) => {
+    if (typeof val === "object" && val !== null) {
+      if (seen.has(val)) return "[Circular]";
+      seen.add(val);
+    }
+    return val as unknown;
+  }) ?? String(value);
 }
