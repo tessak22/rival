@@ -298,7 +298,8 @@ export const logger = {
 
       return result;
     } catch (error) {
-      const rawError = stringifyUnknown(error).slice(0, MAX_RAW_ERROR_LENGTH);
+      const raw = stringifyUnknown(error);
+      const rawError = raw.length > MAX_RAW_ERROR_LENGTH ? `${raw.slice(0, MAX_RAW_ERROR_LENGTH)} [truncated]` : raw;
 
       await safeWriteLog({
         metadata,
