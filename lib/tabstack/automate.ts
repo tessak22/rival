@@ -34,7 +34,8 @@
 
 import type { AutomateEvent } from "@tabstack/sdk/resources/agent";
 
-import { logger, stringifyUnknown, type LoggerCallMetadata } from "@/lib/logger";
+import { logger, type LoggerCallMetadata } from "@/lib/logger";
+import { stringifyUnknown } from "@/lib/utils/types";
 import { getTabstackClient, toGeoTarget } from "@/lib/tabstack/client";
 
 const MAX_EVENTS = 1000;

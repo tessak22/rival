@@ -1,21 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AutomateEvent } from "@tabstack/sdk/resources/agent";
 
-const { automateMock, loggerCallMock } = vi.hoisted(() => {
-  const automateMock = vi.fn();
-  const loggerCallMock = vi.fn().mockImplementation(async (fn: () => Promise<unknown>) => fn());
-  return { automateMock, loggerCallMock };
-});
-
-vi.mock("@tabstack/sdk", () => ({
-  default: vi.fn().mockImplementation(() => ({
-    agent: { automate: automateMock }
-  }))
+const { automateMock, loggerCallMock, getTabstackClientMock, toGeoTargetMock } = vi.hoisted(() => ({
+  automateMock: vi.fn(),
+  loggerCallMock: vi.fn(async (fn: () => Promise<unknown>) => fn()),
+  getTabstackClientMock: vi.fn(),
+  toGeoTargetMock: vi.fn()
 }));
 
 vi.mock("@/lib/logger", () => ({
-  logger: { call: loggerCallMock },
-  stringifyUnknown: (v: unknown) => (typeof v === "string" ? v : JSON.stringify(v))
+  logger: { call: loggerCallMock }
+}));
+
+vi.mock("@/lib/tabstack/client", () => ({
+  getTabstackClient: getTabstackClientMock,
+  toGeoTarget: toGeoTargetMock
 }));
 
 function makeStream(events: AutomateEvent[]): AsyncIterable<AutomateEvent> {
@@ -34,6 +33,10 @@ describe("automateExtract", () => {
     loggerCallMock.mockReset();
     loggerCallMock.mockImplementation(async (fn: () => Promise<unknown>) => fn());
     automateMock.mockReset();
+    getTabstackClientMock.mockReset();
+    getTabstackClientMock.mockReturnValue({ agent: { automate: automateMock } });
+    toGeoTargetMock.mockReset();
+    toGeoTargetMock.mockReturnValue(undefined);
     process.env.TABSTACK_API_KEY = "test-key";
   });
 
@@ -199,12 +202,14 @@ describe("automateExtract", () => {
     );
   });
 
-  it("normalizes geoTarget to uppercase ISO-2", async () => {
+  it("normalizes geoTarget and passes it to SDK and logger", async () => {
     const { automateExtract } = await import("@/lib/tabstack/automate");
     automateMock.mockResolvedValue(makeStream([{ event: "complete", data: {} }]));
+    toGeoTargetMock.mockReturnValue({ country: "GB" });
 
     await automateExtract({ url: "https://example.com", task: "Extract", geoTarget: "gb" });
 
+    expect(toGeoTargetMock).toHaveBeenCalledWith("gb");
     const sdkCall = automateMock.mock.calls[0][0];
     expect(sdkCall.geo_target).toEqual({ country: "GB" });
     expect(loggerCallMock).toHaveBeenCalledWith(
@@ -213,9 +218,10 @@ describe("automateExtract", () => {
     );
   });
 
-  it("rejects invalid geoTarget and passes undefined to SDK", async () => {
+  it("passes undefined geo_target to SDK when geoTarget is invalid", async () => {
     const { automateExtract } = await import("@/lib/tabstack/automate");
     automateMock.mockResolvedValue(makeStream([{ event: "complete", data: {} }]));
+    // toGeoTargetMock returns undefined by default (set in beforeEach)
 
     await automateExtract({ url: "https://example.com", task: "Extract", geoTarget: "USA" });
 

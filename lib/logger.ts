@@ -24,7 +24,7 @@
  *   still returns successfully — logging never blocks the primary data path.
  */
 import { prisma } from "@/lib/db/client";
-import { isPlainObject } from "@/lib/utils/types";
+import { isPlainObject, stringifyUnknown } from "@/lib/utils/types";
 
 export type TabstackEndpoint = "extract/json" | "extract/markdown" | "generate" | "automate" | "research";
 
@@ -171,22 +171,6 @@ function qualityFromPayload(payload: unknown, expectedFields: string[]): LoggedR
 
 function detectSignal(patterns: RegExp[], text: string): boolean {
   return patterns.some((pattern) => pattern.test(text));
-}
-
-export function stringifyUnknown(value: unknown): string {
-  if (value instanceof Error) {
-    return `${value.name}: ${value.message}`;
-  }
-
-  if (typeof value === "string") {
-    return value;
-  }
-
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return String(value);
-  }
 }
 
 function signalTextFromResult(result: unknown): string {
