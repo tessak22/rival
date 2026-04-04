@@ -148,6 +148,7 @@ This is Rival's contribution back to the Tabstack ecosystem — real usage data 
 - Deployment infrastructure and cloud provider
 - Key integrations, CLI/SDK/IDE support
 - Sourced from docs, readme, about pages, and job descriptions
+- Schema: `lib/schemas/stack.ts`
 
 **Community** — `/extract/json`, effort: low
 - GitHub stars, forks, active contributors (last 90 days)
@@ -158,6 +159,12 @@ This is Rival's contribution back to the Tabstack ecosystem — real usage data 
 **Social Presence** — `/extract/json`, effort: low
 - Twitter/X, LinkedIn, YouTube follower counts
 - Recent post topics and posting frequency
+
+**Documentation** — `/extract/json`, effort: low
+- Top-level navigation sections (API reference, guides, tutorials, quickstart)
+- Has API reference, SDK docs, and tutorial presence
+- Last updated date (if shown)
+- Schema: `lib/schemas/docs.ts`
 
 **Company Profile** — `/extract/json`, effort: low
 - Mission and positioning statement
