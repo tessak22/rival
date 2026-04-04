@@ -26,7 +26,8 @@ export function stringifyUnknown(value: unknown): string {
           // Trim the stack back to the current parent so siblings don't
           // inherit each other's children as ancestors.
           while (stack.length > 0 && stack[stack.length - 1] !== this) {
-            ancestors.delete(stack.pop()!);
+            const top = stack.pop();
+            if (top !== undefined) ancestors.delete(top);
           }
           if (ancestors.has(val)) return "[Circular]";
           ancestors.add(val);
