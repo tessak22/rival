@@ -56,6 +56,48 @@ describe("stringifyUnknown", () => {
     expect(stringifyUnknown(obj)).toBe('{"a":{"x":1},"b":{"x":1}}');
   });
 
+  it("does not mark shared references at multiple depths as circular", () => {
+    // shared is nested inside two sibling wrapper objects — still not a cycle.
+    const shared = { x: 1 };
+    const obj = { p: { shared }, q: { shared } };
+    const result = stringifyUnknown(obj);
+    expect(result).toBe('{"p":{"shared":{"x":1}},"q":{"shared":{"x":1}}}');
+    expect(result).not.toContain("[Circular]");
+  });
+
+  it("does not mark shared references inside arrays as circular", () => {
+    const shared = { x: 1 };
+    const arr = [shared, shared, shared];
+    expect(stringifyUnknown(arr)).toBe('[{"x":1},{"x":1},{"x":1}]');
+  });
+
+  it("detects circular references at depth, not just at root", () => {
+    const inner: Record<string, unknown> = { y: 2 };
+    inner["self"] = inner;
+    const obj = { outer: 1, inner };
+    const result = stringifyUnknown(obj);
+    expect(result).toContain("[Circular]");
+    expect(result).toContain('"y":2');
+    expect(result).toContain('"outer":1');
+  });
+
+  it("handles null values in objects without throwing", () => {
+    expect(stringifyUnknown({ a: null, b: 1 })).toBe('{"a":null,"b":1}');
+  });
+
+  it("handles shared object that is itself circular", () => {
+    // circ is both shared (referenced from a and b) and circular (self-referential).
+    // Each reference should detect the cycle independently.
+    const circ: Record<string, unknown> = {};
+    circ["self"] = circ;
+    const obj = { a: circ, b: circ };
+    const result = stringifyUnknown(obj);
+    expect(result).toContain('"self":"[Circular]"');
+    // Both a and b should be serialized (shared ref handled), each with their own [Circular]
+    expect(result).toContain('"a":{');
+    expect(result).toContain('"b":{');
+  });
+
   it("falls back to String() for BigInt (non-serializable by JSON.stringify)", () => {
     // BigInt causes JSON.stringify to throw — the try-catch must handle it
     expect(stringifyUnknown(BigInt(42))).toBe("42");
