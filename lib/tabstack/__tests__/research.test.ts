@@ -1,18 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ResearchEvent } from "@tabstack/sdk/resources/agent";
 
-const apiLogCreateMock = vi.fn().mockResolvedValue({});
-
-vi.mock("@/lib/db/client", () => ({
-  prisma: { apiLog: { create: apiLogCreateMock } }
+const { researchMock, loggerCallMock, getTabstackClientMock } = vi.hoisted(() => ({
+  researchMock: vi.fn(),
+  loggerCallMock: vi.fn(async (fn: () => Promise<unknown>) => fn()),
+  getTabstackClientMock: vi.fn()
 }));
 
-const researchMock = vi.fn();
+vi.mock("@/lib/logger", () => ({
+  logger: { call: loggerCallMock }
+}));
 
-vi.mock("@tabstack/sdk", () => ({
-  default: vi.fn().mockImplementation(() => ({
-    agent: { research: researchMock }
-  }))
+vi.mock("@/lib/tabstack/client", () => ({
+  getTabstackClient: getTabstackClientMock
 }));
 
 function makeStream(events: ResearchEvent[]): AsyncIterable<ResearchEvent> {
@@ -33,8 +33,11 @@ const mockCitations = [
 describe("runResearch", () => {
   beforeEach(() => {
     vi.resetModules();
-    apiLogCreateMock.mockClear();
-    researchMock.mockClear();
+    loggerCallMock.mockReset();
+    loggerCallMock.mockImplementation(async (fn: () => Promise<unknown>) => fn());
+    researchMock.mockReset();
+    getTabstackClientMock.mockReset();
+    getTabstackClientMock.mockReturnValue({ agent: { research: researchMock } });
     process.env.TABSTACK_API_KEY = "test-key";
   });
 
@@ -59,21 +62,15 @@ describe("runResearch", () => {
     expect(result.error).toBeUndefined();
   });
 
-  it("logs with endpoint 'research' and mode in metadata", async () => {
+  it("calls logger with endpoint research and mode in metadata", async () => {
     const { runResearch } = await import("@/lib/tabstack/research");
     researchMock.mockResolvedValue(makeStream([{ event: "complete", data: { result: "answer", citations: [] } }]));
 
     await runResearch({ query: "Research question", mode: "balanced" });
 
-    expect(apiLogCreateMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          endpoint: "research",
-          mode: "balanced",
-          effort: null,
-          url: null
-        })
-      })
+    expect(loggerCallMock).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({ endpoint: "research", mode: "balanced", effort: null, url: null })
     );
   });
 
@@ -83,9 +80,7 @@ describe("runResearch", () => {
 
     await runResearch({ query: "q", mode: "fast" });
 
-    expect(apiLogCreateMock).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ effort: null }) })
-    );
+    expect(loggerCallMock).toHaveBeenCalledWith(expect.any(Function), expect.objectContaining({ effort: null }));
   });
 
   it("passes nocache to SDK when provided", async () => {
@@ -163,6 +158,52 @@ describe("runResearch", () => {
     expect(result.citations[1].source_url).toBe("https://y.com");
   });
 
+  it("rejects citations with non-http/https source_url protocols", async () => {
+    const { runResearch } = await import("@/lib/tabstack/research");
+    researchMock.mockResolvedValue(
+      makeStream([
+        {
+          event: "complete",
+          data: {
+            result: "answer",
+            citations: [
+              { claim: "safe", source_url: "https://example.com" },
+              { claim: "js injection", source_url: "javascript:alert(1)" },
+              { claim: "file access", source_url: "file:///etc/passwd" },
+              { claim: "data uri", source_url: "data:text/html,<script>alert(1)</script>" }
+            ]
+          }
+        }
+      ])
+    );
+
+    const result = await runResearch({ query: "q", mode: "fast" });
+    expect(result.citations).toHaveLength(1);
+    expect(result.citations[0].source_url).toBe("https://example.com");
+  });
+
+  it("rejects citations with invalid (unparseable) source_url", async () => {
+    const { runResearch } = await import("@/lib/tabstack/research");
+    researchMock.mockResolvedValue(
+      makeStream([
+        {
+          event: "complete",
+          data: {
+            result: "answer",
+            citations: [
+              { claim: "valid", source_url: "https://good.com" },
+              { claim: "bad url", source_url: "not a url at all" }
+            ]
+          }
+        }
+      ])
+    );
+
+    const result = await runResearch({ query: "q", mode: "fast" });
+    expect(result.citations).toHaveLength(1);
+    expect(result.citations[0].source_url).toBe("https://good.com");
+  });
+
   it("error event followed by complete — only error is recorded, complete is ignored", async () => {
     const { runResearch } = await import("@/lib/tabstack/research");
     researchMock.mockResolvedValue(
@@ -175,7 +216,6 @@ describe("runResearch", () => {
     const result = await runResearch({ query: "q", mode: "balanced" });
 
     expect(result.error).toBe("Research failed mid-way");
-    // Break on error means complete event is never processed
     expect(result.result).toBeNull();
     expect(result.citations).toHaveLength(0);
   });
@@ -207,7 +247,6 @@ describe("runResearch", () => {
 
   it("caps intermediate events at maxStreamEvents but always captures complete", async () => {
     const { runResearch } = await import("@/lib/tabstack/research");
-    // 5 progress events + 1 complete — cap at 3 intermediate events
     const events: ResearchEvent[] = [
       ...Array.from({ length: 5 }, (_, i) => ({ event: "progress", data: { step: i } }) as ResearchEvent),
       { event: "complete", data: { result: "final answer", citations: [] } }
@@ -216,7 +255,6 @@ describe("runResearch", () => {
 
     const result = await runResearch({ query: "q", mode: "fast", maxStreamEvents: 3 });
 
-    // Only 3 intermediate events buffered, but complete is always captured
     expect(result.events).toHaveLength(4); // 3 progress + 1 complete
     expect(result.result).toBe("final answer");
   });
@@ -230,27 +268,22 @@ describe("runResearch", () => {
     expect(result.result).toBe("r");
   });
 
-  it("propagates SDK errors and logs status 'error'", async () => {
-    const { runResearch } = await import("@/lib/tabstack/research");
-    researchMock.mockRejectedValue(new Error("Network failure"));
-
-    await expect(runResearch({ query: "q", mode: "fast" })).rejects.toThrow("Network failure");
-
-    expect(apiLogCreateMock).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ status: "error" }) })
-    );
-  });
-
-  it("passes competitorId and isDemo to logger", async () => {
+  it("forwards competitorId and isDemo to logger metadata", async () => {
     const { runResearch } = await import("@/lib/tabstack/research");
     researchMock.mockResolvedValue(makeStream([{ event: "complete", data: { result: "r", citations: [] } }]));
 
     await runResearch({ query: "q", mode: "fast", competitorId: "comp-abc", isDemo: true });
 
-    expect(apiLogCreateMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ competitorId: "comp-abc", isDemo: true })
-      })
+    expect(loggerCallMock).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({ competitorId: "comp-abc", isDemo: true })
     );
+  });
+
+  it("propagates SDK errors", async () => {
+    const { runResearch } = await import("@/lib/tabstack/research");
+    researchMock.mockRejectedValue(new Error("Network failure"));
+
+    await expect(runResearch({ query: "q", mode: "fast" })).rejects.toThrow("Network failure");
   });
 });

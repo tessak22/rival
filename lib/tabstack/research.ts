@@ -47,7 +47,7 @@ import type { ResearchEvent } from "@tabstack/sdk/resources/agent";
 
 import { logger, type LoggerCallMetadata, type TabstackMode } from "@/lib/logger";
 import { getTabstackClient } from "@/lib/tabstack/client";
-import { isPlainObject } from "@/lib/utils/types";
+import { isPlainObject, stringifyUnknown } from "@/lib/utils/types";
 
 export type ResearchCitation = {
   claim: string;
@@ -155,7 +155,7 @@ async function collectStream(
     }
     if (event.event === "error") {
       const raw = event.data;
-      error = typeof raw === "string" ? raw : JSON.stringify(raw);
+      error = stringifyUnknown(raw);
       break; // Stop draining — a failed stream won't produce a valid complete event
     }
   }
