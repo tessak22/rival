@@ -1,0 +1,8 @@
+.next
+node_modules
+prisma/migrations
+package-lock.json
+.claude
+.github
+docs
+notes-local

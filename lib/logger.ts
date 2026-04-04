@@ -26,12 +26,7 @@
 import { prisma } from "@/lib/db/client";
 import { isPlainObject } from "@/lib/utils/types";
 
-export type TabstackEndpoint =
-  | "extract/json"
-  | "extract/markdown"
-  | "generate"
-  | "automate"
-  | "research";
+export type TabstackEndpoint = "extract/json" | "extract/markdown" | "generate" | "automate" | "research";
 
 export type TabstackStatus = "success" | "fallback" | "empty" | "error";
 export type ResultQuality = "full" | "partial" | "empty";
@@ -115,6 +110,12 @@ function firstObjectPayload(result: unknown): unknown {
   return result;
 }
 
+function computeQuality(missingCount: number, expectedCount: number): ResultQuality {
+  if (missingCount === expectedCount) return "empty";
+  if (missingCount > 0) return "partial";
+  return "full";
+}
+
 function qualityFromPayload(payload: unknown, expectedFields: string[]): LoggedResult {
   if (isTrulyEmpty(payload)) {
     return {
@@ -151,12 +152,7 @@ function qualityFromPayload(payload: unknown, expectedFields: string[]): LoggedR
     return isTrulyEmpty(value);
   });
 
-  const quality: ResultQuality =
-    missingFields.length === expectedFields.length
-      ? "empty"
-      : missingFields.length > 0
-        ? "partial"
-        : "full";
+  const quality: ResultQuality = computeQuality(missingFields.length, expectedFields.length);
 
   // schemaMismatch: the response had data but none of the expected fields exist as keys,
   // indicating the extraction schema doesn't match the actual page structure.

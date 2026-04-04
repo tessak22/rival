@@ -24,19 +24,19 @@ Rival includes Claude Code audit commands in `.claude/commands/` for automated c
 
 ### Quick reference
 
-| Command | When to Run |
-|---------|-------------|
-| `/audit-errors` | Every PR touching `lib/tabstack/`, `lib/logger.ts`, cron, or SSE |
-| `/audit-boundaries` | Every PR adding imports across architectural layers |
-| `/audit-drift` | Every PR modifying state, status fields, or enums |
-| `/audit-names` | PRs adding public functions or Tabstack module code |
-| `/audit-abstractions` | PRs adding utility classes or interfaces |
-| `/audit-dead-code` | Monthly or before release |
-| `/audit-todos` | Monthly |
-| `/audit-idiomatic` | Before release |
-| `/finalize` | End of every session |
-| `/tests-new` | After any `lib/tabstack/` or `lib/logger.ts` changes |
-| `/changelog` | Before each release |
+| Command               | When to Run                                                      |
+| --------------------- | ---------------------------------------------------------------- |
+| `/audit-errors`       | Every PR touching `lib/tabstack/`, `lib/logger.ts`, cron, or SSE |
+| `/audit-boundaries`   | Every PR adding imports across architectural layers              |
+| `/audit-drift`        | Every PR modifying state, status fields, or enums                |
+| `/audit-names`        | PRs adding public functions or Tabstack module code              |
+| `/audit-abstractions` | PRs adding utility classes or interfaces                         |
+| `/audit-dead-code`    | Monthly or before release                                        |
+| `/audit-todos`        | Monthly                                                          |
+| `/audit-idiomatic`    | Before release                                                   |
+| `/finalize`           | End of every session                                             |
+| `/tests-new`          | After any `lib/tabstack/` or `lib/logger.ts` changes             |
+| `/changelog`          | Before each release                                              |
 
 ## Code Conventions
 
