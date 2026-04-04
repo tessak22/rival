@@ -48,6 +48,14 @@ describe("stringifyUnknown", () => {
     expect(result).toContain('"a":1');
   });
 
+  it("does not mark shared (non-circular) references as circular", () => {
+    // Diamond pattern: both a and b point to the same object but there is no cycle.
+    // The old WeakSet approach incorrectly returned "[Circular]" for the second reference.
+    const shared = { x: 1 };
+    const obj = { a: shared, b: shared };
+    expect(stringifyUnknown(obj)).toBe('{"a":{"x":1},"b":{"x":1}}');
+  });
+
   it("falls back to String() for BigInt (non-serializable by JSON.stringify)", () => {
     // BigInt causes JSON.stringify to throw — the try-catch must handle it
     expect(stringifyUnknown(BigInt(42))).toBe("42");
