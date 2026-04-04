@@ -61,6 +61,7 @@ type LoggedResult = {
   schemaMismatch: boolean;
 };
 
+const MAX_RAW_ERROR_LENGTH = 2_000;
 const NOT_FOUND_PATTERNS = [/\b404\b/i, /not found/i, /page does not exist/i];
 const BLOCKED_PATTERNS = [
   /forbidden/i,
@@ -297,7 +298,7 @@ export const logger = {
 
       return result;
     } catch (error) {
-      const rawError = stringifyUnknown(error);
+      const rawError = stringifyUnknown(error).slice(0, MAX_RAW_ERROR_LENGTH);
 
       await safeWriteLog({
         metadata,

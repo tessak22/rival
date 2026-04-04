@@ -41,7 +41,9 @@ import { getTabstackClient, toGeoTarget } from "@/lib/tabstack/client";
 const MAX_EVENTS = 1000;
 const DEFAULT_GUARDRAILS = "browse and extract only, do not interact";
 
-const RESULT_EVENTS = new Set(["complete", "agent:extracted"]);
+// Explicit as const so SDK event renames surface as type errors here first.
+const RESULT_EVENT_NAMES = ["complete", "agent:extracted"] as const;
+const RESULT_EVENTS = new Set<string>(RESULT_EVENT_NAMES);
 const ERROR_EVENT = "error";
 
 export type AutomateInput = {
@@ -79,6 +81,7 @@ async function collectStream(stream: AsyncIterable<AutomateEvent>): Promise<Auto
     }
   }
 
+  // AutomateEvent.event is string | undefined in the SDK — guard is required for type narrowing.
   const resultEvent = events.findLast((e) => e.event !== undefined && RESULT_EVENTS.has(e.event));
   const result = resultEvent?.data ?? null;
 
