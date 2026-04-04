@@ -21,6 +21,8 @@
  * - `url`: starting URL for the browser agent.
  * - `guardrails`: safety constraints. Defaults to "browse and extract only, do not interact".
  * - `geoTarget`: optional country code — normalized to ISO-2 uppercase.
+ * - `timeoutMs`: max milliseconds to wait for the stream to complete. Defaults to 300,000ms (5 min).
+ *   Passed to the SDK as an AbortSignal to prevent indefinite hangs on complex SPAs.
  *
  * Important SDK difference:
  * - `/automate` does NOT support `effort` or `nocache` params (unlike extract/generate).
@@ -40,6 +42,7 @@ import { getTabstackClient, toGeoTarget } from "@/lib/tabstack/client";
 
 const MAX_EVENTS = 1000;
 const DEFAULT_GUARDRAILS = "browse and extract only, do not interact";
+const DEFAULT_TIMEOUT_MS = 300_000; // 5 minutes
 
 // Explicit as const so SDK event renames surface as type errors here first.
 const RESULT_EVENT_NAMES = ["complete", "agent:extracted"] as const;
@@ -53,6 +56,7 @@ export type AutomateInput = {
   task: string;
   guardrails?: string;
   geoTarget?: string | null;
+  timeoutMs?: number;
   isDemo?: boolean;
   fallback?: LoggerCallMetadata["fallback"];
   expectedFields?: string[];
@@ -63,21 +67,18 @@ export type AutomateResult<T = unknown> = {
   result: T | null;
 };
 
-// TODO: Add AbortSignal / deadline support before wiring to API routes.
-// If the Tabstack browser agent hangs on a complex SPA, this blocks the caller
-// indefinitely. The SDK's HTTP timeout may not cover the full SSE stream duration.
 async function collectStream(stream: AsyncIterable<AutomateEvent>): Promise<AutomateResult> {
   const events: AutomateEvent[] = [];
 
   for await (const event of stream) {
+    if (events.length >= MAX_EVENTS) {
+      throw new Error(`[automateExtract] stream exceeded ${MAX_EVENTS} event limit`);
+    }
+
     events.push(event);
 
     if (event.event === ERROR_EVENT) {
       throw new Error(stringifyUnknown(event.data));
-    }
-
-    if (events.length > MAX_EVENTS) {
-      throw new Error(`[automateExtract] stream exceeded ${MAX_EVENTS} event limit`);
     }
   }
 
@@ -103,15 +104,19 @@ async function collectStream(stream: AsyncIterable<AutomateEvent>): Promise<Auto
 export async function automateExtract(input: AutomateInput): Promise<AutomateResult> {
   const client = getTabstackClient();
   const geoTarget = toGeoTarget(input.geoTarget);
+  const signal = AbortSignal.timeout(input.timeoutMs ?? DEFAULT_TIMEOUT_MS);
 
   return logger.call(
     async () => {
-      const stream = await client.agent.automate({
-        task: input.task,
-        url: input.url,
-        guardrails: input.guardrails ?? DEFAULT_GUARDRAILS,
-        geo_target: geoTarget
-      });
+      const stream = await client.agent.automate(
+        {
+          task: input.task,
+          url: input.url,
+          guardrails: input.guardrails ?? DEFAULT_GUARDRAILS,
+          geo_target: geoTarget
+        },
+        { signal }
+      );
 
       return collectStream(stream);
     },

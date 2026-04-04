@@ -94,8 +94,9 @@ export async function generateDiff(input: GenerateDiffInput): Promise<GenerateJs
   const geoTarget = toGeoTarget(input.geoTarget);
   const previousContent = input.previousContent.slice(0, MAX_CONTEXT_LENGTH);
   if (input.previousContent.length > MAX_CONTEXT_LENGTH) {
-    console.warn(
-      `[generateDiff] previousContent truncated from ${input.previousContent.length} to ${MAX_CONTEXT_LENGTH} chars`
+    process.emitWarning(
+      `[generateDiff] previousContent truncated from ${input.previousContent.length} to ${MAX_CONTEXT_LENGTH} chars`,
+      { code: "RIVAL_CONTEXT_TRUNCATED" }
     );
   }
 
@@ -200,8 +201,9 @@ export async function generateBrief(input: GenerateBriefInput): Promise<Generate
   const geoTarget = toGeoTarget(input.geoTarget);
   const contextData = input.contextData.slice(0, MAX_CONTEXT_LENGTH);
   if (input.contextData.length > MAX_CONTEXT_LENGTH) {
-    console.warn(
-      `[generateBrief] contextData truncated from ${input.contextData.length} to ${MAX_CONTEXT_LENGTH} chars`
+    process.emitWarning(
+      `[generateBrief] contextData truncated from ${input.contextData.length} to ${MAX_CONTEXT_LENGTH} chars`,
+      { code: "RIVAL_CONTEXT_TRUNCATED" }
     );
   }
 

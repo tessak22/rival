@@ -164,7 +164,7 @@ describe("generateDiff", () => {
   it("truncates previousContent exceeding MAX_CONTEXT_LENGTH and warns", async () => {
     const { generateDiff } = await import("@/lib/tabstack/generate");
     generateJsonMock.mockResolvedValue({ added: [], changed: [], removed: [], summary: "" });
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warnSpy = vi.spyOn(process, "emitWarning").mockImplementation(() => {});
     const oversized = "x".repeat(50_001);
 
     await generateDiff({ url: "https://example.com", previousContent: oversized, effort: "low", nocache: true });
@@ -172,7 +172,10 @@ describe("generateDiff", () => {
     const sdkCall = generateJsonMock.mock.calls[0][0];
     expect(sdkCall.instructions).not.toContain(oversized); // full oversized string not present
     expect(sdkCall.instructions).toContain("x".repeat(50_000)); // truncated portion is present
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("truncated"));
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("truncated"),
+      expect.objectContaining({ code: "RIVAL_CONTEXT_TRUNCATED" })
+    );
     warnSpy.mockRestore();
   });
 });
@@ -300,7 +303,7 @@ describe("generateBrief", () => {
   it("truncates contextData exceeding MAX_CONTEXT_LENGTH and warns", async () => {
     const { generateBrief } = await import("@/lib/tabstack/generate");
     generateJsonMock.mockResolvedValue({});
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warnSpy = vi.spyOn(process, "emitWarning").mockImplementation(() => {});
     const oversized = "y".repeat(50_001);
 
     await generateBrief({ url: "https://example.com", contextData: oversized, effort: "low", nocache: true });
@@ -308,7 +311,10 @@ describe("generateBrief", () => {
     const sdkCall = generateJsonMock.mock.calls[0][0];
     expect(sdkCall.instructions).not.toContain(oversized); // full oversized string not present
     expect(sdkCall.instructions).toContain("y".repeat(50_000)); // truncated portion is present
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("truncated"));
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("truncated"),
+      expect.objectContaining({ code: "RIVAL_CONTEXT_TRUNCATED" })
+    );
     warnSpy.mockRestore();
   });
 });

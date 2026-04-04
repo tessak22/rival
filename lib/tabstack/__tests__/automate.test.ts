@@ -97,10 +97,10 @@ describe("automateExtract", () => {
     );
   });
 
-  it("throws when stream exceeds MAX_EVENTS", async () => {
+  it("throws when stream reaches MAX_EVENTS", async () => {
     const { automateExtract } = await import("@/lib/tabstack/automate");
-    const manyEvents: AutomateEvent[] = Array.from({ length: 1002 }, (_, i) => ({
-      event: i === 1001 ? "complete" : "agent:processing",
+    const manyEvents: AutomateEvent[] = Array.from({ length: 1001 }, (_, i) => ({
+      event: i === 1000 ? "complete" : "agent:processing",
       data: null
     }));
     automateMock.mockResolvedValue(makeStream(manyEvents));
@@ -138,7 +138,8 @@ describe("automateExtract", () => {
     await automateExtract({ url: "https://example.com", task: "Extract" });
 
     expect(automateMock).toHaveBeenCalledWith(
-      expect.objectContaining({ guardrails: "browse and extract only, do not interact" })
+      expect.objectContaining({ guardrails: "browse and extract only, do not interact" }),
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
     );
   });
 
@@ -157,7 +158,8 @@ describe("automateExtract", () => {
         task: "Find all pricing tiers",
         url: "https://example.com/pricing",
         guardrails: "browse and extract only, don't interact"
-      })
+      }),
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
     );
   });
 

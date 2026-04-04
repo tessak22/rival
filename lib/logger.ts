@@ -299,7 +299,9 @@ export const logger = {
       return result;
     } catch (error) {
       const raw = stringifyUnknown(error);
-      const rawError = raw.length > MAX_RAW_ERROR_LENGTH ? `${raw.slice(0, MAX_RAW_ERROR_LENGTH)} [truncated]` : raw;
+      // Use code-point-safe slice to avoid cutting surrogate pairs mid-sequence.
+      const rawError =
+        raw.length > MAX_RAW_ERROR_LENGTH ? `${[...raw].slice(0, MAX_RAW_ERROR_LENGTH).join("")} [truncated]` : raw;
 
       await safeWriteLog({
         metadata,
