@@ -77,6 +77,6 @@ export type GithubData = {
   open_issues?: number;
   open_prs?: number;
   recent_releases?: Array<{ version?: string; date?: string; title?: string }>;
-  contributors_last_90_days?: number;
+  contributors?: number;
   last_commit_date?: string;
 };

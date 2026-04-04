@@ -50,12 +50,12 @@ export type LoggerCallMetadata = {
   mode?: TabstackMode | null;
   isDemo?: boolean;
   fallback?: LoggerFallback;
-  expectedFields?: string[];
+  expectedFields?: readonly string[];
 };
 
 type LoggedResult = {
   quality: ResultQuality;
-  missingFields: string[];
+  missingFields: readonly string[];
   pageNotFound: boolean;
   contentBlocked: boolean;
   schemaMismatch: boolean;
@@ -117,7 +117,7 @@ function computeQuality(missingCount: number, expectedCount: number): ResultQual
   return "full";
 }
 
-function qualityFromPayload(payload: unknown, expectedFields: string[]): LoggedResult {
+function qualityFromPayload(payload: unknown, expectedFields: readonly string[]): LoggedResult {
   if (isTrulyEmpty(payload)) {
     return {
       quality: "empty",
@@ -214,7 +214,7 @@ async function writeLog(params: {
   status: TabstackStatus;
   durationMs: number;
   quality?: ResultQuality;
-  missingFields?: string[];
+  missingFields?: readonly string[];
   pageNotFound?: boolean;
   contentBlocked?: boolean;
   schemaMismatch?: boolean;
@@ -237,7 +237,7 @@ async function writeLog(params: {
       fallbackReason: metadata.fallback?.reason ?? null,
       fallbackEndpoint: metadata.fallback?.endpoint ?? null,
       resultQuality: params.quality ?? null,
-      missingFields: params.missingFields ?? [],
+      missingFields: [...(params.missingFields ?? [])],
       pageNotFound: params.pageNotFound ?? false,
       contentBlocked: params.contentBlocked ?? false,
       schemaMismatch: params.schemaMismatch ?? false,
