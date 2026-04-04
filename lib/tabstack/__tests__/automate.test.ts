@@ -196,10 +196,7 @@ describe("automateExtract", () => {
 
     await automateExtract({ url: "https://example.com", task: "Extract", isDemo: true });
 
-    expect(loggerCallMock).toHaveBeenCalledWith(
-      expect.any(Function),
-      expect.objectContaining({ isDemo: true })
-    );
+    expect(loggerCallMock).toHaveBeenCalledWith(expect.any(Function), expect.objectContaining({ isDemo: true }));
   });
 
   it("normalizes geoTarget and passes it to SDK and logger", async () => {
@@ -212,10 +209,7 @@ describe("automateExtract", () => {
     expect(toGeoTargetMock).toHaveBeenCalledWith("gb");
     const sdkCall = automateMock.mock.calls[0][0];
     expect(sdkCall.geo_target).toEqual({ country: "GB" });
-    expect(loggerCallMock).toHaveBeenCalledWith(
-      expect.any(Function),
-      expect.objectContaining({ geoTarget: "GB" })
-    );
+    expect(loggerCallMock).toHaveBeenCalledWith(expect.any(Function), expect.objectContaining({ geoTarget: "GB" }));
   });
 
   it("passes undefined geo_target to SDK when geoTarget is invalid", async () => {
