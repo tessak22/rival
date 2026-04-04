@@ -173,7 +173,7 @@ function detectSignal(patterns: RegExp[], text: string): boolean {
   return patterns.some((pattern) => pattern.test(text));
 }
 
-function stringifyUnknown(value: unknown): string {
+export function stringifyUnknown(value: unknown): string {
   if (value instanceof Error) {
     return `${value.name}: ${value.message}`;
   }
