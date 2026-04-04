@@ -49,15 +49,18 @@ export type AutomateInput = {
   expectedFields?: string[];
 };
 
-export type AutomateResult = {
+export type AutomateResult<T = unknown> = {
   events: AutomateEvent[];
-  result: unknown;
+  result: T | null;
   error?: string;
 };
 
 const RESULT_EVENTS = new Set(["complete", "agent:extracted"]);
 const ERROR_EVENT = "error";
 
+// TODO: Add AbortSignal / deadline support before wiring to API routes.
+// If the Tabstack browser agent hangs on a complex SPA, this blocks the caller
+// indefinitely. The SDK's HTTP timeout may not cover the full SSE stream duration.
 async function collectStream(stream: AsyncIterable<AutomateEvent>): Promise<{
   events: AutomateEvent[];
   result: unknown;
@@ -87,6 +90,10 @@ async function collectStream(stream: AsyncIterable<AutomateEvent>): Promise<{
  * preserved in `result.events` for debugging and for the UI stream relay in
  * the API route layer (app/api/).
  */
+// Note: logger.call uses firstObjectPayload() to extract the quality-scoring target.
+// For AutomateResult { events, result, error }, it finds the `result` key and evaluates
+// quality against it. If the return shape changes (e.g., renaming `result` to `data`),
+// quality logging silently breaks. Keep this shape stable or update logger.ts accordingly.
 export async function automateExtract(input: AutomateInput): Promise<AutomateResult> {
   const client = getTabstackClient();
   const geoTarget = toGeoTarget(input.geoTarget);
@@ -101,7 +108,7 @@ export async function automateExtract(input: AutomateInput): Promise<AutomateRes
       });
 
       const { events, result, error } = await collectStream(stream);
-      return { events, result, error } satisfies AutomateResult;
+      return { events, result, error } satisfies AutomateResult<unknown>;
     },
     {
       competitorId: input.competitorId,

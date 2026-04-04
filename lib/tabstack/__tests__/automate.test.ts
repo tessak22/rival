@@ -164,6 +164,38 @@ describe("automateExtract", () => {
     );
   });
 
+  it("propagates mid-stream iterator error through logger", async () => {
+    const { automateExtract } = await import("@/lib/tabstack/automate");
+    const failingStream: AsyncIterable<AutomateEvent> = {
+      [Symbol.asyncIterator]: async function* () {
+        yield { event: "start", data: null } as AutomateEvent;
+        throw new Error("connection dropped");
+      }
+    };
+    automateMock.mockResolvedValue(failingStream);
+
+    await expect(automateExtract({ url: "https://example.com", task: "Extract" })).rejects.toThrow(
+      "connection dropped"
+    );
+
+    expect(apiLogCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: "error" }) })
+    );
+  });
+
+  it("done event alone does not produce a result", async () => {
+    const { automateExtract } = await import("@/lib/tabstack/automate");
+    const events: AutomateEvent[] = [
+      { event: "start", data: null },
+      { event: "agent:processing", data: null },
+      { event: "done", data: null }
+    ];
+    automateMock.mockResolvedValue(makeStream(events));
+
+    const result = await automateExtract({ url: "https://example.com", task: "Extract" });
+    expect(result.result).toBeNull();
+  });
+
   it("passes guardrails and task to SDK", async () => {
     const { automateExtract } = await import("@/lib/tabstack/automate");
     automateMock.mockResolvedValue(makeStream([{ event: "complete", data: {} }]));
