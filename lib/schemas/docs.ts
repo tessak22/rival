@@ -45,7 +45,7 @@ export const DOCS_SCHEMA = {
   required: ["sections", "has_api_reference"]
 } as const;
 
-export const DOCS_EXPECTED_FIELDS: string[] = [...DOCS_SCHEMA.required];
+export const DOCS_EXPECTED_FIELDS = [...DOCS_SCHEMA.required] as const;
 
 export type DocsData = {
   last_update_date?: string;

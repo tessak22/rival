@@ -38,7 +38,7 @@ export const CHANGELOG_SCHEMA = {
   required: ["last_update_date", "recent_features"]
 } as const;
 
-export const CHANGELOG_EXPECTED_FIELDS: string[] = [...CHANGELOG_SCHEMA.required];
+export const CHANGELOG_EXPECTED_FIELDS = [...CHANGELOG_SCHEMA.required] as const;
 
 export type ChangelogData = {
   last_update_date?: string;

@@ -66,7 +66,7 @@ export const PRICING_SCHEMA = {
   required: ["tiers", "has_free_tier", "pricing_transparent"]
 } as const;
 
-export const PRICING_EXPECTED_FIELDS: string[] = [...PRICING_SCHEMA.required];
+export const PRICING_EXPECTED_FIELDS = [...PRICING_SCHEMA.required] as const;
 
 export type PricingData = {
   tiers?: Array<{

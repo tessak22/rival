@@ -73,7 +73,7 @@ export const CAREERS_SCHEMA = {
   required: ["open_roles", "total_count", "hiring_trend", "aggregate_tech_stack"]
 } as const;
 
-export const CAREERS_EXPECTED_FIELDS: string[] = [...CAREERS_SCHEMA.required];
+export const CAREERS_EXPECTED_FIELDS = [...CAREERS_SCHEMA.required] as const;
 
 export type CareersData = {
   open_roles?: Array<{

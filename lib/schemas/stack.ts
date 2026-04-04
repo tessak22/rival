@@ -64,7 +64,7 @@ export const STACK_SCHEMA = {
   required: ["languages", "frameworks", "integrations"]
 } as const;
 
-export const STACK_EXPECTED_FIELDS: string[] = [...STACK_SCHEMA.required];
+export const STACK_EXPECTED_FIELDS = [...STACK_SCHEMA.required] as const;
 
 export type StackData = {
   languages?: string[];

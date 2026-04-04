@@ -47,7 +47,7 @@ export const SOCIAL_SCHEMA = {
   required: ["followers", "platform", "recent_post_topics"]
 } as const;
 
-export const SOCIAL_EXPECTED_FIELDS: string[] = [...SOCIAL_SCHEMA.required];
+export const SOCIAL_EXPECTED_FIELDS = [...SOCIAL_SCHEMA.required] as const;
 
 export type SocialData = {
   followers?: number;
