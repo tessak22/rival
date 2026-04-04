@@ -71,6 +71,8 @@ export const DIFF_SCHEMA = {
   required: ["added", "changed", "removed", "summary"]
 } as const;
 
+export const DIFF_EXPECTED_FIELDS: string[] = [...DIFF_SCHEMA.required];
+
 export type GenerateDiffInput = {
   competitorId?: string | null;
   pageId?: string | null;

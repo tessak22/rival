@@ -48,7 +48,7 @@ describe("generateDiff", () => {
   });
 
   it("returns SDK result and calls logger with correct metadata", async () => {
-    const { generateDiff, DIFF_SCHEMA } = await import("@/lib/tabstack/generate");
+    const { generateDiff, DIFF_EXPECTED_FIELDS } = await import("@/lib/tabstack/generate");
     generateJsonMock.mockResolvedValue({ added: ["new feature"], changed: [], removed: [], summary: "Added a thing" });
 
     const result = await generateDiff({
@@ -66,7 +66,7 @@ describe("generateDiff", () => {
         url: "https://example.com/changelog",
         effort: "low",
         nocache: true,
-        expectedFields: [...DIFF_SCHEMA.required]
+        expectedFields: DIFF_EXPECTED_FIELDS
       })
     );
   });
@@ -107,13 +107,13 @@ describe("generateDiff", () => {
   });
 
   it("passes expectedFields derived from DIFF_SCHEMA.required to logger", async () => {
-    const { generateDiff, DIFF_SCHEMA } = await import("@/lib/tabstack/generate");
+    const { generateDiff, DIFF_EXPECTED_FIELDS } = await import("@/lib/tabstack/generate");
     generateJsonMock.mockResolvedValue({ added: [], changed: [], removed: [], summary: "" });
 
     await generateDiff({ url: "https://example.com", previousContent: "prev", effort: "low", nocache: false });
 
     const [, metadata] = loggerCallMock.mock.calls[0] as [unknown, Record<string, unknown>];
-    expect(metadata.expectedFields).toEqual([...DIFF_SCHEMA.required]);
+    expect(metadata.expectedFields).toEqual(DIFF_EXPECTED_FIELDS);
   });
 
   it("propagates SDK errors", async () => {
@@ -142,6 +142,23 @@ describe("generateDiff", () => {
       expect.any(Function),
       expect.objectContaining({ competitorId: "comp-123", pageId: "page-456" })
     );
+  });
+
+  it("passes geo_target through to SDK and logger", async () => {
+    const { generateDiff } = await import("@/lib/tabstack/generate");
+    generateJsonMock.mockResolvedValue({ added: [], changed: [], removed: [], summary: "" });
+
+    await generateDiff({
+      url: "https://example.com",
+      previousContent: "prev",
+      effort: "low",
+      nocache: true,
+      geoTarget: "US"
+    });
+
+    const sdkCall = generateJsonMock.mock.calls[0][0];
+    expect(sdkCall.geo_target).toEqual({ country: "US" });
+    expect(loggerCallMock).toHaveBeenCalledWith(expect.any(Function), expect.objectContaining({ geoTarget: "US" }));
   });
 });
 
@@ -262,10 +279,7 @@ describe("generateBrief", () => {
 
     const sdkCall = generateJsonMock.mock.calls[0][0];
     expect(sdkCall.geo_target).toEqual({ country: "GB" });
-    expect(loggerCallMock).toHaveBeenCalledWith(
-      expect.any(Function),
-      expect.objectContaining({ geoTarget: "GB" })
-    );
+    expect(loggerCallMock).toHaveBeenCalledWith(expect.any(Function), expect.objectContaining({ geoTarget: "GB" }));
   });
 });
 
