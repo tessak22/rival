@@ -60,9 +60,10 @@ describe("generateDiff", () => {
     expect(sdkCall.effort).toBe("max"); // "high" maps to "max"
   });
 
-  it("logs correct expectedFields for quality scoring", async () => {
+  it("logs missingFields when result is incomplete", async () => {
     const { generateDiff } = await import("@/lib/tabstack/generate");
-    generateJsonMock.mockResolvedValue({ added: [], changed: [], removed: [], summary: "" });
+    // Return a result missing "summary" and "removed" to trigger quality scoring
+    generateJsonMock.mockResolvedValue({ added: ["new feature"], changed: [] });
 
     await generateDiff({ url: "https://example.com", previousContent: "prev", effort: "low", nocache: false });
 
@@ -70,7 +71,7 @@ describe("generateDiff", () => {
       expect.objectContaining({
         data: expect.objectContaining({
           endpoint: "generate",
-          missingFields: expect.any(Array)
+          missingFields: expect.arrayContaining(["summary", "removed"])
         })
       })
     );
@@ -161,6 +162,21 @@ describe("generateBrief", () => {
     expect(sdkCall.instructions).toContain("competitive intelligence analyst");
   });
 
+  it("propagates errors and logs status 'error'", async () => {
+    const { generateBrief } = await import("@/lib/tabstack/generate");
+    generateJsonMock.mockRejectedValue(new Error("Brief API failure"));
+
+    await expect(
+      generateBrief({ url: "https://example.com", contextData: "data", effort: "low", nocache: true })
+    ).rejects.toThrow("Brief API failure");
+
+    expect(apiLogCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: "error", rawError: "Error: Brief API failure" })
+      })
+    );
+  });
+
   it("uses BRIEF_EXPECTED_FIELDS for quality scoring", async () => {
     const { generateBrief, BRIEF_EXPECTED_FIELDS } = await import("@/lib/tabstack/generate");
     generateJsonMock.mockResolvedValue({});
@@ -172,6 +188,26 @@ describe("generateBrief", () => {
         data: expect.objectContaining({
           missingFields: expect.arrayContaining(BRIEF_EXPECTED_FIELDS)
         })
+      })
+    );
+  });
+
+  it("passes competitorId and pageId to logger", async () => {
+    const { generateBrief } = await import("@/lib/tabstack/generate");
+    generateJsonMock.mockResolvedValue({});
+
+    await generateBrief({
+      url: "https://competitor.com",
+      contextData: "data",
+      effort: "low",
+      nocache: true,
+      competitorId: "comp-abc",
+      pageId: "page-xyz"
+    });
+
+    expect(apiLogCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ competitorId: "comp-abc", pageId: "page-xyz" })
       })
     );
   });
@@ -194,6 +230,10 @@ describe("generateBrief", () => {
 });
 
 describe("schema exports", () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
   it("DIFF_SCHEMA has required fields", async () => {
     const { DIFF_SCHEMA } = await import("@/lib/tabstack/generate");
     expect(DIFF_SCHEMA.type).toBe("object");

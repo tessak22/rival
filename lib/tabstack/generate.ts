@@ -35,6 +35,8 @@ import type { GenerateJsonParams, GenerateJsonResponse } from "@tabstack/sdk/res
 import { logger, type LoggerCallMetadata, type TabstackEffort } from "@/lib/logger";
 import { getTabstackClient, toGeoTarget, toSdkEffort } from "@/lib/tabstack/client";
 
+const MAX_CONTEXT_LENGTH = 50_000;
+
 // ---------------------------------------------------------------------------
 // Diff summary
 // ---------------------------------------------------------------------------
@@ -88,13 +90,14 @@ export type GenerateDiffInput = {
 export async function generateDiff(input: GenerateDiffInput): Promise<GenerateJsonResponse> {
   const client = getTabstackClient();
   const geoTarget = toGeoTarget(input.geoTarget);
+  const previousContent = input.previousContent.slice(0, MAX_CONTEXT_LENGTH);
 
   const instructions = `Compare these two versions of a competitor page.
 List what was added, changed, or removed in plain English.
 Be concise. Focus on developer-facing changes.
 
 Previous version:
-${input.previousContent}`;
+${previousContent}`;
 
   const requestPayload: GenerateJsonParams = {
     url: input.url,
@@ -115,7 +118,7 @@ ${input.previousContent}`;
     geoTarget: geoTarget?.country,
     isDemo: input.isDemo,
     fallback: input.fallback,
-    expectedFields: ["added", "changed", "removed", "summary"]
+    expectedFields: [...DIFF_SCHEMA.required]
   });
 }
 
@@ -167,14 +170,7 @@ export const BRIEF_SCHEMA = {
   ]
 } as const;
 
-export const BRIEF_EXPECTED_FIELDS = [
-  "positioning_opportunity",
-  "content_opportunity",
-  "product_opportunity",
-  "threat_level",
-  "threat_reasoning",
-  "watch_list"
-];
+export const BRIEF_EXPECTED_FIELDS: string[] = [...BRIEF_SCHEMA.required];
 
 export type GenerateBriefInput = {
   competitorId?: string | null;
@@ -195,6 +191,7 @@ export type GenerateBriefInput = {
 export async function generateBrief(input: GenerateBriefInput): Promise<GenerateJsonResponse> {
   const client = getTabstackClient();
   const geoTarget = toGeoTarget(input.geoTarget);
+  const contextData = input.contextData.slice(0, MAX_CONTEXT_LENGTH);
 
   const instructions = `You are a competitive intelligence analyst. Based on this competitor data,
 produce a structured brief covering:
@@ -206,7 +203,7 @@ produce a structured brief covering:
 Be direct and specific. No generic advice.
 
 Additional competitor context:
-${input.contextData}`;
+${contextData}`;
 
   const requestPayload: GenerateJsonParams = {
     url: input.url,
