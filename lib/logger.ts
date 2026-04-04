@@ -24,7 +24,7 @@
  *   still returns successfully — logging never blocks the primary data path.
  */
 import { prisma } from "@/lib/db/client";
-import { isPlainObject } from "@/lib/utils/types";
+import { isPlainObject, stringifyUnknown } from "@/lib/utils/types";
 
 export type TabstackEndpoint = "extract/json" | "extract/markdown" | "generate" | "automate" | "research";
 
@@ -61,6 +61,7 @@ type LoggedResult = {
   schemaMismatch: boolean;
 };
 
+const MAX_RAW_ERROR_LENGTH = 2_000;
 const NOT_FOUND_PATTERNS = [/\b404\b/i, /not found/i, /page does not exist/i];
 const BLOCKED_PATTERNS = [
   /forbidden/i,
@@ -171,22 +172,6 @@ function qualityFromPayload(payload: unknown, expectedFields: string[]): LoggedR
 
 function detectSignal(patterns: RegExp[], text: string): boolean {
   return patterns.some((pattern) => pattern.test(text));
-}
-
-function stringifyUnknown(value: unknown): string {
-  if (value instanceof Error) {
-    return `${value.name}: ${value.message}`;
-  }
-
-  if (typeof value === "string") {
-    return value;
-  }
-
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return String(value);
-  }
 }
 
 function signalTextFromResult(result: unknown): string {
@@ -313,7 +298,10 @@ export const logger = {
 
       return result;
     } catch (error) {
-      const rawError = stringifyUnknown(error);
+      const raw = stringifyUnknown(error);
+      // Use code-point-safe slice to avoid cutting surrogate pairs mid-sequence.
+      const rawError =
+        raw.length > MAX_RAW_ERROR_LENGTH ? `${[...raw].slice(0, MAX_RAW_ERROR_LENGTH).join("")} [truncated]` : raw;
 
       await safeWriteLog({
         metadata,

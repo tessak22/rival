@@ -6,3 +6,4 @@ package-lock.json
 .github
 docs
 notes-local
+coverage
