@@ -10,6 +10,8 @@ jobs:
   fast-checks:
     name: Format, Lint & TypeScript
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://user:pass@localhost:5432/rival?schema=public
 
     steps:
       - uses: actions/checkout@v4
