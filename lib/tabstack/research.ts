@@ -44,8 +44,7 @@ import type { ResearchEvent } from "@tabstack/sdk/resources/agent";
 
 import { logger, type LoggerCallMetadata, type TabstackMode } from "@/lib/logger";
 import { getTabstackClient } from "@/lib/tabstack/client";
-
-export type { TabstackMode };
+import { isPlainObject } from "@/lib/utils/types";
 
 export type ResearchCitation = {
   claim: string;
@@ -55,6 +54,9 @@ export type ResearchCitation = {
 
 export type ResearchResult = {
   events: ResearchEvent[];
+  // result is unknown intentionally: the SDK synthesis output is an unpredictable
+  // shape (string, object, or structured report) depending on the query. Every
+  // caller must narrow before use. Do not cast without narrowing.
   result: unknown;
   citations: ResearchCitation[];
   error?: string;
@@ -65,58 +67,68 @@ export type ResearchInput = {
   pageId?: string | null;
   query: string;
   mode: TabstackMode;
+  // nocache is optional (not required like in extract/generate) because research is
+  // always on-demand — there is no scheduled scan path that must force-bust the cache.
   nocache?: boolean;
   isDemo?: boolean;
   fallback?: LoggerCallMetadata["fallback"];
 };
 
 function extractCitations(data: unknown): ResearchCitation[] {
-  if (!data || typeof data !== "object") {
+  if (!isPlainObject(data)) {
     return [];
   }
 
-  const payload = data as Record<string, unknown>;
-  const raw = payload["citations"];
+  const raw = data["citations"];
 
   if (!Array.isArray(raw)) {
     return [];
   }
 
   return raw.flatMap((item: unknown): ResearchCitation[] => {
-    if (!item || typeof item !== "object") {
+    if (!isPlainObject(item)) {
       return [];
     }
 
-    const c = item as Record<string, unknown>;
-    if (typeof c["source_url"] !== "string") {
+    if (typeof item["source_url"] !== "string") {
+      return [];
+    }
+
+    // Validate source_url is a safe http/https URL to prevent XSS/SSRF at ingestion
+    try {
+      const parsed = new URL(item["source_url"]);
+      if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+        return [];
+      }
+    } catch {
       return [];
     }
 
     return [
       {
-        claim: typeof c["claim"] === "string" ? c["claim"] : "",
-        source_url: c["source_url"],
-        source_text: typeof c["source_text"] === "string" ? c["source_text"] : undefined
+        claim: typeof item["claim"] === "string" ? item["claim"] : "",
+        source_url: item["source_url"],
+        source_text: typeof item["source_text"] === "string" ? item["source_text"] : undefined
       }
     ];
   });
 }
 
 function extractResult(data: unknown): unknown {
-  if (!data || typeof data !== "object") {
+  if (!isPlainObject(data)) {
     return data ?? null;
   }
 
-  const payload = data as Record<string, unknown>;
-
   // Prefer explicit `result` field; fall back to entire payload minus citations
-  if ("result" in payload) {
-    return payload["result"];
+  if ("result" in data) {
+    return data["result"];
   }
 
-  const { citations: _citations, ...rest } = payload;
+  const { citations: _citations, ...rest } = data;
   return Object.keys(rest).length > 0 ? rest : null;
 }
+
+const MAX_STREAM_EVENTS = 500;
 
 async function collectStream(stream: AsyncIterable<ResearchEvent>): Promise<{
   events: ResearchEvent[];
@@ -128,10 +140,13 @@ async function collectStream(stream: AsyncIterable<ResearchEvent>): Promise<{
   let error: string | undefined;
 
   for await (const event of stream) {
-    events.push(event);
+    if (events.length < MAX_STREAM_EVENTS) {
+      events.push(event);
+    }
     if (event.event === "error") {
       const raw = event.data;
       error = typeof raw === "string" ? raw : JSON.stringify(raw);
+      break; // Stop draining — a failed stream won't produce a valid complete event
     }
   }
 
@@ -176,7 +191,11 @@ export async function runResearch(input: ResearchInput): Promise<ResearchResult>
       mode: input.mode,
       isDemo: input.isDemo,
       fallback: input.fallback,
-      expectedFields: ["result", "citations"]
+      // Quality scoring is skipped for research (expectedFields: []) because the
+      // logger.call wrapper unwraps the ResearchResult envelope via firstObjectPayload()
+      // and would evaluate the inner result (a string/unknown) against these field names,
+      // producing schemaMismatch: true on every successful call.
+      expectedFields: []
     }
   );
 }

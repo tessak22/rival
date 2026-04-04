@@ -163,6 +163,48 @@ describe("runResearch", () => {
     expect(result.citations[1].source_url).toBe("https://y.com");
   });
 
+  it("error event followed by complete — only error is recorded, complete is ignored", async () => {
+    const { runResearch } = await import("@/lib/tabstack/research");
+    researchMock.mockResolvedValue(
+      makeStream([
+        { event: "error", data: "Research failed mid-way" },
+        { event: "complete", data: { result: "should not appear", citations: [] } }
+      ])
+    );
+
+    const result = await runResearch({ query: "q", mode: "balanced" });
+
+    expect(result.error).toBe("Research failed mid-way");
+    // Break on error means complete event is never processed
+    expect(result.result).toBeNull();
+    expect(result.citations).toHaveLength(0);
+  });
+
+  it("omitted nocache sends undefined to SDK (not false)", async () => {
+    const { runResearch } = await import("@/lib/tabstack/research");
+    researchMock.mockResolvedValue(makeStream([{ event: "complete", data: { result: "r", citations: [] } }]));
+
+    await runResearch({ query: "q", mode: "fast" });
+
+    expect(researchMock).toHaveBeenCalledWith(expect.objectContaining({ nocache: undefined }));
+  });
+
+  it("extractResult fallback: returns fields other than citations when no result key", async () => {
+    const { runResearch } = await import("@/lib/tabstack/research");
+    researchMock.mockResolvedValue(
+      makeStream([
+        {
+          event: "complete",
+          data: { summary: "Competitor analysis", confidence: 0.9 } // no "result" key
+        }
+      ])
+    );
+
+    const result = await runResearch({ query: "q", mode: "fast" });
+
+    expect(result.result).toEqual({ summary: "Competitor analysis", confidence: 0.9 });
+  });
+
   it("propagates SDK errors and logs status 'error'", async () => {
     const { runResearch } = await import("@/lib/tabstack/research");
     researchMock.mockRejectedValue(new Error("Network failure"));
