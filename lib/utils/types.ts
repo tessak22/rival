@@ -11,8 +11,20 @@ export function stringifyUnknown(value: unknown): string {
     return value;
   }
 
+  // Use a WeakSet replacer to handle circular references, and wrap in try-catch
+  // to guard against non-serializable values like BigInt (which JSON.stringify
+  // throws for rather than returning null/undefined — so ?? cannot catch it).
   try {
-    return JSON.stringify(value);
+    const seen = new WeakSet();
+    return (
+      JSON.stringify(value, (_key, val) => {
+        if (typeof val === "object" && val !== null) {
+          if (seen.has(val)) return "[Circular]";
+          seen.add(val);
+        }
+        return val as unknown;
+      }) ?? String(value)
+    );
   } catch {
     return String(value);
   }
