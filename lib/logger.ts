@@ -299,9 +299,14 @@ export const logger = {
       return result;
     } catch (error) {
       const raw = stringifyUnknown(error);
-      // Use code-point-safe slice to avoid cutting surrogate pairs mid-sequence.
+      // Spread to code points so both the length check and the slice use the
+      // same unit — avoids inconsistent truncation for strings with multi-byte
+      // characters (emoji, CJK) where .length counts UTF-16 units, not code points.
+      const codePoints = [...raw];
       const rawError =
-        raw.length > MAX_RAW_ERROR_LENGTH ? `${[...raw].slice(0, MAX_RAW_ERROR_LENGTH).join("")} [truncated]` : raw;
+        codePoints.length > MAX_RAW_ERROR_LENGTH
+          ? `${codePoints.slice(0, MAX_RAW_ERROR_LENGTH).join("")} [truncated]`
+          : raw;
 
       await safeWriteLog({
         metadata,
