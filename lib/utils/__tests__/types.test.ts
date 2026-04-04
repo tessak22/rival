@@ -50,7 +50,7 @@ describe("stringifyUnknown", () => {
 
   it("falls back to String() for BigInt (non-serializable by JSON.stringify)", () => {
     // BigInt causes JSON.stringify to throw — the try-catch must handle it
-    expect(stringifyUnknown(42n)).toBe("42");
+    expect(stringifyUnknown(BigInt(42))).toBe("42");
   });
 
   it("falls back to String() for functions (JSON.stringify returns undefined)", () => {
