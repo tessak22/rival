@@ -21,6 +21,9 @@ jobs:
 
       - run: npm ci
 
+      - name: Prisma Generate
+        run: npx prisma generate
+
       - name: Prettier
         run: npm run format:check
 
