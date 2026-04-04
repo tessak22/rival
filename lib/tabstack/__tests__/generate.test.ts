@@ -160,6 +160,21 @@ describe("generateDiff", () => {
     expect(sdkCall.geo_target).toEqual({ country: "US" });
     expect(loggerCallMock).toHaveBeenCalledWith(expect.any(Function), expect.objectContaining({ geoTarget: "US" }));
   });
+
+  it("truncates previousContent exceeding MAX_CONTEXT_LENGTH and warns", async () => {
+    const { generateDiff } = await import("@/lib/tabstack/generate");
+    generateJsonMock.mockResolvedValue({ added: [], changed: [], removed: [], summary: "" });
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const oversized = "x".repeat(50_001);
+
+    await generateDiff({ url: "https://example.com", previousContent: oversized, effort: "low", nocache: true });
+
+    const sdkCall = generateJsonMock.mock.calls[0][0];
+    expect(sdkCall.instructions).not.toContain(oversized); // full oversized string not present
+    expect(sdkCall.instructions).toContain("x".repeat(50_000)); // truncated portion is present
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("truncated"));
+    warnSpy.mockRestore();
+  });
 });
 
 describe("generateBrief", () => {
@@ -280,6 +295,21 @@ describe("generateBrief", () => {
     const sdkCall = generateJsonMock.mock.calls[0][0];
     expect(sdkCall.geo_target).toEqual({ country: "GB" });
     expect(loggerCallMock).toHaveBeenCalledWith(expect.any(Function), expect.objectContaining({ geoTarget: "GB" }));
+  });
+
+  it("truncates contextData exceeding MAX_CONTEXT_LENGTH and warns", async () => {
+    const { generateBrief } = await import("@/lib/tabstack/generate");
+    generateJsonMock.mockResolvedValue({});
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const oversized = "y".repeat(50_001);
+
+    await generateBrief({ url: "https://example.com", contextData: oversized, effort: "low", nocache: true });
+
+    const sdkCall = generateJsonMock.mock.calls[0][0];
+    expect(sdkCall.instructions).not.toContain(oversized); // full oversized string not present
+    expect(sdkCall.instructions).toContain("y".repeat(50_000)); // truncated portion is present
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("truncated"));
+    warnSpy.mockRestore();
   });
 });
 

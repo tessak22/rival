@@ -93,6 +93,11 @@ export async function generateDiff(input: GenerateDiffInput): Promise<GenerateJs
   const client = getTabstackClient();
   const geoTarget = toGeoTarget(input.geoTarget);
   const previousContent = input.previousContent.slice(0, MAX_CONTEXT_LENGTH);
+  if (input.previousContent.length > MAX_CONTEXT_LENGTH) {
+    console.warn(
+      `[generateDiff] previousContent truncated from ${input.previousContent.length} to ${MAX_CONTEXT_LENGTH} chars`
+    );
+  }
 
   const instructions = `Compare these two versions of a competitor page.
 List what was added, changed, or removed in plain English.
@@ -120,7 +125,7 @@ ${previousContent}`;
     geoTarget: geoTarget?.country,
     isDemo: input.isDemo,
     fallback: input.fallback,
-    expectedFields: [...DIFF_SCHEMA.required]
+    expectedFields: DIFF_EXPECTED_FIELDS
   });
 }
 
@@ -194,6 +199,11 @@ export async function generateBrief(input: GenerateBriefInput): Promise<Generate
   const client = getTabstackClient();
   const geoTarget = toGeoTarget(input.geoTarget);
   const contextData = input.contextData.slice(0, MAX_CONTEXT_LENGTH);
+  if (input.contextData.length > MAX_CONTEXT_LENGTH) {
+    console.warn(
+      `[generateBrief] contextData truncated from ${input.contextData.length} to ${MAX_CONTEXT_LENGTH} chars`
+    );
+  }
 
   const instructions = `You are a competitive intelligence analyst. Based on this competitor data,
 produce a structured brief covering:
