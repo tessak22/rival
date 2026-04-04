@@ -56,4 +56,12 @@ export const PROFILE_SCHEMA = {
   required: ["mission_statement", "positioning", "key_leadership"]
 } as const;
 
-export const PROFILE_EXPECTED_FIELDS = ["mission_statement", "positioning", "key_leadership"];
+export const PROFILE_EXPECTED_FIELDS: string[] = [...PROFILE_SCHEMA.required];
+
+export type ProfileData = {
+  mission_statement?: string;
+  positioning?: string;
+  key_leadership?: Array<{ name?: string; title?: string }>;
+  recent_partnerships?: string[];
+  recent_awards_or_recognition?: string[];
+};

@@ -1,14 +1,12 @@
 /**
  * Changelog / release notes extraction schema.
  *
- * Endpoint: /extract/markdown, effort: low
- * Why markdown: changelogs are typically server-rendered text pages. Markdown
- * output preserves structure (headings, lists) and is cheaper than JSON extraction.
+ * Endpoint: /extract/json, effort: low
  * Why low effort: static pages don't need full browser rendering.
  *
- * This schema is used for optional structured extraction when /extract/json is
- * called on changelog pages (e.g. to extract cadence or last update date).
- * For raw content capture, use /extract/markdown without a schema.
+ * Note: for raw content capture, /extract/markdown is preferred (cheaper, preserves
+ * heading/list structure). Use this JSON schema when you need structured fields
+ * (cadence, last_update_date) rather than the full text.
  *
  * Fallback: /automate — for SPAs that load changelog content dynamically.
  *
@@ -40,4 +38,10 @@ export const CHANGELOG_SCHEMA = {
   required: ["last_update_date", "recent_features"]
 } as const;
 
-export const CHANGELOG_EXPECTED_FIELDS = ["last_update_date", "recent_features"];
+export const CHANGELOG_EXPECTED_FIELDS: string[] = [...CHANGELOG_SCHEMA.required];
+
+export type ChangelogData = {
+  last_update_date?: string;
+  recent_features?: string[];
+  cadence?: string;
+};

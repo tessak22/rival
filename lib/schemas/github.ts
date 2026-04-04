@@ -69,4 +69,14 @@ export const GITHUB_SCHEMA = {
   required: ["stars", "forks", "open_issues", "recent_releases"]
 } as const;
 
-export const GITHUB_EXPECTED_FIELDS = ["stars", "forks", "open_issues", "recent_releases"];
+export const GITHUB_EXPECTED_FIELDS: string[] = [...GITHUB_SCHEMA.required];
+
+export type GithubData = {
+  stars?: number;
+  forks?: number;
+  open_issues?: number;
+  open_prs?: number;
+  recent_releases?: Array<{ version?: string; date?: string; title?: string }>;
+  contributors_last_90_days?: number;
+  last_commit_date?: string;
+};

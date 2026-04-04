@@ -66,4 +66,19 @@ export const PRICING_SCHEMA = {
   required: ["tiers", "has_free_tier", "pricing_transparent"]
 } as const;
 
-export const PRICING_EXPECTED_FIELDS = ["tiers", "has_free_tier", "pricing_transparent"];
+export const PRICING_EXPECTED_FIELDS: string[] = [...PRICING_SCHEMA.required];
+
+export type PricingData = {
+  tiers?: Array<{
+    name?: string;
+    price?: string;
+    billing_period?: string;
+    features?: string[];
+    per_unit?: string;
+    cta?: string;
+    is_self_serve?: boolean;
+  }>;
+  has_free_tier?: boolean;
+  free_tier_limits?: string;
+  pricing_transparent?: boolean;
+};

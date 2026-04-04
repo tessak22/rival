@@ -20,7 +20,7 @@
 export const DOCS_SCHEMA = {
   type: "object",
   properties: {
-    last_updated: {
+    last_update_date: {
       type: "string",
       description: "Date the docs were last updated if shown. Null if not visible."
     },
@@ -45,4 +45,12 @@ export const DOCS_SCHEMA = {
   required: ["sections", "has_api_reference"]
 } as const;
 
-export const DOCS_EXPECTED_FIELDS = ["sections", "has_api_reference"];
+export const DOCS_EXPECTED_FIELDS: string[] = [...DOCS_SCHEMA.required];
+
+export type DocsData = {
+  last_update_date?: string;
+  sections?: string[];
+  has_api_reference?: boolean;
+  has_sdk_docs?: boolean;
+  has_tutorials?: boolean;
+};
