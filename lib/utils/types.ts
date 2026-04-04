@@ -15,11 +15,13 @@ export function stringifyUnknown(value: unknown): string {
   // the throw — this preserves full object content instead of falling back to
   // the unhelpful "[object Object]" that String() produces for complex values.
   const seen = new WeakSet();
-  return JSON.stringify(value, (_key, val) => {
-    if (typeof val === "object" && val !== null) {
-      if (seen.has(val)) return "[Circular]";
-      seen.add(val);
-    }
-    return val as unknown;
-  }) ?? String(value);
+  return (
+    JSON.stringify(value, (_key, val) => {
+      if (typeof val === "object" && val !== null) {
+        if (seen.has(val)) return "[Circular]";
+        seen.add(val);
+      }
+      return val as unknown;
+    }) ?? String(value)
+  );
 }
