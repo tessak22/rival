@@ -205,6 +205,31 @@ describe("runResearch", () => {
     expect(result.result).toEqual({ summary: "Competitor analysis", confidence: 0.9 });
   });
 
+  it("caps intermediate events at maxStreamEvents but always captures complete", async () => {
+    const { runResearch } = await import("@/lib/tabstack/research");
+    // 5 progress events + 1 complete — cap at 3 intermediate events
+    const events: ResearchEvent[] = [
+      ...Array.from({ length: 5 }, (_, i) => ({ event: "progress", data: { step: i } }) as ResearchEvent),
+      { event: "complete", data: { result: "final answer", citations: [] } }
+    ];
+    researchMock.mockResolvedValue(makeStream(events));
+
+    const result = await runResearch({ query: "q", mode: "fast", maxStreamEvents: 3 });
+
+    // Only 3 intermediate events buffered, but complete is always captured
+    expect(result.events).toHaveLength(4); // 3 progress + 1 complete
+    expect(result.result).toBe("final answer");
+  });
+
+  it("uses default cap of 500 when maxStreamEvents is omitted", async () => {
+    const { runResearch } = await import("@/lib/tabstack/research");
+    researchMock.mockResolvedValue(makeStream([{ event: "complete", data: { result: "r", citations: [] } }]));
+
+    const result = await runResearch({ query: "q", mode: "fast" });
+
+    expect(result.result).toBe("r");
+  });
+
   it("propagates SDK errors and logs status 'error'", async () => {
     const { runResearch } = await import("@/lib/tabstack/research");
     researchMock.mockRejectedValue(new Error("Network failure"));

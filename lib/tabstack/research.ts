@@ -22,6 +22,9 @@
  * - `query`: the research question in natural language.
  * - `mode`: "fast" (10-30s, lightweight) or "balanced" (1-2min, full recursive loop).
  * - `nocache`: skip cache for fresh results.
+ * - `maxStreamEvents`: max intermediate events to buffer in memory (default 500).
+ *   Terminal events (`complete` / `error`) are always captured regardless of this limit,
+ *   so the result is never lost even if a long balanced run exceeds the cap.
  *
  * Important SDK difference from other endpoints:
  * - NO `url` param — research searches the open web based on the query.
@@ -70,6 +73,7 @@ export type ResearchInput = {
   // nocache is optional (not required like in extract/generate) because research is
   // always on-demand — there is no scheduled scan path that must force-bust the cache.
   nocache?: boolean;
+  maxStreamEvents?: number;
   isDemo?: boolean;
   fallback?: LoggerCallMetadata["fallback"];
 };
@@ -128,9 +132,12 @@ function extractResult(data: unknown): unknown {
   return Object.keys(rest).length > 0 ? rest : null;
 }
 
-const MAX_STREAM_EVENTS = 500;
+const DEFAULT_MAX_STREAM_EVENTS = 500;
 
-async function collectStream(stream: AsyncIterable<ResearchEvent>): Promise<{
+async function collectStream(
+  stream: AsyncIterable<ResearchEvent>,
+  maxStreamEvents: number
+): Promise<{
   events: ResearchEvent[];
   result: unknown;
   citations: ResearchCitation[];
@@ -140,7 +147,10 @@ async function collectStream(stream: AsyncIterable<ResearchEvent>): Promise<{
   let error: string | undefined;
 
   for await (const event of stream) {
-    if (events.length < MAX_STREAM_EVENTS) {
+    const isTerminal = event.event === "complete" || event.event === "error";
+    // Always capture terminal events — they carry the result and must not be dropped.
+    // Cap intermediate progress events to bound memory on long balanced-mode runs.
+    if (isTerminal || events.length < maxStreamEvents) {
       events.push(event);
     }
     if (event.event === "error") {
@@ -178,7 +188,10 @@ export async function runResearch(input: ResearchInput): Promise<ResearchResult>
         nocache: input.nocache
       });
 
-      const { events, result, citations, error } = await collectStream(stream);
+      const { events, result, citations, error } = await collectStream(
+        stream,
+        input.maxStreamEvents ?? DEFAULT_MAX_STREAM_EVENTS
+      );
       return { events, result, citations, error } satisfies ResearchResult;
     },
     {
