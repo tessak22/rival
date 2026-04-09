@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db/client";
 import { getApiInsights } from "@/lib/db/api-logs";
+import { InsightsFilters } from "@/components/insights/InsightsFilters";
 
 type InsightsPageProps = {
   searchParams: Promise<{
@@ -24,10 +25,17 @@ function safeText(value: unknown): string {
 
 export default async function InsightsPage({ searchParams }: InsightsPageProps) {
   const params = await searchParams;
-  const competitors = await prisma.competitor.findMany({
-    orderBy: { name: "asc" },
-    select: { id: true, name: true }
-  });
+  const [competitors, endpointRows] = await Promise.all([
+    prisma.competitor.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true }
+    }),
+    prisma.apiLog.findMany({
+      distinct: ["endpoint"],
+      orderBy: { endpoint: "asc" },
+      select: { endpoint: true }
+    })
+  ]);
 
   const filters = {
     endpoint: params.endpoint || undefined,
@@ -49,49 +57,30 @@ export default async function InsightsPage({ searchParams }: InsightsPageProps) 
         <header className="panel-header">
           <h2>Filters</h2>
         </header>
-        <form className="filters" method="get">
-          <label>
-            Endpoint
-            <select name="endpoint" defaultValue={params.endpoint ?? ""}>
-              <option value="">All</option>
-              <option value="extract/json">extract/json</option>
-              <option value="extract/markdown">extract/markdown</option>
-              <option value="generate">generate</option>
-              <option value="automate">automate</option>
-              <option value="research">research</option>
-            </select>
-          </label>
-          <label>
-            Competitor
-            <select name="competitorId" defaultValue={params.competitorId ?? ""}>
-              <option value="">All</option>
-              {competitors.map((competitor) => (
-                <option key={competitor.id} value={competitor.id}>
-                  {competitor.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Date from
-            <input type="date" name="dateFrom" defaultValue={params.dateFrom ?? ""} />
-          </label>
-          <label>
-            Date to
-            <input type="date" name="dateTo" defaultValue={params.dateTo ?? ""} />
-          </label>
-          <button type="submit">Apply filters</button>
-        </form>
+        <InsightsFilters
+          endpoints={endpointRows.map((row) => row.endpoint)}
+          competitors={competitors}
+          initial={{
+            endpoint: params.endpoint,
+            competitorId: params.competitorId,
+            dateFrom: params.dateFrom,
+            dateTo: params.dateTo
+          }}
+        />
       </section>
 
       <section className="panel">
         <header className="panel-header">
           <h2>Success Rate</h2>
         </header>
-        <p>
-          {Math.round(insights.successRate.successRate * 100)}% ({insights.successRate.successCalls}/
-          {insights.successRate.totalCalls})
-        </p>
+        {insights.successRate.totalCalls === 0 ? (
+          <p className="muted">No data yet.</p>
+        ) : (
+          <p>
+            {Math.round(insights.successRate.successRate * 100)}% ({insights.successRate.successCalls}/
+            {insights.successRate.totalCalls})
+          </p>
+        )}
       </section>
 
       <section className="panel">
@@ -108,8 +97,8 @@ export default async function InsightsPage({ searchParams }: InsightsPageProps) 
               </tr>
             </thead>
             <tbody>
-              {insights.missingFields.slice(0, 25).map((row) => (
-                <tr key={`${row.pageType}-${row.field}`}>
+              {insights.missingFields.slice(0, 25).map((row, index) => (
+                <tr key={`${row.pageType}-${row.field}-${index}`}>
                   <td>{safeText(row.pageType)}</td>
                   <td>{safeText(row.field)}</td>
                   <td>{row.missingCount}</td>
