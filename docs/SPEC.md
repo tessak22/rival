@@ -23,7 +23,7 @@ Rival exercises every Tabstack endpoint and API feature. This is intentional —
 
 | Endpoint | Used For |
 |---|---|
-| `/extract/markdown` | Changelogs, docs, release notes |
+| `/extract/markdown` | Changelogs, release notes |
 | `/extract/json` | Pricing, careers, GitHub, social, profiles |
 | `/generate` | Diff summaries between scans |
 | `/automate` | JS-heavy pages, fallback, demo default |
