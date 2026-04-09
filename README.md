@@ -37,6 +37,8 @@ Required env vars:
 
 Recommended env vars:
 - `CRON_SECRET`
+- `INTERNAL_API_KEY` (required for protected internal API routes like `/api/scan` and `/api/brief`)
+- `RESEND_API_KEY` (if email notifications enabled)
 - `SLACK_WEBHOOK_URL` (if notifications enabled)
 
 3. Generate Prisma client and apply migrations:
@@ -49,6 +51,7 @@ npx prisma migrate deploy
 ```bash
 npm run db:seed
 ```
+`db:seed` is idempotent for competitors (upserts by `slug`) and resets/recreates configured pages for each competitor.
 
 5. Start app:
 ```bash
@@ -58,6 +61,16 @@ npm run dev
 ## Config (`rivals.config.json`)
 
 Rival reads competitor definitions from `rivals.config.json`.
+Supported `type` values for pages:
+- `pricing`
+- `careers`
+- `changelog`
+- `docs`
+- `github`
+- `social`
+- `profile`
+- `stack`
+- `custom`
 
 Minimal example:
 
@@ -228,4 +241,3 @@ See `CONTRIBUTING.md` for additional workflow expectations.
 ## License
 
 MIT
-
