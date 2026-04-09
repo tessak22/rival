@@ -15,7 +15,13 @@ function parseSseChunk(chunk: string): Array<{ event: string; data: unknown }> {
     const lines = block.split("\n");
     const eventLine = lines.find((line) => line.startsWith("event:"));
     const dataLine = lines.find((line) => line.startsWith("data:"));
-    if (!eventLine || !dataLine) continue;
+    if (!eventLine || !dataLine) {
+      parsed.push({
+        event: "scan:error",
+        data: { error: "Received malformed stream event from server." }
+      });
+      continue;
+    }
 
     const event = eventLine.slice("event:".length).trim();
     const raw = dataLine.slice("data:".length).trim();
@@ -72,6 +78,16 @@ export function DemoClient() {
           }
         }
       }
+
+      if (buffer.trim()) {
+        for (const event of parseSseChunk(buffer)) {
+          setEvents((prev) => [...prev, { id: `${Date.now()}-${Math.random()}`, event: event.event, data: event.data }]);
+          if (event.event === "scan:error") {
+            const payload = event.data as { error?: string };
+            setError(payload?.error ?? "Demo scan failed");
+          }
+        }
+      }
     } finally {
       setIsRunning(false);
     }
@@ -117,4 +133,3 @@ export function DemoClient() {
     </div>
   );
 }
-

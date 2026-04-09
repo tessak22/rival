@@ -39,6 +39,23 @@ function getClientIp(request: NextRequest): string {
   return request.headers.get("x-real-ip") ?? "unknown";
 }
 
+function isPrivateHost(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  if (host === "localhost" || host === "::1" || host.endsWith(".local")) return true;
+  if (host === "0.0.0.0") return true;
+  if (/^127\./.test(host)) return true;
+  if (/^10\./.test(host)) return true;
+  if (/^192\.168\./.test(host)) return true;
+  if (/^169\.254\./.test(host)) return true;
+  if (host.startsWith("fe80:") || host.startsWith("fc") || host.startsWith("fd")) return true;
+  const match172 = /^172\.(\d{1,3})\./.exec(host);
+  if (match172) {
+    const segment = Number(match172[1]);
+    if (segment >= 16 && segment <= 31) return true;
+  }
+  return false;
+}
+
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request);
   const hashedIp = ipHash(ip);
@@ -49,98 +66,116 @@ export async function POST(request: NextRequest) {
       headers: { "content-type": "application/json" }
     });
   }
+  activeScans.add(hashedIp);
+  let lockOwnedByStream = false;
 
-  const dayStart = new Date();
-  dayStart.setHours(0, 0, 0, 0);
-
-  const scansToday = await prisma.demoScan.count({
-    where: { ipHash: hashedIp, scannedAt: { gte: dayStart } }
-  });
-
-  if (scansToday >= MAX_SCANS_PER_DAY) {
-    return new Response(JSON.stringify({ error: "Demo rate limit exceeded (3 scans/day)." }), {
-      status: 429,
-      headers: { "content-type": "application/json" }
-    });
-  }
-
-  let rawUrl: string;
   try {
-    const body = (await request.json()) as { url?: string };
-    rawUrl = body.url?.trim() ?? "";
-  } catch {
-    return new Response(JSON.stringify({ error: "Invalid JSON body." }), {
-      status: 400,
-      headers: { "content-type": "application/json" }
+    const dayStart = new Date();
+    dayStart.setHours(0, 0, 0, 0);
+
+    const scansToday = await prisma.demoScan.count({
+      where: { ipHash: hashedIp, scannedAt: { gte: dayStart } }
     });
-  }
 
-  if (!rawUrl) {
-    return new Response(JSON.stringify({ error: "url is required" }), {
-      status: 400,
-      headers: { "content-type": "application/json" }
-    });
-  }
+    if (scansToday >= MAX_SCANS_PER_DAY) {
+      return new Response(JSON.stringify({ error: "Demo rate limit exceeded (3 scans/day)." }), {
+        status: 429,
+        headers: { "content-type": "application/json" }
+      });
+    }
 
-  let parsedUrl: URL;
-  try {
-    parsedUrl = new URL(rawUrl);
-  } catch {
-    return new Response(JSON.stringify({ error: "Invalid URL" }), {
-      status: 400,
-      headers: { "content-type": "application/json" }
-    });
-  }
+    let rawUrl: string;
+    try {
+      const body = (await request.json()) as { url?: string };
+      rawUrl = body.url?.trim() ?? "";
+    } catch {
+      return new Response(JSON.stringify({ error: "Invalid JSON body." }), {
+        status: 400,
+        headers: { "content-type": "application/json" }
+      });
+    }
 
-  const type = inferPageType(parsedUrl.toString());
+    if (!rawUrl) {
+      return new Response(JSON.stringify({ error: "url is required" }), {
+        status: 400,
+        headers: { "content-type": "application/json" }
+      });
+    }
 
-  const stream = new ReadableStream({
-    start: async (controller) => {
-      activeScans.add(hashedIp);
-      try {
-        controller.enqueue(sse("scan:started", { url: parsedUrl.toString() }));
-        controller.enqueue(sse("scan:endpoint", { type }));
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(rawUrl);
+    } catch {
+      return new Response(JSON.stringify({ error: "Invalid URL" }), {
+        status: 400,
+        headers: { "content-type": "application/json" }
+      });
+    }
 
-        const result = await scanPage({
-          url: parsedUrl.toString(),
-          type,
-          isDemo: true,
-          customTask: type === "custom" ? "Extract high-signal competitive intelligence from this page." : undefined
-        });
+    if ((parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") || isPrivateHost(parsedUrl.hostname)) {
+      return new Response(JSON.stringify({ error: "URL is not allowed for demo scanning." }), {
+        status: 400,
+        headers: { "content-type": "application/json" }
+      });
+    }
 
-        await prisma.demoScan.create({
-          data: {
-            ipHash: hashedIp
-          }
-        });
+    const type = inferPageType(parsedUrl.toString());
+    lockOwnedByStream = true;
 
-        controller.enqueue(
-          sse("scan:complete", {
-            endpointUsed: result.endpointUsed,
-            usedFallback: result.usedFallback,
-            diffSummary: result.diffSummary,
-            hasChanges: result.hasChanges,
-            result: result.rawResult
-          })
-        );
-      } catch (error) {
-        controller.enqueue(
-          sse("scan:error", {
-            error: error instanceof Error ? error.message : "Demo scan failed"
-          })
-        );
-      } finally {
+    const stream = new ReadableStream({
+      start: async (controller) => {
+        try {
+          controller.enqueue(sse("scan:started", { url: parsedUrl.toString() }));
+          controller.enqueue(sse("scan:endpoint", { type }));
+
+          const result = await scanPage({
+            url: parsedUrl.toString(),
+            type,
+            isDemo: true,
+            customTask: type === "custom" ? "Extract high-signal competitive intelligence from this page." : undefined
+          });
+
+          await prisma.demoScan.create({
+            data: {
+              ipHash: hashedIp
+            }
+          });
+
+          controller.enqueue(
+            sse("scan:complete", {
+              endpointUsed: result.endpointUsed,
+              usedFallback: result.usedFallback,
+              diffSummary: result.diffSummary,
+              hasChanges: result.hasChanges,
+              result: result.rawResult
+            })
+          );
+        } catch (error) {
+          controller.enqueue(
+            sse("scan:error", {
+              error: error instanceof Error ? error.message : "Demo scan failed"
+            })
+          );
+        } finally {
+          activeScans.delete(hashedIp);
+          controller.close();
+        }
+      },
+      cancel() {
         activeScans.delete(hashedIp);
-        controller.close();
       }
-    }
-  });
+    });
 
-  return new Response(stream, {
-    headers: {
-      "content-type": "text/event-stream",
-      "cache-control": "no-cache, no-transform",
-      connection: "keep-alive"
+    return new Response(stream, {
+      headers: {
+        "content-type": "text/event-stream",
+        "cache-control": "no-cache, no-transform",
+        connection: "keep-alive"
+      }
+    });
+  } finally {
+    if (!lockOwnedByStream) {
+      activeScans.delete(hashedIp);
     }
-  });
+  }
 }
