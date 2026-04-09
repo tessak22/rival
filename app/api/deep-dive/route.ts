@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/db/client";
 import { runResearch } from "@/lib/tabstack/research";
@@ -22,6 +23,15 @@ function buildResearchQuery(name: string): string {
 - Hiring signals and org changes
 - Funding, acquisition, or partnership signals
 Provide inline citations for every claim.`;
+}
+
+function toJsonValue(value: unknown): Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput {
+  if (value === null || value === undefined) return Prisma.JsonNull;
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return value;
+  if (Array.isArray(value) || (typeof value === "object" && value !== null)) {
+    return value as Prisma.InputJsonValue;
+  }
+  return String(value);
 }
 
 export async function POST(request: NextRequest) {
@@ -69,8 +79,8 @@ export async function POST(request: NextRequest) {
             competitorId: competitor.id,
             mode,
             query,
-            result: result.result as never,
-            citations: result.citations as never
+            result: toJsonValue(result.result),
+            citations: toJsonValue(result.citations)
           }
         });
 

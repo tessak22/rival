@@ -15,6 +15,12 @@ type LogsTableProps = {
 };
 
 export function LogsTable({ logs }: LogsTableProps) {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "UTC"
+  });
+
   if (logs.length === 0) {
     return <p className="muted">No API logs captured yet.</p>;
   }
@@ -36,7 +42,7 @@ export function LogsTable({ logs }: LogsTableProps) {
         <tbody>
           {logs.map((log) => (
             <tr key={log.id} className={log.fallbackTriggered ? "log-row log-row--fallback" : "log-row"}>
-              <td>{log.calledAt.toLocaleString()}</td>
+              <td>{formatter.format(log.calledAt)} UTC</td>
               <td>{log.pageLabel}</td>
               <td>{log.endpoint}</td>
               <td>{log.status}</td>
@@ -50,4 +56,3 @@ export function LogsTable({ logs }: LogsTableProps) {
     </div>
   );
 }
-
