@@ -14,9 +14,7 @@ function computeSchemaHealthByType(
   const buckets = new Map<string, number[]>();
   for (const log of logs) {
     const score = log.resultQuality === "full" ? 1 : log.resultQuality === "partial" ? 0.5 : 0;
-    const arr = buckets.get(log.pageType) ?? [];
-    arr.push(score);
-    buckets.set(log.pageType, arr);
+    buckets.set(log.pageType, [...(buckets.get(log.pageType) ?? []), score]);
   }
 
   return [...buckets.entries()]
@@ -33,6 +31,7 @@ function sanitizeText(value: unknown): string {
 }
 
 export default async function CompetitorDetailPage({ params }: PageProps) {
+  // TODO(auth): protect competitor detail routes before exposing a public deployment.
   const { slug } = params;
 
   const competitor = await prisma.competitor.findUnique({
@@ -126,6 +125,7 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
         <header className="panel-header">
           <h2>Logs</h2>
         </header>
+        <p className="muted">Showing latest 200 log entries.</p>
         <LogsTable
           logs={logs.map((log) => ({
             id: log.id,
