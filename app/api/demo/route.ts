@@ -6,7 +6,6 @@ import { prisma } from "@/lib/db/client";
 import { scanPage } from "@/lib/scanner";
 
 const MAX_SCANS_PER_DAY = 3;
-const activeScans = new Set<string>();
 const encoder = new TextEncoder();
 
 function sse(event: string, data: unknown): Uint8Array {
@@ -15,6 +14,11 @@ function sse(event: string, data: unknown): Uint8Array {
 
 function ipHash(ip: string): string {
   return createHash("sha256").update(ip).digest("hex");
+}
+
+function toAdvisoryLockKey(hash: string): bigint {
+  const head = hash.slice(0, 16);
+  return BigInt.asIntN(63, BigInt(`0x${head}`));
 }
 
 function inferPageType(rawUrl: string): string {
@@ -59,15 +63,23 @@ function isPrivateHost(hostname: string): boolean {
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request);
   const hashedIp = ipHash(ip);
+  const lockKey = toAdvisoryLockKey(hashedIp);
 
-  if (activeScans.has(hashedIp)) {
+  const [{ pg_try_advisory_lock: lockAcquired }] = await prisma.$queryRaw<Array<{ pg_try_advisory_lock: boolean }>>`
+    SELECT pg_try_advisory_lock(${lockKey})
+  `;
+
+  if (!lockAcquired) {
     return new Response(JSON.stringify({ error: "A demo scan is already in progress for this IP." }), {
       status: 429,
       headers: { "content-type": "application/json" }
     });
   }
-  activeScans.add(hashedIp);
   let lockOwnedByStream = false;
+
+  const releaseLock = async () => {
+    await prisma.$executeRaw`SELECT pg_advisory_unlock(${lockKey})`;
+  };
 
   try {
     const dayStart = new Date();
@@ -157,12 +169,12 @@ export async function POST(request: NextRequest) {
             })
           );
         } finally {
-          activeScans.delete(hashedIp);
+          await releaseLock();
           controller.close();
         }
       },
       cancel() {
-        activeScans.delete(hashedIp);
+        void releaseLock();
       }
     });
 
@@ -175,7 +187,7 @@ export async function POST(request: NextRequest) {
     });
   } finally {
     if (!lockOwnedByStream) {
-      activeScans.delete(hashedIp);
+      await releaseLock();
     }
   }
 }

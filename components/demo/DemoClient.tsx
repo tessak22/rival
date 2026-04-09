@@ -1,38 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { parseSseChunk } from "@/lib/utils/sse";
 
 type DemoEvent = {
   id: string;
   event: string;
   data: unknown;
 };
-
-function parseSseChunk(chunk: string): Array<{ event: string; data: unknown }> {
-  const blocks = chunk.split("\n\n").filter(Boolean);
-  const parsed: Array<{ event: string; data: unknown }> = [];
-  for (const block of blocks) {
-    const lines = block.split("\n");
-    const eventLine = lines.find((line) => line.startsWith("event:"));
-    const dataLine = lines.find((line) => line.startsWith("data:"));
-    if (!eventLine || !dataLine) {
-      parsed.push({
-        event: "scan:error",
-        data: { error: "Received malformed stream event from server." }
-      });
-      continue;
-    }
-
-    const event = eventLine.slice("event:".length).trim();
-    const raw = dataLine.slice("data:".length).trim();
-    try {
-      parsed.push({ event, data: JSON.parse(raw) });
-    } catch {
-      parsed.push({ event, data: raw });
-    }
-  }
-  return parsed;
-}
 
 export function DemoClient() {
   const [url, setUrl] = useState("");
@@ -45,23 +20,22 @@ export function DemoClient() {
     setError(null);
     setIsRunning(true);
 
-    const response = await fetch("/api/demo", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ url })
-    });
-
-    if (!response.ok || !response.body) {
-      setError(`Request failed (${response.status})`);
-      setIsRunning(false);
-      return;
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-
     try {
+      const response = await fetch("/api/demo", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ url })
+      });
+
+      if (!response.ok || !response.body) {
+        setError(`Request failed (${response.status})`);
+        return;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -88,6 +62,8 @@ export function DemoClient() {
           }
         }
       }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Demo request failed");
     } finally {
       setIsRunning(false);
     }
