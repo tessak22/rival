@@ -32,7 +32,6 @@ export default tseslint.config(
       "next.config.*", // Next.js config (framework-generated patterns)
       "coverage/**",
       "notes-local/**",
-      "scripts/**",
       // vitest.config.ts is intentionally linted via tsc
     ]
   }
