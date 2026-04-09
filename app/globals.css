@@ -259,6 +259,58 @@ body {
   background: rgba(173, 126, 45, 0.08);
 }
 
+.filters {
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  align-items: end;
+}
+
+.filters label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.filters select,
+.filters input,
+.filters button {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #25354b;
+  background: #0f1824;
+  color: var(--text);
+  padding: 0.5rem 0.6rem;
+}
+
+.filters button {
+  cursor: pointer;
+  border-color: #3a5e89;
+}
+
+.insights-grid {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.stat-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.stat-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  border-bottom: 1px solid #203147;
+  padding-bottom: 0.4rem;
+}
+
 @media (max-width: 900px) {
   .matrix {
     grid-template-columns: repeat(2, minmax(0, 1fr));
