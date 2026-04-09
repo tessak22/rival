@@ -143,13 +143,15 @@ describe("scanPage", () => {
       competitorId: "cmp_1",
       pageId: "page_1",
       url: "https://example.com/changelog",
-      type: "changelog"
+      type: "changelog",
+      geoTarget: "CA"
     });
 
     expect(extractMarkdownMock).toHaveBeenCalledWith(
       expect.objectContaining({
         effort: "low",
-        nocache: true
+        nocache: true,
+        geoTarget: "CA"
       })
     );
     expect(generateDiffMock).toHaveBeenCalledWith(
@@ -203,5 +205,54 @@ describe("scanPage", () => {
 
     expect(scanCreateMock).not.toHaveBeenCalled();
     expect(result.scanId).toBeNull();
+  });
+
+  it("falls back to automate when extract/json returns an ambiguous envelope", async () => {
+    extractJsonMock.mockResolvedValueOnce({
+      data: { tiers: [{ name: "Pro" }] },
+      result: { tiers: [{ name: "Starter" }] }
+    });
+    const { scanPage } = await import("@/lib/scanner");
+
+    const result = await scanPage({
+      pageId: "page_1",
+      url: "https://example.com/pricing",
+      type: "pricing"
+    });
+
+    expect(result.endpointUsed).toBe("automate");
+    expect(result.usedFallback).toBe(true);
+    expect(automateExtractMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fallback: {
+          triggered: true,
+          reason: "extract/json failed",
+          endpoint: "automate"
+        }
+      })
+    );
+  });
+
+  it("does not recurse indefinitely when checking deeply nested payloads", async () => {
+    const nested: Record<string, unknown> = {};
+    let cursor: Record<string, unknown> = nested;
+    for (let index = 0; index < 30; index += 1) {
+      cursor["next"] = {};
+      cursor = cursor["next"] as Record<string, unknown>;
+    }
+    cursor["leaf"] = "";
+
+    extractJsonMock.mockResolvedValueOnce({ data: nested });
+    const { scanPage } = await import("@/lib/scanner");
+
+    const result = await scanPage({
+      pageId: "page_1",
+      url: "https://example.com/pricing",
+      type: "pricing"
+    });
+
+    expect(result.endpointUsed).toBe("extract/json");
+    expect(result.usedFallback).toBe(false);
+    expect(automateExtractMock).not.toHaveBeenCalled();
   });
 });
