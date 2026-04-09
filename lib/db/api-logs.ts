@@ -70,6 +70,9 @@ export type ErrorSummary = {
   timeline: Array<{ day: string; count: number }>;
 };
 
+const INSIGHTS_LOG_LIMIT = 10_000;
+const MISSING_FIELD_KEY_SEPARATOR = "\u0000";
+
 function buildInsightsWhere(filters: InsightsFilters): Prisma.ApiLogWhereInput {
   return {
     competitorId: filters.competitorId,
@@ -108,7 +111,8 @@ async function loadLogs(filters: InsightsFilters): Promise<ApiLogRecord[]> {
         }
       }
     },
-    orderBy: { calledAt: "desc" }
+    orderBy: { calledAt: "desc" },
+    take: INSIGHTS_LOG_LIMIT
   });
 }
 
@@ -143,14 +147,16 @@ export async function getMissingFieldsByPageType(filters: InsightsFilters = {}):
   for (const log of logs) {
     const pageType = log.page?.type ?? "unknown";
     for (const field of log.missingFields) {
-      const key = `${pageType}::${field}`;
+      const key = `${pageType}${MISSING_FIELD_KEY_SEPARATOR}${field}`;
       counts.set(key, (counts.get(key) ?? 0) + 1);
     }
   }
 
   return [...counts.entries()]
     .map(([key, missingCount]) => {
-      const [pageType, field] = key.split("::");
+      const separatorIndex = key.indexOf(MISSING_FIELD_KEY_SEPARATOR);
+      const pageType = separatorIndex === -1 ? key : key.slice(0, separatorIndex);
+      const field = separatorIndex === -1 ? "" : key.slice(separatorIndex + MISSING_FIELD_KEY_SEPARATOR.length);
       return { pageType, field, missingCount };
     })
     .sort((a, b) => b.missingCount - a.missingCount);
@@ -198,6 +204,7 @@ export async function getFallbackFrequencyByPage(filters: InsightsFilters = {}):
 
 export async function getEffortDistribution(filters: InsightsFilters = {}): Promise<EffortDistributionSummary[]> {
   const logs = await loadLogs(filters);
+  // Known Tabstack effort values are low/high. Unknown captures null and any future SDK values.
   const counts = { low: 0, high: 0, unknown: 0 };
 
   for (const log of logs) {
@@ -306,4 +313,3 @@ export async function getApiInsights(filters: InsightsFilters = {}) {
     topErrors
   };
 }
-

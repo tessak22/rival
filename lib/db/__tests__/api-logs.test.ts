@@ -155,9 +155,107 @@ describe("api-log insights aggregations", () => {
             gte: new Date("2026-04-01T00:00:00.000Z"),
             lte: new Date("2026-04-30T23:59:59.000Z")
           }
-        })
+        }),
+        take: 10_000
       })
     );
   });
-});
 
+  it("handles missing field names containing :: safely", async () => {
+    apiLogFindManyMock.mockResolvedValueOnce([
+      {
+        id: "a",
+        status: "success",
+        endpoint: "extract/json",
+        effort: "low",
+        geoTarget: null,
+        missingFields: ["features::beta"],
+        fallbackTriggered: false,
+        contentBlocked: false,
+        rawError: null,
+        url: "https://example.com",
+        calledAt: new Date("2026-04-01T00:00:00.000Z"),
+        pageId: "page_1",
+        page: { type: "docs::api", label: "Docs", url: "https://example.com/docs" }
+      }
+    ]);
+
+    const { getMissingFieldsByPageType } = await import("@/lib/db/api-logs");
+    const rows = await getMissingFieldsByPageType();
+    expect(rows[0]).toEqual({
+      pageType: "docs::api",
+      field: "features::beta",
+      missingCount: 1
+    });
+  });
+
+  it("returns geo-target segment when all calls are geo-targeted", async () => {
+    apiLogFindManyMock.mockResolvedValueOnce([
+      {
+        id: "geo-only",
+        status: "success",
+        endpoint: "extract/json",
+        effort: "low",
+        geoTarget: "US",
+        missingFields: [],
+        fallbackTriggered: false,
+        contentBlocked: false,
+        rawError: null,
+        url: "https://example.com",
+        calledAt: new Date("2026-04-01T00:00:00.000Z"),
+        pageId: "page_1",
+        page: { type: "pricing", label: "Pricing", url: "https://example.com/pricing" }
+      }
+    ]);
+
+    const { getGeoTargetComparisons } = await import("@/lib/db/api-logs");
+    const rows = await getGeoTargetComparisons();
+    expect(rows).toContainEqual({
+      segment: "geo_targeted",
+      totalCalls: 1,
+      successCalls: 1,
+      successRate: 1
+    });
+    expect(rows).toContainEqual({
+      segment: "default",
+      totalCalls: 0,
+      successCalls: 0,
+      successRate: 0
+    });
+  });
+
+  it("returns default segment when no calls are geo-targeted", async () => {
+    apiLogFindManyMock.mockResolvedValueOnce([
+      {
+        id: "default-only",
+        status: "error",
+        endpoint: "extract/json",
+        effort: "low",
+        geoTarget: null,
+        missingFields: [],
+        fallbackTriggered: false,
+        contentBlocked: false,
+        rawError: "timeout",
+        url: "https://example.com",
+        calledAt: new Date("2026-04-01T00:00:00.000Z"),
+        pageId: "page_1",
+        page: { type: "pricing", label: "Pricing", url: "https://example.com/pricing" }
+      }
+    ]);
+
+    const { getGeoTargetComparisons } = await import("@/lib/db/api-logs");
+    const rows = await getGeoTargetComparisons();
+    expect(rows).toContainEqual({
+      segment: "geo_targeted",
+      totalCalls: 0,
+      successCalls: 0,
+      successRate: 0
+    });
+    expect(rows).toContainEqual({
+      segment: "default",
+      totalCalls: 1,
+      successCalls: 0,
+      successRate: 0
+    });
+  });
+});
