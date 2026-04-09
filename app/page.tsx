@@ -48,21 +48,18 @@ async function loadDashboardData() {
   const feed = await prisma.scan.findMany({
     where: { hasChanges: true },
     include: {
-      page: {
-        include: {
-          competitor: { select: { name: true } }
-        }
-      }
+      page: true
     },
     orderBy: { scannedAt: "desc" },
     take: 25
   });
+  const competitorNames = new Map(competitors.map((competitor) => [competitor.id, competitor.name]));
 
   return {
     matrix,
     feed: feed.map((item) => ({
       id: item.id,
-      competitorName: item.page.competitor.name,
+      competitorName: competitorNames.get(item.page.competitorId) ?? "Unknown competitor",
       pageLabel: item.page.label,
       scannedAt: item.scannedAt,
       diffSummary: item.diffSummary
