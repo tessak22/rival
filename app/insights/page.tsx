@@ -12,8 +12,14 @@ type InsightsPageProps = {
 
 function toDate(value?: string): Date | undefined {
   if (!value) return undefined;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined;
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
+function safeText(value: unknown): string {
+  const text = typeof value === "string" ? value : String(value ?? "");
+  return text.replace(/[<>&]/g, (char) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[char] ?? char);
 }
 
 export default async function InsightsPage({ searchParams }: InsightsPageProps) {
@@ -104,8 +110,8 @@ export default async function InsightsPage({ searchParams }: InsightsPageProps) 
             <tbody>
               {insights.missingFields.slice(0, 25).map((row) => (
                 <tr key={`${row.pageType}-${row.field}`}>
-                  <td>{row.pageType}</td>
-                  <td>{row.field}</td>
+                  <td>{safeText(row.pageType)}</td>
+                  <td>{safeText(row.field)}</td>
                   <td>{row.missingCount}</td>
                 </tr>
               ))}
@@ -132,8 +138,8 @@ export default async function InsightsPage({ searchParams }: InsightsPageProps) 
             <tbody>
               {insights.fallbackFrequency.slice(0, 25).map((row) => (
                 <tr key={row.pageId}>
-                  <td>{row.pageLabel}</td>
-                  <td>{row.pageType}</td>
+                  <td>{safeText(row.pageLabel)}</td>
+                  <td>{safeText(row.pageType)}</td>
                   <td>{row.fallbackCount}</td>
                   <td>{row.totalCalls}</td>
                   <td>{Math.round(row.fallbackRate * 100)}%</td>
@@ -182,7 +188,7 @@ export default async function InsightsPage({ searchParams }: InsightsPageProps) 
           <ul className="stat-list">
             {insights.blockedByDomain.slice(0, 20).map((item) => (
               <li key={item.domain}>
-                <span>{item.domain}</span>
+                <span>{safeText(item.domain)}</span>
                 <strong>{item.blockedCount}</strong>
               </li>
             ))}
@@ -206,7 +212,7 @@ export default async function InsightsPage({ searchParams }: InsightsPageProps) 
             <tbody>
               {insights.topErrors.map((item) => (
                 <tr key={item.error}>
-                  <td>{item.error}</td>
+                  <td>{safeText(item.error)}</td>
                   <td>{item.count}</td>
                   <td>{item.timeline.map((point) => `${point.day}: ${point.count}`).join(" | ")}</td>
                 </tr>
@@ -218,4 +224,3 @@ export default async function InsightsPage({ searchParams }: InsightsPageProps) 
     </main>
   );
 }
-

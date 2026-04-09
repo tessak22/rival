@@ -8,6 +8,7 @@ type ScanRequest = {
   competitorId?: string;
   pageId?: string;
   runBrief?: boolean;
+  briefNocache?: boolean;
 };
 
 export async function POST(request: NextRequest) {
@@ -59,8 +60,13 @@ export async function POST(request: NextRequest) {
     results.push(result);
   }
 
-  if (body.runBrief ?? true) {
-    await generateCompetitorBrief(competitor.id, true);
+  if (body.runBrief === true) {
+    try {
+      await generateCompetitorBrief(competitor.id, body.briefNocache ?? false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Brief generation failed";
+      return NextResponse.json({ results, briefError: message }, { status: 409 });
+    }
   }
 
   return NextResponse.json({ results });
