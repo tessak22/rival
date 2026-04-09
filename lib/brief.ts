@@ -67,6 +67,7 @@ export async function generateCompetitorBrief(competitorId: string, nocache = tr
     throw new Error("Competitor not found");
   }
 
+  const staleThreshold = new Date(Date.now() - 1000 * 60 * 60 * 24 * 7); // 7 days
   const scans = await prisma.scan.findMany({
     where: { page: { competitorId } },
     include: { page: true },
@@ -76,11 +77,16 @@ export async function generateCompetitorBrief(competitorId: string, nocache = tr
   const latestByPage = new Map<string, { pageType: string; pageLabel: string; result: unknown }>();
   for (const scan of scans) {
     if (latestByPage.has(scan.pageId)) continue;
+    if (scan.scannedAt < staleThreshold) continue;
     latestByPage.set(scan.pageId, {
       pageType: scan.page.type,
       pageLabel: scan.page.label,
       result: scan.markdownResult ?? scan.rawResult
     });
+  }
+
+  if (latestByPage.size === 0) {
+    throw new Error("No recent scans available for brief generation");
   }
 
   const response = await generateBrief({
