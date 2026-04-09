@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import { parseSseChunk } from "@/lib/utils/sse";
 
 type DeepDiveClientProps = {
   competitorId: string;
@@ -19,29 +20,6 @@ type Citation = {
   source_text?: string;
 };
 
-function parseSseChunk(chunk: string): Array<{ event: string; data: unknown }> {
-  const blocks = chunk.split("\n\n").filter(Boolean);
-  const parsed: Array<{ event: string; data: unknown }> = [];
-
-  for (const block of blocks) {
-    const lines = block.split("\n");
-    const eventLine = lines.find((line) => line.startsWith("event:"));
-    const dataLine = lines.find((line) => line.startsWith("data:"));
-    if (!eventLine || !dataLine) continue;
-
-    const event = eventLine.slice("event:".length).trim();
-    const raw = dataLine.slice("data:".length).trim();
-
-    try {
-      parsed.push({ event, data: JSON.parse(raw) });
-    } catch {
-      parsed.push({ event, data: raw });
-    }
-  }
-
-  return parsed;
-}
-
 export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientProps) {
   const [mode, setMode] = useState<"fast" | "balanced">("balanced");
   const [events, setEvents] = useState<ResearchEvent[]>([]);
@@ -50,19 +28,6 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const timeline = useMemo(
-    () =>
-      events.map((event) => (
-        <li key={event.id} className="intel-item">
-          <div className="intel-item-top">
-            <strong>{event.event}</strong>
-          </div>
-          <pre className="json-view">{JSON.stringify(event.data, null, 2)}</pre>
-        </li>
-      )),
-    [events]
-  );
-
   async function runDeepDive() {
     setEvents([]);
     setResult(null);
@@ -70,23 +35,22 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
     setError(null);
     setIsLoading(true);
 
-    const response = await fetch("/api/deep-dive", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ competitorId, mode })
-    });
-
-    if (!response.ok || !response.body) {
-      setError(`Request failed (${response.status})`);
-      setIsLoading(false);
-      return;
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-
     try {
+      const response = await fetch("/api/deep-dive", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ competitorId, mode })
+      });
+
+      if (!response.ok || !response.body) {
+        setError(`Request failed (${response.status})`);
+        return;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -109,6 +73,23 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
           }
         }
       }
+      if (buffer.trim()) {
+        for (const parsed of parseSseChunk(buffer)) {
+          const id = `${Date.now()}-${Math.random()}`;
+          setEvents((prev) => [...prev, { id, event: parsed.event, data: parsed.data }]);
+          if (parsed.event === "research:complete" && parsed.data && typeof parsed.data === "object") {
+            const payload = parsed.data as { result?: unknown; citations?: Citation[] };
+            setResult(payload.result ?? null);
+            setCitations(Array.isArray(payload.citations) ? payload.citations : []);
+          }
+          if (parsed.event === "research:error") {
+            const payload = parsed.data as { error?: string };
+            setError(payload?.error ?? "Deep dive failed");
+          }
+        }
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Deep dive request failed");
     } finally {
       setIsLoading(false);
     }
@@ -151,7 +132,20 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
         <header className="panel-header">
           <h2>Live Research Stream</h2>
         </header>
-        {timeline.length === 0 ? <p className="muted">No stream events yet.</p> : <ul className="intel-feed">{timeline}</ul>}
+        {events.length === 0 ? (
+          <p className="muted">No stream events yet.</p>
+        ) : (
+          <ul className="intel-feed">
+            {events.map((event) => (
+              <li key={event.id} className="intel-item">
+                <div className="intel-item-top">
+                  <strong>{event.event}</strong>
+                </div>
+                <pre className="json-view">{JSON.stringify(event.data, null, 2)}</pre>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section className="panel">
@@ -188,4 +182,3 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
     </div>
   );
 }
-

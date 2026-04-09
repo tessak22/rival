@@ -4,11 +4,11 @@ import { DeepDiveClient } from "@/components/deep-dive/DeepDiveClient";
 import { prisma } from "@/lib/db/client";
 
 type PageProps = {
-  params: Promise<{ slug: string }>;
+  params: { slug: string };
 };
 
 export default async function DeepDivePage({ params }: PageProps) {
-  const { slug } = await params;
+  const { slug } = params;
   const competitor = await prisma.competitor.findUnique({
     where: { slug },
     select: { id: true, name: true, baseUrl: true }
@@ -45,6 +45,11 @@ export default async function DeepDivePage({ params }: PageProps) {
               <li key={item.id}>
                 <span>{item.mode}</span>
                 <strong>{item.createdAt.toLocaleString()}</strong>
+                {item.result ? (
+                  <p className="muted">{JSON.stringify(item.result).replace(/\s+/g, " ").slice(0, 180)}...</p>
+                ) : (
+                  <p className="muted">No saved result payload.</p>
+                )}
               </li>
             ))}
           </ul>
@@ -53,4 +58,3 @@ export default async function DeepDivePage({ params }: PageProps) {
     </main>
   );
 }
-
