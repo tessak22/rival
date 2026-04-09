@@ -5,7 +5,7 @@ import { LogsTable } from "@/components/logs/LogsTable";
 import { prisma } from "@/lib/db/client";
 
 type PageProps = {
-  params: Promise<{ slug: string }>;
+  params: { slug: string };
 };
 
 function computeSchemaHealthByType(
@@ -27,8 +27,13 @@ function computeSchemaHealthByType(
     .sort((a, b) => b.score - a.score);
 }
 
+function sanitizeText(value: unknown): string {
+  if (typeof value !== "string") return String(value ?? "");
+  return value.replace(/[<>&]/g, (char) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[char] ?? char);
+}
+
 export default async function CompetitorDetailPage({ params }: PageProps) {
-  const { slug } = await params;
+  const { slug } = params;
 
   const competitor = await prisma.competitor.findUnique({
     where: { slug },
@@ -80,7 +85,7 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
           <h2>Intelligence Brief</h2>
         </header>
         {competitor.intelligenceBrief ? (
-          <pre className="json-view">{JSON.stringify(competitor.intelligenceBrief, null, 2)}</pre>
+          <pre className="json-view">{sanitizeText(JSON.stringify(competitor.intelligenceBrief, null, 2))}</pre>
         ) : (
           <p className="muted">No brief generated yet.</p>
         )}
@@ -138,4 +143,3 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
     </main>
   );
 }
-
