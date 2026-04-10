@@ -6,6 +6,8 @@ import { prisma } from "@/lib/db/client";
 import { scanPage } from "@/lib/scanner";
 
 const MAX_SCANS_PER_DAY = 3;
+// Locks older than this are considered stale (e.g. server crash mid-scan).
+const LOCK_TTL_MS = 5 * 60 * 1000;
 const encoder = new TextEncoder();
 
 function sse(event: string, data: unknown): Uint8Array {
@@ -14,11 +16,6 @@ function sse(event: string, data: unknown): Uint8Array {
 
 function ipHash(ip: string): string {
   return createHash("sha256").update(ip).digest("hex");
-}
-
-function toAdvisoryLockKey(hash: string): bigint {
-  const head = hash.slice(0, 16);
-  return BigInt.asIntN(63, BigInt(`0x${head}`));
 }
 
 function inferPageType(rawUrl: string): string {
@@ -69,26 +66,44 @@ function isPrivateHost(hostname: string): boolean {
   return false;
 }
 
+// Attempt to acquire a per-IP lock using a unique-key INSERT.
+// Safe with Prisma connection pooling — no session affinity required.
+// Returns true if the lock was acquired, false if another scan is in progress.
+async function tryAcquireLock(hashedIp: string): Promise<boolean> {
+  // Remove stale locks first (server may have crashed before releasing).
+  const staleThreshold = new Date(Date.now() - LOCK_TTL_MS);
+  await prisma.demoIpLock.deleteMany({
+    where: { ipHash: hashedIp, acquiredAt: { lt: staleThreshold } }
+  });
+
+  try {
+    await prisma.demoIpLock.create({ data: { ipHash: hashedIp } });
+    return true;
+  } catch {
+    // INSERT failed — unique constraint violation means lock is held.
+    return false;
+  }
+}
+
+async function releaseLock(hashedIp: string): Promise<void> {
+  await prisma.demoIpLock.delete({ where: { ipHash: hashedIp } }).catch(() => {
+    // Already released (e.g. cancel() and stream finally both fire) — safe to ignore.
+  });
+}
+
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request);
   const hashedIp = ipHash(ip);
-  const lockKey = toAdvisoryLockKey(hashedIp);
 
-  const [{ pg_try_advisory_lock: lockAcquired }] = await prisma.$queryRaw<Array<{ pg_try_advisory_lock: boolean }>>`
-    SELECT pg_try_advisory_lock(${lockKey})
-  `;
-
-  if (!lockAcquired) {
+  const locked = await tryAcquireLock(hashedIp);
+  if (!locked) {
     return new Response(JSON.stringify({ error: "A demo scan is already in progress for this IP." }), {
       status: 429,
       headers: { "content-type": "application/json" }
     });
   }
-  let lockOwnedByStream = false;
 
-  const releaseLock = async () => {
-    await prisma.$executeRaw`SELECT pg_advisory_unlock(${lockKey})`;
-  };
+  let lockOwnedByStream = false;
 
   try {
     const dayStart = new Date();
@@ -156,11 +171,7 @@ export async function POST(request: NextRequest) {
             customTask: type === "custom" ? "Extract high-signal competitive intelligence from this page." : undefined
           });
 
-          await prisma.demoScan.create({
-            data: {
-              ipHash: hashedIp
-            }
-          });
+          await prisma.demoScan.create({ data: { ipHash: hashedIp } });
 
           controller.enqueue(
             sse("scan:complete", {
@@ -178,12 +189,12 @@ export async function POST(request: NextRequest) {
             })
           );
         } finally {
-          await releaseLock();
+          await releaseLock(hashedIp);
           controller.close();
         }
       },
       cancel() {
-        void releaseLock();
+        void releaseLock(hashedIp);
       }
     });
 
@@ -196,7 +207,7 @@ export async function POST(request: NextRequest) {
     });
   } finally {
     if (!lockOwnedByStream) {
-      await releaseLock();
+      await releaseLock(hashedIp);
     }
   }
 }
