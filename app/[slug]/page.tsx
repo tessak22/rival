@@ -7,7 +7,7 @@ import { prisma } from "@/lib/db/client";
 export const dynamic = "force-dynamic";
 
 type PageProps = {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 };
 
 function computeSchemaHealthByType(
@@ -27,14 +27,10 @@ function computeSchemaHealthByType(
     .sort((a, b) => b.score - a.score);
 }
 
-function sanitizeText(value: unknown): string {
-  if (typeof value !== "string") return String(value ?? "");
-  return value.replace(/[<>&]/g, (char) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[char] ?? char);
-}
 
 export default async function CompetitorDetailPage({ params }: PageProps) {
   // TODO(auth): protect competitor detail routes before exposing a public deployment.
-  const { slug } = params;
+  const { slug } = await params;
 
   const competitor = await prisma.competitor.findUnique({
     where: { slug },
@@ -89,7 +85,7 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
           <h2>Intelligence Brief</h2>
         </header>
         {competitor.intelligenceBrief ? (
-          <pre className="json-view">{sanitizeText(JSON.stringify(competitor.intelligenceBrief, null, 2))}</pre>
+          <pre className="json-view">{JSON.stringify(competitor.intelligenceBrief, null, 2)}</pre>
         ) : (
           <p className="muted">No brief generated yet.</p>
         )}
@@ -143,6 +139,7 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
             fallbackTriggered: log.fallbackTriggered,
             fallbackReason: log.fallbackReason,
             missingFields: log.missingFields,
+            isDemo: log.isDemo,
             pageLabel: log.page?.label ?? "Demo / Unknown"
           }))}
         />

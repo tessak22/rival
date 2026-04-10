@@ -7,6 +7,7 @@ type LogRow = {
   fallbackTriggered: boolean;
   fallbackReason: string | null;
   missingFields: string[];
+  isDemo: boolean;
   pageLabel: string;
 };
 
@@ -37,6 +38,7 @@ export function LogsTable({ logs }: LogsTableProps) {
             <th>Quality</th>
             <th>Fallback</th>
             <th>Missing fields</th>
+            <th>Demo</th>
           </tr>
         </thead>
         <tbody>
@@ -49,6 +51,7 @@ export function LogsTable({ logs }: LogsTableProps) {
               <td>{log.resultQuality ?? "n/a"}</td>
               <td>{log.fallbackTriggered ? (log.fallbackReason ?? "yes") : "no"}</td>
               <td>{log.missingFields.length ? log.missingFields.join(", ") : "none"}</td>
+              <td>{log.isDemo ? "yes" : "no"}</td>
             </tr>
           ))}
         </tbody>

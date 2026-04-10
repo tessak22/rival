@@ -22,11 +22,7 @@ export default defineConfig({
         "**/__tests__/**",
         "**/*.test.ts",
         "lib/db/client.ts",
-        "app/api/**",
-        "lib/db/competitors.ts",
-        "lib/db/deep-dives.ts",
-        "lib/db/index.ts",
-        "lib/db/scans.ts"
+        "lib/db/index.ts"
       ],
       thresholds: {
         lines: 80,
