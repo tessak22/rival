@@ -58,9 +58,12 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
     })
   ]);
 
-  const latestByPage = new Map<string, (typeof scans)[number]>();
+  const seenPageIds = new Set<string>();
+  const latestScans: (typeof scans)[number][] = [];
   for (const scan of scans) {
-    if (!latestByPage.has(scan.pageId)) latestByPage.set(scan.pageId, scan);
+    if (seenPageIds.has(scan.pageId)) continue;
+    seenPageIds.add(scan.pageId);
+    latestScans.push(scan);
   }
 
   const schemaHealth = computeSchemaHealthByType(
@@ -110,7 +113,7 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
           <h2>Latest Scans</h2>
         </header>
         <div className="scan-grid">
-          {[...latestByPage.values()].map((scan) => (
+          {latestScans.map((scan) => (
             <article key={scan.id} className="scan-card">
               <h3>{scan.page.label}</h3>
               <p className="muted">{scan.page.type}</p>
