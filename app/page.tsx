@@ -2,6 +2,8 @@ import { IntelFeed } from "@/components/dashboard/IntelFeed";
 import { ThreatMatrix } from "@/components/dashboard/ThreatMatrix";
 import { prisma } from "@/lib/db/client";
 
+export const dynamic = "force-dynamic";
+
 async function loadDashboardData() {
   const competitors = await prisma.competitor.findMany({
     orderBy: { name: "asc" }

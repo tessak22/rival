@@ -4,6 +4,8 @@ import { SchemaHealthBadge } from "@/components/competitor/SchemaHealthBadge";
 import { LogsTable } from "@/components/logs/LogsTable";
 import { prisma } from "@/lib/db/client";
 
+export const dynamic = "force-dynamic";
+
 type PageProps = {
   params: { slug: string };
 };
