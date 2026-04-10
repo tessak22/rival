@@ -17,6 +17,11 @@ type ThreatMatrixProps = {
 const ORDER = ["High", "Medium", "Low", "Unknown"] as const;
 
 export function ThreatMatrix({ competitors }: ThreatMatrixProps) {
+  const dateFormatter = new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeZone: "UTC"
+  });
+
   const grouped = new Map<string, CompetitorThreat[]>();
   for (const level of ORDER) grouped.set(level, []);
 
@@ -42,7 +47,9 @@ export function ThreatMatrix({ competitors }: ThreatMatrixProps) {
                     <div className="matrix-item-meta">
                       <span>Health {Math.round(competitor.schemaHealth * 100)}%</span>
                       <span>{competitor.hasRecentChanges ? "Changes detected" : "Stable"}</span>
-                      <span>{competitor.lastScanAt ? competitor.lastScanAt.toLocaleDateString() : "No scans"}</span>
+                      <span>
+                        {competitor.lastScanAt ? `${dateFormatter.format(competitor.lastScanAt)} UTC` : "No scans"}
+                      </span>
                     </div>
                   </Link>
                 </li>
@@ -54,4 +61,3 @@ export function ThreatMatrix({ competitors }: ThreatMatrixProps) {
     </section>
   );
 }
-

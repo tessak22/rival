@@ -184,7 +184,8 @@ function extractDiffPayload(value: unknown): { summary: string | null; hasChange
     return { summary: null, hasChanges: false };
   }
 
-  const summary = typeof payload["summary"] === "string" && payload["summary"].trim().length > 0 ? payload["summary"] : null;
+  const summary =
+    typeof payload["summary"] === "string" && payload["summary"].trim().length > 0 ? payload["summary"] : null;
   const addedCount = Array.isArray(payload["added"]) ? payload["added"].length : 0;
   const changedCount = Array.isArray(payload["changed"]) ? payload["changed"].length : 0;
   const removedCount = Array.isArray(payload["removed"]) ? payload["removed"].length : 0;

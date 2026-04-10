@@ -118,7 +118,9 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
               <h3>{scan.page.label}</h3>
               <p className="muted">{scan.page.type}</p>
               <p>{scan.diffSummary ?? "No diff summary recorded."}</p>
-              <p className={scan.hasChanges ? "flag flag--changes" : "flag"}>{scan.hasChanges ? "Changes detected" : "No changes"}</p>
+              <p className={scan.hasChanges ? "flag flag--changes" : "flag"}>
+                {scan.hasChanges ? "Changes detected" : "No changes"}
+              </p>
             </article>
           ))}
         </div>
