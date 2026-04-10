@@ -6,7 +6,10 @@ import { scanPage } from "@/lib/scanner";
 
 function isAuthorized(request: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
+  if (!secret) {
+    console.error("[api/cron] CRON_SECRET is not configured.");
+    return false;
+  }
   const headerSecret = request.headers.get("x-cron-secret");
   const bearer = request.headers.get("authorization");
   return headerSecret === secret || bearer === `Bearer ${secret}`;
