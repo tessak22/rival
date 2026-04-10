@@ -237,6 +237,10 @@ body {
   color: #6fd9a2;
 }
 
+.flag--error {
+  color: #f17f7f;
+}
+
 .logs-table-wrap {
   overflow: auto;
 }
@@ -293,6 +297,51 @@ body {
   display: grid;
   gap: 0.8rem;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.deep-dive-layout {
+  display: grid;
+  gap: 1rem;
+}
+
+.mode-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  align-items: center;
+}
+
+.mode-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.mode-row button {
+  border-radius: 8px;
+  border: 1px solid #3a5e89;
+  background: #0f1824;
+  color: var(--text);
+  padding: 0.4rem 0.8rem;
+  cursor: pointer;
+}
+
+.citation-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.citation-list li {
+  border: 1px solid #273a51;
+  border-radius: 8px;
+  padding: 0.5rem 0.65rem;
+}
+
+.citation-list summary {
+  cursor: pointer;
 }
 
 .stat-list {
