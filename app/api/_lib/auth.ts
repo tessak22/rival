@@ -30,4 +30,3 @@ export function isSameOriginRequest(request: NextRequest): boolean {
     return false;
   }
 }
-
