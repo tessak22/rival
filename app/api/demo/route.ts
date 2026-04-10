@@ -1,13 +1,12 @@
 import { createHash } from "node:crypto";
 
+import { Prisma } from "@prisma/client";
 import type { NextRequest } from "next/server";
 
 import { prisma } from "@/lib/db/client";
 import { scanPage } from "@/lib/scanner";
 
 const MAX_SCANS_PER_DAY = 3;
-// Locks older than this are considered stale (e.g. server crash mid-scan).
-const LOCK_TTL_MS = 5 * 60 * 1000;
 const encoder = new TextEncoder();
 
 function sse(event: string, data: unknown): Uint8Array {
@@ -69,19 +68,20 @@ function isPrivateHost(hostname: string): boolean {
 // Attempt to acquire a per-IP lock using a unique-key INSERT.
 // Safe with Prisma connection pooling — no session affinity required.
 // Returns true if the lock was acquired, false if another scan is in progress.
+// Any DB error other than a unique-constraint violation (P2002) is rethrown so
+// the caller can surface a proper 5xx rather than a misleading 429.
+// Note: orphaned locks from server crashes can be cleared manually:
+//   DELETE FROM demo_ip_locks WHERE acquired_at < NOW() - INTERVAL '1 hour';
 async function tryAcquireLock(hashedIp: string): Promise<boolean> {
-  // Remove stale locks first (server may have crashed before releasing).
-  const staleThreshold = new Date(Date.now() - LOCK_TTL_MS);
-  await prisma.demoIpLock.deleteMany({
-    where: { ipHash: hashedIp, acquiredAt: { lt: staleThreshold } }
-  });
-
   try {
     await prisma.demoIpLock.create({ data: { ipHash: hashedIp } });
     return true;
-  } catch {
-    // INSERT failed — unique constraint violation means lock is held.
-    return false;
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      // Unique constraint violation — another scan is active for this IP.
+      return false;
+    }
+    throw e; // Unexpected DB error — let the route surface a 5xx.
   }
 }
 
