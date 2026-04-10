@@ -18,4 +18,3 @@ export function SchemaHealthBadge({ score, label = "Schema health" }: SchemaHeal
     </span>
   );
 }
-

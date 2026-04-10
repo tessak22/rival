@@ -28,7 +28,12 @@ export function DemoClient() {
       });
 
       if (!response.ok || !response.body) {
-        setError(`Request failed (${response.status})`);
+        try {
+          const body = (await response.json()) as { error?: string };
+          setError(body.error ?? `Request failed (${response.status})`);
+        } catch {
+          setError(`Request failed (${response.status})`);
+        }
         return;
       }
 
@@ -45,7 +50,10 @@ export function DemoClient() {
         buffer = chunks.pop() ?? "";
 
         for (const event of parseSseChunk(chunks.join("\n\n"))) {
-          setEvents((prev) => [...prev, { id: `${Date.now()}-${Math.random()}`, event: event.event, data: event.data }]);
+          setEvents((prev) => [
+            ...prev,
+            { id: `${Date.now()}-${Math.random()}`, event: event.event, data: event.data }
+          ]);
           if (event.event === "scan:error") {
             const payload = event.data as { error?: string };
             setError(payload?.error ?? "Demo scan failed");
@@ -55,7 +63,10 @@ export function DemoClient() {
 
       if (buffer.trim()) {
         for (const event of parseSseChunk(buffer)) {
-          setEvents((prev) => [...prev, { id: `${Date.now()}-${Math.random()}`, event: event.event, data: event.data }]);
+          setEvents((prev) => [
+            ...prev,
+            { id: `${Date.now()}-${Math.random()}`, event: event.event, data: event.data }
+          ]);
           if (event.event === "scan:error") {
             const payload = event.data as { error?: string };
             setError(payload?.error ?? "Demo scan failed");
@@ -78,7 +89,11 @@ export function DemoClient() {
         <div className="filters">
           <label>
             URL
-            <input value={url} onChange={(event) => setUrl(event.target.value)} placeholder="https://example.com/pricing" />
+            <input
+              value={url}
+              onChange={(event) => setUrl(event.target.value)}
+              placeholder="https://example.com/pricing"
+            />
           </label>
           <button type="button" onClick={runDemo} disabled={isRunning || !url.trim()}>
             {isRunning ? "Scanning..." : "Run demo"}

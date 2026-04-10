@@ -28,19 +28,28 @@ function inferPageType(rawUrl: string): string {
   if (lower.includes("career") || lower.includes("jobs")) return "careers";
   if (lower.includes("docs")) return "docs";
   if (lower.includes("github.com")) return "github";
-  if (lower.includes("linkedin.com") || lower.includes("twitter.com") || lower.includes("x.com") || lower.includes("youtube.com")) {
+  if (
+    lower.includes("linkedin.com") ||
+    lower.includes("twitter.com") ||
+    lower.includes("x.com") ||
+    lower.includes("youtube.com")
+  ) {
     return "social";
   }
   if (lower.includes("about")) return "profile";
   return "custom";
 }
 
+// x-real-ip is set by the outermost trusted proxy (e.g. nginx) and is preferred
+// because it cannot be injected by the client. x-forwarded-for is used as a
+// fallback but its first value CAN be spoofed in direct-to-app deployments.
+// Ensure a trusted reverse proxy is in front before relying on either header.
 function getClientIp(request: NextRequest): string {
+  const realIp = request.headers.get("x-real-ip");
+  if (realIp) return realIp.trim();
   const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) {
-    return forwarded.split(",")[0]?.trim() ?? "unknown";
-  }
-  return request.headers.get("x-real-ip") ?? "unknown";
+  if (forwarded) return forwarded.split(",")[0]?.trim() ?? "unknown";
+  return "unknown";
 }
 
 function isPrivateHost(hostname: string): boolean {

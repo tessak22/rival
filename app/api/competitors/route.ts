@@ -6,4 +6,3 @@ export async function GET() {
   const competitors = await listCompetitors({ includePages: true });
   return NextResponse.json({ competitors });
 }
-

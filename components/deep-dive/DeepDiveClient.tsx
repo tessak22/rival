@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { parseSseChunk } from "@/lib/utils/sse";
 
 type DeepDiveClientProps = {
   competitorId: string;
@@ -18,29 +19,6 @@ type Citation = {
   source_url: string;
   source_text?: string;
 };
-
-function parseSseChunk(chunk: string): Array<{ event: string; data: unknown }> {
-  const blocks = chunk.split("\n\n").filter(Boolean);
-  const parsed: Array<{ event: string; data: unknown }> = [];
-
-  for (const block of blocks) {
-    const lines = block.split("\n");
-    const eventLine = lines.find((line) => line.startsWith("event:"));
-    const dataLine = lines.find((line) => line.startsWith("data:"));
-    if (!eventLine || !dataLine) continue;
-
-    const event = eventLine.slice("event:".length).trim();
-    const raw = dataLine.slice("data:".length).trim();
-
-    try {
-      parsed.push({ event, data: JSON.parse(raw) });
-    } catch {
-      parsed.push({ event, data: raw });
-    }
-  }
-
-  return parsed;
-}
 
 export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientProps) {
   const [mode, setMode] = useState<"fast" | "balanced">("balanced");
@@ -70,23 +48,27 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
     setError(null);
     setIsLoading(true);
 
-    const response = await fetch("/api/deep-dive", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ competitorId, mode })
-    });
-
-    if (!response.ok || !response.body) {
-      setError(`Request failed (${response.status})`);
-      setIsLoading(false);
-      return;
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-
     try {
+      const response = await fetch("/api/deep-dive", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ competitorId, mode })
+      });
+
+      if (!response.ok || !response.body) {
+        try {
+          const body = (await response.json()) as { error?: string };
+          setError(body.error ?? `Request failed (${response.status})`);
+        } catch {
+          setError(`Request failed (${response.status})`);
+        }
+        return;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -109,6 +91,8 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
           }
         }
       }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Deep dive request failed");
     } finally {
       setIsLoading(false);
     }
@@ -123,21 +107,11 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
         <p className="muted">{competitorName}</p>
         <div className="mode-row">
           <label>
-            <input
-              type="radio"
-              name="mode"
-              checked={mode === "fast"}
-              onChange={() => setMode("fast")}
-            />
+            <input type="radio" name="mode" checked={mode === "fast"} onChange={() => setMode("fast")} />
             Fast
           </label>
           <label>
-            <input
-              type="radio"
-              name="mode"
-              checked={mode === "balanced"}
-              onChange={() => setMode("balanced")}
-            />
+            <input type="radio" name="mode" checked={mode === "balanced"} onChange={() => setMode("balanced")} />
             Balanced
           </label>
           <button type="button" onClick={runDeepDive} disabled={isLoading}>
@@ -151,14 +125,22 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
         <header className="panel-header">
           <h2>Live Research Stream</h2>
         </header>
-        {timeline.length === 0 ? <p className="muted">No stream events yet.</p> : <ul className="intel-feed">{timeline}</ul>}
+        {timeline.length === 0 ? (
+          <p className="muted">No stream events yet.</p>
+        ) : (
+          <ul className="intel-feed">{timeline}</ul>
+        )}
       </section>
 
       <section className="panel">
         <header className="panel-header">
           <h2>Structured Report</h2>
         </header>
-        {result ? <pre className="json-view">{JSON.stringify(result, null, 2)}</pre> : <p className="muted">No report yet.</p>}
+        {result ? (
+          <pre className="json-view">{JSON.stringify(result, null, 2)}</pre>
+        ) : (
+          <p className="muted">No report yet.</p>
+        )}
       </section>
 
       <section className="panel">
@@ -188,4 +170,3 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
     </div>
   );
 }
-

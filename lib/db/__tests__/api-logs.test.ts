@@ -160,4 +160,3 @@ describe("api-log insights aggregations", () => {
     );
   });
 });
-

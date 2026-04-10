@@ -27,4 +27,3 @@ export async function listScansWithChanges(competitorId: string, limit = 25) {
     take: limit
   });
 }
-

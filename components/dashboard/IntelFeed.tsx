@@ -35,4 +35,3 @@ export function IntelFeed({ items }: IntelFeedProps) {
     </section>
   );
 }
-

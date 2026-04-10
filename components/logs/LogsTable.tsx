@@ -47,7 +47,7 @@ export function LogsTable({ logs }: LogsTableProps) {
               <td>{log.endpoint}</td>
               <td>{log.status}</td>
               <td>{log.resultQuality ?? "n/a"}</td>
-              <td>{log.fallbackTriggered ? log.fallbackReason ?? "yes" : "no"}</td>
+              <td>{log.fallbackTriggered ? (log.fallbackReason ?? "yes") : "no"}</td>
               <td>{log.missingFields.length ? log.missingFields.join(", ") : "none"}</td>
             </tr>
           ))}

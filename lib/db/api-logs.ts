@@ -306,4 +306,3 @@ export async function getApiInsights(filters: InsightsFilters = {}) {
     topErrors
   };
 }
-

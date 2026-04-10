@@ -54,4 +54,3 @@ export function ThreatMatrix({ competitors }: ThreatMatrixProps) {
     </section>
   );
 }
-
