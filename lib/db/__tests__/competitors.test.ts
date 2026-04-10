@@ -28,26 +28,20 @@ describe("lib/db/competitors", () => {
     it("returns all competitors ordered by name", async () => {
       const { listCompetitors } = await import("@/lib/db/competitors");
       const result = await listCompetitors();
-      expect(competitorFindManyMock).toHaveBeenCalledWith(
-        expect.objectContaining({ orderBy: { name: "asc" } })
-      );
+      expect(competitorFindManyMock).toHaveBeenCalledWith(expect.objectContaining({ orderBy: { name: "asc" } }));
       expect(result).toEqual([COMPETITOR]);
     });
 
     it("does not include pages by default", async () => {
       const { listCompetitors } = await import("@/lib/db/competitors");
       await listCompetitors();
-      expect(competitorFindManyMock).toHaveBeenCalledWith(
-        expect.objectContaining({ include: undefined })
-      );
+      expect(competitorFindManyMock).toHaveBeenCalledWith(expect.objectContaining({ include: undefined }));
     });
 
     it("includes pages when includePages is true", async () => {
       const { listCompetitors } = await import("@/lib/db/competitors");
       await listCompetitors({ includePages: true });
-      expect(competitorFindManyMock).toHaveBeenCalledWith(
-        expect.objectContaining({ include: { pages: true } })
-      );
+      expect(competitorFindManyMock).toHaveBeenCalledWith(expect.objectContaining({ include: { pages: true } }));
     });
   });
 

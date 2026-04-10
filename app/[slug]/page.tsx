@@ -27,7 +27,6 @@ function computeSchemaHealthByType(
     .sort((a, b) => b.score - a.score);
 }
 
-
 export default async function CompetitorDetailPage({ params }: PageProps) {
   // TODO(auth): protect competitor detail routes before exposing a public deployment.
   const { slug } = await params;

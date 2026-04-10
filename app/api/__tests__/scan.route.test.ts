@@ -28,7 +28,14 @@ vi.mock("@/lib/db/client", () => ({
   }
 }));
 
-const PAGE = { id: "page_1", competitorId: "cmp_1", label: "Pricing", url: "https://example.com/pricing", type: "pricing", geoTarget: null };
+const PAGE = {
+  id: "page_1",
+  competitorId: "cmp_1",
+  label: "Pricing",
+  url: "https://example.com/pricing",
+  type: "pricing",
+  geoTarget: null
+};
 const COMPETITOR = { id: "cmp_1", name: "Acme", pages: [PAGE] };
 const SCAN_RESULT = { pageId: "page_1", status: "success" };
 

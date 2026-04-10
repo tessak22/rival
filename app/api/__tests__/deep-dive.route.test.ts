@@ -65,16 +65,12 @@ describe("POST /api/deep-dive", () => {
   it("defaults mode to balanced", async () => {
     const { POST } = await import("@/app/api/deep-dive/route");
     await POST(jsonRequest({ competitorId: "cmp_1" }));
-    expect(runResearchMock).toHaveBeenCalledWith(
-      expect.objectContaining({ mode: "balanced", nocache: true })
-    );
+    expect(runResearchMock).toHaveBeenCalledWith(expect.objectContaining({ mode: "balanced", nocache: true }));
   });
 
   it("respects provided mode", async () => {
     const { POST } = await import("@/app/api/deep-dive/route");
     await POST(jsonRequest({ competitorId: "cmp_1", mode: "fast" }));
-    expect(runResearchMock).toHaveBeenCalledWith(
-      expect.objectContaining({ mode: "fast" })
-    );
+    expect(runResearchMock).toHaveBeenCalledWith(expect.objectContaining({ mode: "fast" }));
   });
 });

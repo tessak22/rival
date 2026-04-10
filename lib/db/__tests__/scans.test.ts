@@ -14,8 +14,20 @@ vi.mock("@/lib/db/client", () => ({
   }
 }));
 
-const PAGE = { id: "page_1", competitorId: "cmp_1", label: "Pricing", url: "https://example.com/pricing", type: "pricing" };
-const SCAN = { id: "scan_1", pageId: "page_1", scannedAt: new Date("2026-04-01T00:00:00Z"), hasChanges: false, page: PAGE };
+const PAGE = {
+  id: "page_1",
+  competitorId: "cmp_1",
+  label: "Pricing",
+  url: "https://example.com/pricing",
+  type: "pricing"
+};
+const SCAN = {
+  id: "scan_1",
+  pageId: "page_1",
+  scannedAt: new Date("2026-04-01T00:00:00Z"),
+  hasChanges: false,
+  page: PAGE
+};
 const SCAN_WITH_CHANGES = { ...SCAN, id: "scan_2", hasChanges: true };
 
 describe("lib/db/scans", () => {
@@ -62,17 +74,13 @@ describe("lib/db/scans", () => {
     it("defaults to limit 50", async () => {
       const { listRecentScansForCompetitor } = await import("@/lib/db/scans");
       await listRecentScansForCompetitor("cmp_1");
-      expect(scanFindManyMock).toHaveBeenCalledWith(
-        expect.objectContaining({ take: 50 })
-      );
+      expect(scanFindManyMock).toHaveBeenCalledWith(expect.objectContaining({ take: 50 }));
     });
 
     it("respects a custom limit", async () => {
       const { listRecentScansForCompetitor } = await import("@/lib/db/scans");
       await listRecentScansForCompetitor("cmp_1", 10);
-      expect(scanFindManyMock).toHaveBeenCalledWith(
-        expect.objectContaining({ take: 10 })
-      );
+      expect(scanFindManyMock).toHaveBeenCalledWith(expect.objectContaining({ take: 10 }));
     });
   });
 
@@ -92,17 +100,13 @@ describe("lib/db/scans", () => {
     it("defaults to limit 25", async () => {
       const { listScansWithChanges } = await import("@/lib/db/scans");
       await listScansWithChanges("cmp_1");
-      expect(scanFindManyMock).toHaveBeenCalledWith(
-        expect.objectContaining({ take: 25 })
-      );
+      expect(scanFindManyMock).toHaveBeenCalledWith(expect.objectContaining({ take: 25 }));
     });
 
     it("respects a custom limit", async () => {
       const { listScansWithChanges } = await import("@/lib/db/scans");
       await listScansWithChanges("cmp_1", 5);
-      expect(scanFindManyMock).toHaveBeenCalledWith(
-        expect.objectContaining({ take: 5 })
-      );
+      expect(scanFindManyMock).toHaveBeenCalledWith(expect.objectContaining({ take: 5 }));
     });
   });
 });

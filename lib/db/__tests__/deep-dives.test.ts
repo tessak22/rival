@@ -89,17 +89,13 @@ describe("lib/db/deep-dives", () => {
     it("uses default limit of 20", async () => {
       const { listDeepDivesForCompetitor } = await import("@/lib/db/deep-dives");
       await listDeepDivesForCompetitor("cmp_1");
-      expect(deepDiveFindManyMock).toHaveBeenCalledWith(
-        expect.objectContaining({ take: 20 })
-      );
+      expect(deepDiveFindManyMock).toHaveBeenCalledWith(expect.objectContaining({ take: 20 }));
     });
 
     it("respects a custom limit", async () => {
       const { listDeepDivesForCompetitor } = await import("@/lib/db/deep-dives");
       await listDeepDivesForCompetitor("cmp_1", 5);
-      expect(deepDiveFindManyMock).toHaveBeenCalledWith(
-        expect.objectContaining({ take: 5 })
-      );
+      expect(deepDiveFindManyMock).toHaveBeenCalledWith(expect.objectContaining({ take: 5 }));
     });
   });
 });

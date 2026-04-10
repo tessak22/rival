@@ -1,13 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const { notificationFindManyMock, hasValidInternalApiKeyMock, isSameOriginRequestMock } = vi.hoisted(
-  () => ({
-    notificationFindManyMock: vi.fn(),
-    hasValidInternalApiKeyMock: vi.fn(),
-    isSameOriginRequestMock: vi.fn()
-  })
-);
+const { notificationFindManyMock, hasValidInternalApiKeyMock, isSameOriginRequestMock } = vi.hoisted(() => ({
+  notificationFindManyMock: vi.fn(),
+  hasValidInternalApiKeyMock: vi.fn(),
+  isSameOriginRequestMock: vi.fn()
+}));
 
 vi.mock("@/lib/db/client", () => ({
   prisma: { notification: { findMany: notificationFindManyMock } }
@@ -70,9 +68,7 @@ describe("GET /api/notifications", () => {
     const { GET } = await import("@/app/api/notifications/route");
     const req = new NextRequest("http://localhost/api/notifications");
     await GET(req);
-    expect(notificationFindManyMock).toHaveBeenCalledWith(
-      expect.objectContaining({ take: 50 })
-    );
+    expect(notificationFindManyMock).toHaveBeenCalledWith(expect.objectContaining({ take: 50 }));
   });
 
   it("clamps limit to 200 max", async () => {
@@ -81,9 +77,7 @@ describe("GET /api/notifications", () => {
     const { GET } = await import("@/app/api/notifications/route");
     const req = new NextRequest("http://localhost/api/notifications?limit=999");
     await GET(req);
-    expect(notificationFindManyMock).toHaveBeenCalledWith(
-      expect.objectContaining({ take: 200 })
-    );
+    expect(notificationFindManyMock).toHaveBeenCalledWith(expect.objectContaining({ take: 200 }));
   });
 
   it("returns 500 on DB error", async () => {
