@@ -2,48 +2,71 @@ import { IntelFeed } from "@/components/dashboard/IntelFeed";
 import { ThreatMatrix } from "@/components/dashboard/ThreatMatrix";
 import { prisma } from "@/lib/db/client";
 
+export const dynamic = "force-dynamic";
+
 async function loadDashboardData() {
   const competitors = await prisma.competitor.findMany({
     orderBy: { name: "asc" }
   });
+  const competitorIds = competitors.map((competitor) => competitor.id);
 
-  const matrix = await Promise.all(
-    competitors.map(async (competitor) => {
-      const [lastScan, changeCount, logs] = await Promise.all([
-        prisma.scan.findFirst({
-          where: { page: { competitorId: competitor.id } },
-          orderBy: { scannedAt: "desc" },
-          select: { scannedAt: true }
-        }),
-        prisma.scan.count({
-          where: {
-            page: { competitorId: competitor.id },
-            hasChanges: true
-          }
-        }),
-        prisma.apiLog.findMany({
-          where: { competitorId: competitor.id, resultQuality: { not: null } },
-          select: { resultQuality: true },
-          take: 200
-        })
-      ]);
-
-      const scored: number[] = logs.map((log) =>
-        log.resultQuality === "full" ? 1 : log.resultQuality === "partial" ? 0.5 : 0
-      );
-      const schemaHealth = scored.length === 0 ? 0 : scored.reduce((acc, value) => acc + value, 0) / scored.length;
-
-      return {
-        id: competitor.id,
-        slug: competitor.slug,
-        name: competitor.name,
-        threatLevel: competitor.threatLevel,
-        schemaHealth,
-        hasRecentChanges: changeCount > 0,
-        lastScanAt: lastScan?.scannedAt ?? null
-      };
+  const [recentScans, recentLogs] = await Promise.all([
+    prisma.scan.findMany({
+      where: { page: { competitorId: { in: competitorIds } } },
+      select: {
+        hasChanges: true,
+        scannedAt: true,
+        page: { select: { competitorId: true } }
+      },
+      orderBy: { scannedAt: "desc" },
+      take: 5000
+    }),
+    prisma.apiLog.findMany({
+      where: {
+        competitorId: { in: competitorIds },
+        resultQuality: { not: null }
+      },
+      select: {
+        competitorId: true,
+        resultQuality: true
+      },
+      orderBy: { calledAt: "desc" },
+      take: 5000
     })
-  );
+  ]);
+
+  const latestScanByCompetitor = new Map<string, Date>();
+  const changedScansByCompetitor = new Map<string, number>();
+  for (const scan of recentScans) {
+    const competitorId = scan.page.competitorId;
+    if (!latestScanByCompetitor.has(competitorId)) {
+      latestScanByCompetitor.set(competitorId, scan.scannedAt);
+    }
+    if (scan.hasChanges) {
+      changedScansByCompetitor.set(competitorId, (changedScansByCompetitor.get(competitorId) ?? 0) + 1);
+    }
+  }
+
+  const schemaScores = new Map<string, number[]>();
+  for (const log of recentLogs) {
+    if (!log.competitorId || !log.resultQuality) continue;
+    const score = log.resultQuality === "full" ? 1 : log.resultQuality === "partial" ? 0.5 : 0;
+    schemaScores.set(log.competitorId, [...(schemaScores.get(log.competitorId) ?? []), score]);
+  }
+
+  const matrix = competitors.map((competitor) => {
+    const scores = schemaScores.get(competitor.id) ?? [];
+    const schemaHealth = scores.length === 0 ? 0 : scores.reduce((acc, value) => acc + value, 0) / scores.length;
+    return {
+      id: competitor.id,
+      slug: competitor.slug,
+      name: competitor.name,
+      threatLevel: competitor.threatLevel,
+      schemaHealth,
+      hasRecentChanges: (changedScansByCompetitor.get(competitor.id) ?? 0) > 0,
+      lastScanAt: latestScanByCompetitor.get(competitor.id) ?? null
+    };
+  });
 
   const feed = await prisma.scan.findMany({
     where: { hasChanges: true },
@@ -68,6 +91,7 @@ async function loadDashboardData() {
 }
 
 export default async function HomePage() {
+  // TODO(auth): protect dashboard routes before exposing a public deployment.
   const data = await loadDashboardData();
 
   return (

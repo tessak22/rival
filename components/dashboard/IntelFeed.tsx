@@ -11,6 +11,12 @@ type IntelFeedProps = {
 };
 
 export function IntelFeed({ items }: IntelFeedProps) {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "UTC"
+  });
+
   return (
     <section className="panel">
       <header className="panel-header">
@@ -25,7 +31,7 @@ export function IntelFeed({ items }: IntelFeedProps) {
               <div className="intel-item-top">
                 <strong>{item.competitorName}</strong>
                 <span>{item.pageLabel}</span>
-                <time>{item.scannedAt.toLocaleString()}</time>
+                <time>{formatter.format(item.scannedAt)} UTC</time>
               </div>
               <p>{item.diffSummary ?? "Change detected, summary pending."}</p>
             </li>

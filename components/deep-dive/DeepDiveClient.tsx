@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { parseSseChunk } from "@/lib/utils/sse";
 
 type DeepDiveClientProps = {
@@ -27,19 +27,6 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
   const [citations, setCitations] = useState<Citation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const timeline = useMemo(
-    () =>
-      events.map((event) => (
-        <li key={event.id} className="intel-item">
-          <div className="intel-item-top">
-            <strong>{event.event}</strong>
-          </div>
-          <pre className="json-view">{JSON.stringify(event.data, null, 2)}</pre>
-        </li>
-      )),
-    [events]
-  );
 
   async function runDeepDive() {
     setEvents([]);
@@ -91,6 +78,22 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
           }
         }
       }
+
+      if (buffer.trim()) {
+        for (const parsed of parseSseChunk(buffer)) {
+          const id = `${Date.now()}-${Math.random()}`;
+          setEvents((prev) => [...prev, { id, event: parsed.event, data: parsed.data }]);
+          if (parsed.event === "research:complete" && parsed.data && typeof parsed.data === "object") {
+            const payload = parsed.data as { result?: unknown; citations?: Citation[] };
+            setResult(payload.result ?? null);
+            setCitations(Array.isArray(payload.citations) ? payload.citations : []);
+          }
+          if (parsed.event === "research:error") {
+            const payload = parsed.data as { error?: string };
+            setError(payload?.error ?? "Deep dive failed");
+          }
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Deep dive request failed");
     } finally {
@@ -125,10 +128,19 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
         <header className="panel-header">
           <h2>Live Research Stream</h2>
         </header>
-        {timeline.length === 0 ? (
+        {events.length === 0 ? (
           <p className="muted">No stream events yet.</p>
         ) : (
-          <ul className="intel-feed">{timeline}</ul>
+          <ul className="intel-feed">
+            {events.map((event) => (
+              <li key={event.id} className="intel-item">
+                <div className="intel-item-top">
+                  <strong>{event.event}</strong>
+                </div>
+                <pre className="json-view">{JSON.stringify(event.data, null, 2)}</pre>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
 

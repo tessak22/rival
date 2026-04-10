@@ -4,8 +4,10 @@ import { SchemaHealthBadge } from "@/components/competitor/SchemaHealthBadge";
 import { LogsTable } from "@/components/logs/LogsTable";
 import { prisma } from "@/lib/db/client";
 
+export const dynamic = "force-dynamic";
+
 type PageProps = {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 };
 
 function computeSchemaHealthByType(
@@ -14,9 +16,7 @@ function computeSchemaHealthByType(
   const buckets = new Map<string, number[]>();
   for (const log of logs) {
     const score = log.resultQuality === "full" ? 1 : log.resultQuality === "partial" ? 0.5 : 0;
-    const arr = buckets.get(log.pageType) ?? [];
-    arr.push(score);
-    buckets.set(log.pageType, arr);
+    buckets.set(log.pageType, [...(buckets.get(log.pageType) ?? []), score]);
   }
 
   return [...buckets.entries()]
@@ -27,13 +27,9 @@ function computeSchemaHealthByType(
     .sort((a, b) => b.score - a.score);
 }
 
-function sanitizeText(value: unknown): string {
-  if (typeof value !== "string") return String(value ?? "");
-  return value.replace(/[<>&]/g, (char) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[char] ?? char);
-}
-
 export default async function CompetitorDetailPage({ params }: PageProps) {
-  const { slug } = params;
+  // TODO(auth): protect competitor detail routes before exposing a public deployment.
+  const { slug } = await params;
 
   const competitor = await prisma.competitor.findUnique({
     where: { slug },
@@ -59,9 +55,12 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
     })
   ]);
 
-  const latestByPage = new Map<string, (typeof scans)[number]>();
+  const seenPageIds = new Set<string>();
+  const latestScans: (typeof scans)[number][] = [];
   for (const scan of scans) {
-    if (!latestByPage.has(scan.pageId)) latestByPage.set(scan.pageId, scan);
+    if (seenPageIds.has(scan.pageId)) continue;
+    seenPageIds.add(scan.pageId);
+    latestScans.push(scan);
   }
 
   const schemaHealth = computeSchemaHealthByType(
@@ -85,7 +84,7 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
           <h2>Intelligence Brief</h2>
         </header>
         {competitor.intelligenceBrief ? (
-          <pre className="json-view">{sanitizeText(JSON.stringify(competitor.intelligenceBrief, null, 2))}</pre>
+          <pre className="json-view">{JSON.stringify(competitor.intelligenceBrief, null, 2)}</pre>
         ) : (
           <p className="muted">No brief generated yet.</p>
         )}
@@ -111,7 +110,7 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
           <h2>Latest Scans</h2>
         </header>
         <div className="scan-grid">
-          {[...latestByPage.values()].map((scan) => (
+          {latestScans.map((scan) => (
             <article key={scan.id} className="scan-card">
               <h3>{scan.page.label}</h3>
               <p className="muted">{scan.page.type}</p>
@@ -128,6 +127,7 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
         <header className="panel-header">
           <h2>Logs</h2>
         </header>
+        <p className="muted">Showing latest 200 log entries.</p>
         <LogsTable
           logs={logs.map((log) => ({
             id: log.id,
@@ -138,6 +138,7 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
             fallbackTriggered: log.fallbackTriggered,
             fallbackReason: log.fallbackReason,
             missingFields: log.missingFields,
+            isDemo: log.isDemo,
             pageLabel: log.page?.label ?? "Demo / Unknown"
           }))}
         />
