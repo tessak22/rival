@@ -54,6 +54,8 @@ import type { TabstackEffort, TabstackEndpoint } from "@/lib/logger";
 import { isPlainObject, stringifyUnknown } from "@/lib/utils/types";
 
 const DEFAULT_AUTOMATE_GUARDRAILS = "Extract public page content only. Do not sign in or submit forms.";
+const MAX_EMPTY_CHECK_DEPTH = 20;
+const warnedUnknownTypes = new Set<string>();
 
 type JsonSchema = {
   type?: string;
@@ -151,21 +153,35 @@ export type ScanPageOutput = {
 };
 
 function resolveRouting(type: string): RoutingDefinition {
-  return ROUTING_BY_TYPE[type] ?? ROUTING_BY_TYPE["custom"];
+  const route = ROUTING_BY_TYPE[type];
+  if (route) return route;
+
+  if (!warnedUnknownTypes.has(type)) {
+    warnedUnknownTypes.add(type);
+    console.warn(`[scanner] Unknown page type "${type}", defaulting to custom automate routing.`);
+  }
+
+  return ROUTING_BY_TYPE["custom"];
 }
 
-function valueIsEmpty(value: unknown): boolean {
+function valueIsEmpty(value: unknown, depth = 0): boolean {
+  if (depth > MAX_EMPTY_CHECK_DEPTH) return false;
   if (value === null || value === undefined) return true;
   if (typeof value === "string") return value.trim().length === 0;
   if (Array.isArray(value)) return value.length === 0;
   if (!isPlainObject(value)) return false;
 
   const entries = Object.values(value);
-  return entries.length === 0 || entries.every((entry) => valueIsEmpty(entry));
+  return entries.length === 0 || entries.every((entry) => valueIsEmpty(entry, depth + 1));
 }
 
 function extractDataEnvelope(value: unknown): unknown {
   if (!isPlainObject(value)) return value;
+  const hasData = "data" in value;
+  const hasResult = "result" in value;
+  if (hasData && hasResult) {
+    throw new Error("Ambiguous response envelope: expected either data or result, not both.");
+  }
   if ("data" in value) return value.data;
   if ("result" in value) return value.result;
   return value;
@@ -184,7 +200,8 @@ function extractDiffPayload(value: unknown): { summary: string | null; hasChange
     return { summary: null, hasChanges: false };
   }
 
-  const summary = typeof payload["summary"] === "string" && payload["summary"].trim().length > 0 ? payload["summary"] : null;
+  const summary =
+    typeof payload["summary"] === "string" && payload["summary"].trim().length > 0 ? payload["summary"] : null;
   const addedCount = Array.isArray(payload["added"]) ? payload["added"].length : 0;
   const changedCount = Array.isArray(payload["changed"]) ? payload["changed"].length : 0;
   const removedCount = Array.isArray(payload["removed"]) ? payload["removed"].length : 0;

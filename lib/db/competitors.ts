@@ -24,4 +24,3 @@ export async function getCompetitorBySlug(slug: string) {
     include: { pages: true }
   });
 }
-
