@@ -67,20 +67,27 @@ async function main() {
       }
     });
 
-    await prisma.competitorPage.deleteMany({
-      where: { competitorId: record.id }
-    });
-
-    if (competitor.pages && competitor.pages.length > 0) {
-      await prisma.competitorPage.createMany({
-        data: competitor.pages.map((page) => ({
-          competitorId: record.id,
-          label: page.label,
-          url: page.url,
-          type: page.type,
-          geoTarget: page.geo_target ?? null
-        }))
+    for (const page of competitor.pages ?? []) {
+      const existing = await prisma.competitorPage.findFirst({
+        where: { competitorId: record.id, url: page.url }
       });
+
+      if (existing) {
+        await prisma.competitorPage.update({
+          where: { id: existing.id },
+          data: { label: page.label, type: page.type, geoTarget: page.geo_target ?? null }
+        });
+      } else {
+        await prisma.competitorPage.create({
+          data: {
+            competitorId: record.id,
+            label: page.label,
+            url: page.url,
+            type: page.type,
+            geoTarget: page.geo_target ?? null
+          }
+        });
+      }
     }
 
     console.log(`Seeded ${record.name} (${record.slug})`);
