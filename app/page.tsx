@@ -5,13 +5,6 @@ import type { ReviewsData } from "@/lib/schemas/reviews";
 
 export const dynamic = "force-dynamic";
 
-/**
- * Compute reviews change events for a scan.
- *
- * Emits:
- * - rating_changed: overall_rating moved by more than 0.1
- * - complaint_theme_added: a new recurring complaint theme appeared (highest-signal)
- */
 function computeReviewsEvents(
   current: ReviewsData,
   previous: ReviewsData | null
@@ -111,7 +104,6 @@ async function loadDashboardData() {
     };
   });
 
-  // Fetch changed scans for the Intel Feed, including rawResult for reviews diff events.
   const feed = await prisma.scan.findMany({
     where: { hasChanges: true },
     include: {
@@ -122,8 +114,23 @@ async function loadDashboardData() {
   });
   const competitorNames = new Map(competitors.map((competitor) => [competitor.id, competitor.name]));
 
-  // For reviews pages in the feed, fetch the previous scan to compute diff events.
-  // Only load previous scans for reviews pages that have changes — keeps it targeted.
+  const homepageFeedItems = feed.filter((item) => item.page.type === "homepage");
+  const previousHomepageScans = await Promise.all(
+    homepageFeedItems.map((item) =>
+      prisma.scan.findFirst({
+        where: {
+          pageId: item.pageId,
+          scannedAt: { lt: item.scannedAt }
+        },
+        orderBy: { scannedAt: "desc" },
+        select: { id: true, rawResult: true }
+      })
+    )
+  );
+  const previousHomepageScanByCurrentId = new Map(
+    homepageFeedItems.map((item, i) => [item.id, previousHomepageScans[i]])
+  );
+
   const reviewsFeedScans = feed.filter((item) => item.page.type === "reviews");
   const previousReviewsScans = new Map<string, ReviewsData | null>();
 
@@ -150,9 +157,14 @@ async function loadDashboardData() {
         id: item.id,
         competitorName: competitorNames.get(item.page.competitorId) ?? "Unknown competitor",
         pageLabel: item.page.label,
+        pageType: item.page.type,
         scannedAt: item.scannedAt,
         diffSummary: item.diffSummary,
-        pageType: item.page.type,
+        rawResult: item.page.type === "homepage" ? item.rawResult : undefined,
+        previousRawResult:
+          item.page.type === "homepage"
+            ? (previousHomepageScanByCurrentId.get(item.id)?.rawResult ?? undefined)
+            : undefined,
         reviewsEvents: reviewsEvents.length > 0 ? reviewsEvents : undefined
       };
     })
@@ -160,7 +172,6 @@ async function loadDashboardData() {
 }
 
 export default async function HomePage() {
-  // TODO(auth): protect dashboard routes before exposing a public deployment.
   const data = await loadDashboardData();
 
   return (

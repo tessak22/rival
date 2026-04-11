@@ -24,6 +24,7 @@
  *
  * Fallback behavior:
  * - pricing/careers/reviews: fallback to automate when extract/json errors or returns empty.
+ * - homepage: fallback to automate when extract/json returns empty or fewer than 3 fields populated.
  * - reviews: content_blocked is expected and valid — log it and continue. Do not retry more than once.
  * - blog: fallback to extract/markdown then generate when extract/json returns empty.
  * - other page types: no implicit fallback in this module.
@@ -85,6 +86,12 @@ type RoutingDefinition = {
 };
 
 const ROUTING_BY_TYPE: Record<string, RoutingDefinition> = {
+  homepage: {
+    endpoint: "extract/json",
+    effort: "low",
+    jsonSchema: HOMEPAGE_SCHEMA,
+    expectedFields: HOMEPAGE_EXPECTED_FIELDS
+  },
   pricing: {
     endpoint: "extract/json",
     effort: "high",
@@ -130,12 +137,6 @@ const ROUTING_BY_TYPE: Record<string, RoutingDefinition> = {
     effort: "low",
     jsonSchema: PROFILE_SCHEMA,
     expectedFields: PROFILE_EXPECTED_FIELDS
-  },
-  homepage: {
-    endpoint: "extract/json",
-    effort: "low",
-    jsonSchema: HOMEPAGE_SCHEMA,
-    expectedFields: HOMEPAGE_EXPECTED_FIELDS
   },
   stack: {
     endpoint: "extract/json",
@@ -271,11 +272,35 @@ function shouldUseAutomateFallback(type: string): boolean {
   // content_blocked results in an empty extracted payload, so the same
   // empty-result check naturally triggers the automate fallback. The fallback
   // runs at most once — there is no second retry loop.
-  return type === "pricing" || type === "careers" || type === "reviews";
+  return type === "pricing" || type === "careers" || type === "homepage" || type === "reviews";
 }
 
 function shouldUseBlogFallback(type: string): boolean {
   return type === "blog";
+}
+
+/**
+ * Count the number of non-empty top-level fields in an extracted JSON object.
+ * Used to decide whether a homepage result is sparse enough to warrant a fallback.
+ */
+function countPopulatedFields(value: unknown): number {
+  if (!isPlainObject(value)) return 0;
+  return Object.values(value).filter((v) => !valueIsEmpty(v)).length;
+}
+
+/**
+ * Infer page type from URL when not explicitly provided.
+ * A bare root domain (https://competitor.com or https://competitor.com/) implies homepage.
+ */
+export function inferPageTypeFromUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    const path = parsed.pathname.replace(/\/$/, "");
+    if (path === "") return "homepage";
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 export const BLOG_URL_PATTERNS = ["/blog", "/articles", "/news", "/resources", "/posts", "/insights"];
@@ -500,11 +525,18 @@ async function runPrimaryScan(input: ScanPageInput): Promise<{
     };
   };
 
+  const HOMEPAGE_MIN_POPULATED_FIELDS = 3;
+
   try {
     const primary = await runJsonExtract();
     const extracted = extractDataEnvelope(primary);
 
     if (!valueIsEmpty(extracted)) {
+      // Homepage requires at least 3 populated fields to be considered a valid result.
+      if (input.type === "homepage" && countPopulatedFields(extracted) < HOMEPAGE_MIN_POPULATED_FIELDS) {
+        return runAutomateFallback("extract/json returned fewer than 3 populated fields");
+      }
+
       return {
         endpointUsed: "extract/json",
         rawResult: extracted,
