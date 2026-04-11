@@ -40,6 +40,19 @@ function renderStars(rating: number): string {
   return "★".repeat(full) + (half ? "½" : "") + "☆".repeat(empty);
 }
 
+function toSafeExternalUrl(rawUrl: string | null | undefined): string | null {
+  if (!rawUrl) return null;
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      return parsed.toString();
+    }
+  } catch {
+    // ignore invalid/untrusted URL values from extracted payloads
+  }
+  return null;
+}
+
 function hasMeaningfulReviewsData(data: ReviewsData | null): boolean {
   if (!data) return false;
   if (typeof data.overall_rating === "number") return true;
@@ -612,12 +625,13 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
                 <ol className="blog-post-list">
                   {blogData.recent_post_titles.map((title, i) => {
                     const url = blogData.recent_post_urls?.[i];
+                    const safeUrl = toSafeExternalUrl(url);
                     const date = blogData.recent_post_dates?.[i];
                     return (
                       <li key={i} className="blog-post-item">
                         <div className="blog-post-title">
-                          {url ? (
-                            <a href={url} target="_blank" rel="noopener noreferrer">
+                          {safeUrl ? (
+                            <a href={safeUrl} target="_blank" rel="noopener noreferrer">
                               {title}
                             </a>
                           ) : (
