@@ -233,6 +233,35 @@ describe("scanPage", () => {
     );
   });
 
+  it("falls back to automate for reviews when extract/json explicitly reports content_blocked", async () => {
+    extractJsonMock.mockResolvedValueOnce({
+      data: {
+        content_blocked: true,
+        platform: "G2"
+      }
+    });
+
+    const { scanPage } = await import("@/lib/scanner");
+
+    const result = await scanPage({
+      pageId: "page_reviews",
+      url: "https://www.g2.com/products/example/reviews",
+      type: "reviews"
+    });
+
+    expect(result.endpointUsed).toBe("automate");
+    expect(result.usedFallback).toBe(true);
+    expect(automateExtractMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fallback: {
+          triggered: true,
+          reason: "extract/json reported content_blocked",
+          endpoint: "automate"
+        }
+      })
+    );
+  });
+
   it("does not recurse indefinitely when checking deeply nested payloads", async () => {
     const nested: Record<string, unknown> = {};
     let cursor: Record<string, unknown> = nested;

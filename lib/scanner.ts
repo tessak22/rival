@@ -250,11 +250,21 @@ function buildAutomateTask(input: ScanPageInput): string {
 }
 
 function shouldUseAutomateFallback(type: string): boolean {
-  // reviews: fallback to automate once on empty or content_blocked.
-  // content_blocked results in an empty extracted payload, so the same
-  // empty-result check naturally triggers the automate fallback. The fallback
-  // runs at most once — there is no second retry loop.
+  // reviews: fallback to automate once on empty, explicit content_blocked, or error.
   return type === "pricing" || type === "careers" || type === "reviews";
+}
+
+function extractedIndicatesContentBlocked(value: unknown): boolean {
+  const payload = extractDataEnvelope(value);
+  if (!isPlainObject(payload)) return false;
+
+  if (payload["content_blocked"] === true) return true;
+  const status = payload["status"];
+  if (typeof status === "string" && status.toLowerCase() === "content_blocked") return true;
+  const error = payload["error"];
+  if (typeof error === "string" && error.toLowerCase().includes("content_blocked")) return true;
+
+  return false;
 }
 
 function toMutableJsonSchema(schema: JsonSchema | undefined): ExtractJsonSchema {
@@ -373,6 +383,10 @@ async function runPrimaryScan(input: ScanPageInput): Promise<{
 
   try {
     const primary = await runJsonExtract();
+    if (input.type === "reviews" && extractedIndicatesContentBlocked(primary)) {
+      return runAutomateFallback("extract/json reported content_blocked");
+    }
+
     const extracted = extractDataEnvelope(primary);
 
     if (!valueIsEmpty(extracted)) {

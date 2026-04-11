@@ -133,8 +133,7 @@ async function loadDashboardData() {
       orderBy: { scannedAt: "desc" },
       select: { rawResult: true }
     });
-    const prevData =
-      prev?.rawResult && typeof prev.rawResult === "object" ? (prev.rawResult as ReviewsData) : null;
+    const prevData = prev?.rawResult && typeof prev.rawResult === "object" ? (prev.rawResult as ReviewsData) : null;
     previousReviewsScans.set(scan.id, prevData);
   }
 
@@ -143,9 +142,7 @@ async function loadDashboardData() {
     feed: feed.map((item) => {
       const isReviews = item.page.type === "reviews";
       const currentData =
-        isReviews && item.rawResult && typeof item.rawResult === "object"
-          ? (item.rawResult as ReviewsData)
-          : null;
+        isReviews && item.rawResult && typeof item.rawResult === "object" ? (item.rawResult as ReviewsData) : null;
       const prevData = isReviews ? (previousReviewsScans.get(item.id) ?? null) : null;
       const reviewsEvents = currentData ? computeReviewsEvents(currentData, prevData) : [];
 

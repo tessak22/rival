@@ -31,10 +31,22 @@ function computeSchemaHealthByType(
 }
 
 function renderStars(rating: number): string {
-  const full = Math.floor(rating);
-  const half = rating - full >= 0.5 ? 1 : 0;
+  const bounded = Number.isFinite(rating) ? Math.max(0, Math.min(5, rating)) : 0;
+  const full = Math.floor(bounded);
+  const half = bounded - full >= 0.5 ? 1 : 0;
   const empty = 5 - full - half;
   return "★".repeat(full) + (half ? "½" : "") + "☆".repeat(empty);
+}
+
+function hasMeaningfulReviewsData(data: ReviewsData | null): boolean {
+  if (!data) return false;
+  if (typeof data.overall_rating === "number") return true;
+  if (typeof data.review_count === "number") return true;
+  if ((data.top_praise_themes?.length ?? 0) > 0) return true;
+  if ((data.top_complaint_themes?.length ?? 0) > 0) return true;
+  if ((data.recent_reviews?.length ?? 0) > 0) return true;
+  if (typeof data.recommended_percentage === "number") return true;
+  return false;
 }
 
 export default async function CompetitorDetailPage({ params }: PageProps) {
@@ -85,11 +97,12 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
   // Collect all reviews-type latest scans (one per review page/platform).
   const reviewsScans = latestScans.filter((scan) => scan.page.type === "reviews");
 
-  // For each reviews page, determine if the most recent log shows content_blocked.
-  // Build a map: pageId -> contentBlocked (from the latest log for that page).
+  // For each reviews page, determine if the latest extraction-phase log shows content_blocked.
+  // We intentionally ignore generate logs so diff-generation does not mask blocked extraction status.
+  const EXTRACTION_ENDPOINTS = new Set(["extract/json", "automate"]);
   const latestReviewsLogs = new Map<string, boolean>();
   for (const scan of reviewsScans) {
-    const latestLog = logs.find((log) => log.pageId === scan.pageId);
+    const latestLog = logs.find((log) => log.pageId === scan.pageId && EXTRACTION_ENDPOINTS.has(log.endpoint));
     if (latestLog) {
       latestReviewsLogs.set(scan.pageId, latestLog.contentBlocked);
     }
@@ -148,8 +161,8 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
         <header className="panel-header">
           <h2>Reviews</h2>
           <p className="muted panel-header-note">
-            G2, Capterra, Trustpilot, ProductHunt — review sites actively block scraping.{" "}
-            <code>content_blocked</code> logs here are expected and high-value experience-logging signals.
+            G2, Capterra, Trustpilot, ProductHunt — review sites actively block scraping. <code>content_blocked</code>{" "}
+            logs here are expected and high-value experience-logging signals.
           </p>
         </header>
 
@@ -158,7 +171,7 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
         ) : (
           <div className="reviews-platform-tabs">
             {reviewsScans.map((scan) => {
-              const data =
+              const latestData =
                 scan.rawResult && typeof scan.rawResult === "object" ? (scan.rawResult as ReviewsData) : null;
               const isBlocked = latestReviewsLogs.get(scan.pageId) ?? false;
               const prevScan = previousReviewsScanByPageId.get(scan.pageId);
@@ -166,18 +179,20 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
                 prevScan?.rawResult && typeof prevScan.rawResult === "object"
                   ? (prevScan.rawResult as ReviewsData)
                   : null;
+              const usePreviousData =
+                isBlocked && !hasMeaningfulReviewsData(latestData) && hasMeaningfulReviewsData(prevData);
+              const data = usePreviousData ? prevData : latestData;
 
               // Diff flags
               const ratingChanged =
+                !usePreviousData &&
                 prevData?.overall_rating != null &&
                 data?.overall_rating != null &&
                 Math.abs(data.overall_rating - prevData.overall_rating) > 0.1;
 
               const prevComplaintSet = new Set(prevData?.top_complaint_themes ?? []);
-              const newComplaints = (data?.top_complaint_themes ?? []).filter(
-                (theme) => !prevComplaintSet.has(theme)
-              );
-              const complaintsChanged = newComplaints.length > 0;
+              const newComplaints = (data?.top_complaint_themes ?? []).filter((theme) => !prevComplaintSet.has(theme));
+              const complaintsChanged = !usePreviousData && newComplaints.length > 0;
 
               // Platform label — prefer extracted platform, fall back to page label.
               const platformLabel = data?.platform ?? scan.page.label;
@@ -207,7 +222,8 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
                   {/* Blocked scan banner */}
                   {isBlocked && (
                     <div className="blocked-banner" role="alert">
-                      Last scan was blocked by {platformLabel}. Showing previous successful scan data.
+                      Last scan was blocked by {platformLabel}.{" "}
+                      {usePreviousData ? "Showing the previous available scan data." : "Recent data may be incomplete."}
                     </div>
                   )}
 
@@ -227,9 +243,7 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
                           {data.review_count != null ? `${data.review_count.toLocaleString()} reviews` : ""}
                         </span>
                         {ratingChanged && prevData?.overall_rating != null && (
-                          <span className="diff-badge diff-badge--amber">
-                            was {prevData.overall_rating.toFixed(1)}
-                          </span>
+                          <span className="diff-badge diff-badge--amber">was {prevData.overall_rating.toFixed(1)}</span>
                         )}
                       </div>
 
@@ -306,13 +320,9 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
                               <li key={i} className="reviews-recent-item">
                                 <div className="reviews-recent-meta">
                                   {review.rating != null && (
-                                    <span className="reviews-recent-rating">
-                                      {review.rating.toFixed(1)} ★
-                                    </span>
+                                    <span className="reviews-recent-rating">{review.rating.toFixed(1)} ★</span>
                                   )}
-                                  {review.date && (
-                                    <time className="reviews-recent-date muted">{review.date}</time>
-                                  )}
+                                  {review.date && <time className="reviews-recent-date muted">{review.date}</time>}
                                 </div>
                                 <p className="reviews-recent-summary">{review.summary ?? "—"}</p>
                               </li>
@@ -334,8 +344,8 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
                     ) {
                       return (
                         <p className="muted staleness-note">
-                          Manual field staleness warning suppressed — {platformLabel} scan succeeded within the last
-                          7 days.
+                          Manual field staleness warning suppressed — {platformLabel} scan succeeded within the last 7
+                          days.
                         </p>
                       );
                     }

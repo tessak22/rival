@@ -45,7 +45,8 @@ export const REVIEWS_SCHEMA = {
     },
     overall_rating: {
       type: "number",
-      description: "Overall star rating as decimal (e.g. 4.7). Track delta between scans — changes of 0.1+ are meaningful."
+      description:
+        "Overall star rating as decimal (e.g. 4.7). Track delta between scans — changes of 0.1+ are meaningful."
     },
     review_count: {
       type: "number",
@@ -85,7 +86,8 @@ export const REVIEWS_SCHEMA = {
     },
     recommended_percentage: {
       type: "number",
-      description: "Percentage of reviewers who recommend the product (e.g. 92 for 92%). Strong trust signal if present."
+      description:
+        "Percentage of reviewers who recommend the product (e.g. 92 for 92%). Strong trust signal if present."
     }
   },
   required: ["platform", "overall_rating", "review_count", "top_praise_themes", "top_complaint_themes"]
