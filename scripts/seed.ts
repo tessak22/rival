@@ -41,6 +41,7 @@ function toJsonValue(value: unknown): Prisma.InputJsonValue | Prisma.NullableJso
 }
 
 async function main() {
+  const prunePages = process.argv.includes("--prune-pages");
   const config = await loadConfig();
   const competitors = config.competitors ?? [];
 
@@ -67,6 +68,8 @@ async function main() {
       }
     });
 
+    const configUrls = new Set((competitor.pages ?? []).map((p) => p.url));
+
     for (const page of competitor.pages ?? []) {
       const existing = await prisma.competitorPage.findFirst({
         where: { competitorId: record.id, url: page.url }
@@ -87,6 +90,26 @@ async function main() {
             geoTarget: page.geo_target ?? null
           }
         });
+      }
+    }
+
+    const dbPages = await prisma.competitorPage.findMany({
+      where: { competitorId: record.id }
+    });
+    const orphaned = dbPages.filter((p) => !configUrls.has(p.url));
+
+    if (orphaned.length > 0) {
+      if (prunePages) {
+        await prisma.competitorPage.deleteMany({
+          where: { id: { in: orphaned.map((p) => p.id) } }
+        });
+        console.warn(
+          `  Pruned ${orphaned.length} page(s) for ${record.slug} (scan history deleted): ${orphaned.map((p) => p.url).join(", ")}`
+        );
+      } else {
+        console.warn(
+          `  Warning: ${orphaned.length} page(s) in DB but not in config for ${record.slug} — cron will keep scanning them. Run with --prune-pages to remove (deletes scan history): ${orphaned.map((p) => p.url).join(", ")}`
+        );
       }
     }
 
