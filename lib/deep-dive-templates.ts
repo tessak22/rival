@@ -97,7 +97,9 @@ Cite every finding with a URL. Focus on recency — prioritize sources from the 
     key: "strategic-moves",
     label: "Recent Strategic Moves",
     description: "Funding, hires, partnerships, and product direction in the last 6 months",
-    buildPrompt: (name) => `You are a competitive intelligence analyst. Research ${name} and produce a summary of their notable strategic activity in the last 6 months.
+    buildPrompt: (
+      name
+    ) => `You are a competitive intelligence analyst. Research ${name} and produce a summary of their notable strategic activity in the last 6 months.
 
 Cover:
 
