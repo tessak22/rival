@@ -34,8 +34,7 @@ export const HOMEPAGE_SCHEMA = {
   properties: {
     primary_tagline: {
       type: "string",
-      description:
-        "Main H1 or hero headline on the homepage. The most direct signal of current positioning."
+      description: "Main H1 or hero headline on the homepage. The most direct signal of current positioning."
     },
     sub_tagline: {
       type: "string",

@@ -26,10 +26,12 @@ function getHomepageChangeMessage(
 ): string | null {
   if (!previous) return null;
 
-  const taglineChanged =
-    current.primary_tagline !== undefined && current.primary_tagline !== previous.primary_tagline;
-  const subTaglineChanged =
-    current.sub_tagline !== undefined && current.sub_tagline !== previous.sub_tagline;
+  const normalize = (value: string | null | undefined): string | null => {
+    const trimmed = value?.trim();
+    return trimmed && trimmed.length > 0 ? trimmed : null;
+  };
+  const taglineChanged = normalize(current.primary_tagline) !== normalize(previous.primary_tagline);
+  const subTaglineChanged = normalize(current.sub_tagline) !== normalize(previous.sub_tagline);
   const differentiatorItemsChanged =
     JSON.stringify(current.key_differentiators ?? []) !== JSON.stringify(previous.key_differentiators ?? []);
 
