@@ -13,7 +13,9 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "db:seed": "tsx scripts/seed.ts",
+    "validate:scan-cycle": "tsx scripts/validate-scan-cycle.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.7.0",
@@ -37,6 +39,7 @@
     "eslint": "^10.2.0",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.8.1",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.58.0",
     "vitest": "^2.1.8"
