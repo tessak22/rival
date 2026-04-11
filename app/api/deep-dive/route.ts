@@ -3,10 +3,12 @@ import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/db/client";
 import { runResearch } from "@/lib/tabstack/research";
+import { buildPromptForTemplate } from "@/lib/deep-dive-templates";
 
 type DeepDiveRequest = {
   competitorId?: string;
   mode?: "fast" | "balanced";
+  promptTemplate?: string | null;
 };
 
 const encoder = new TextEncoder();
@@ -44,6 +46,8 @@ export async function POST(request: NextRequest) {
   }
 
   const mode = body.mode ?? "balanced";
+  const promptTemplate = body.promptTemplate ?? null;
+
   const competitor = await prisma.competitor.findUnique({ where: { id: body.competitorId } });
   if (!competitor) {
     return new Response(JSON.stringify({ error: "Competitor not found" }), {
@@ -55,8 +59,11 @@ export async function POST(request: NextRequest) {
   const stream = new ReadableStream({
     start: async (controller) => {
       try {
-        controller.enqueue(sse("research:started", { competitorId: competitor.id, mode }));
-        const query = buildResearchQuery(competitor.name);
+        controller.enqueue(sse("research:started", { competitorId: competitor.id, mode, promptTemplate }));
+
+        // If a known template key is provided, use its prompt; otherwise fall back to general research
+        const builtPrompt = promptTemplate ? buildPromptForTemplate(promptTemplate, competitor.name) : null;
+        const query = builtPrompt ?? buildResearchQuery(competitor.name);
 
         const result = await runResearch({
           competitorId: competitor.id,
@@ -80,7 +87,8 @@ export async function POST(request: NextRequest) {
             mode,
             query,
             result: toJsonValue(result.result),
-            citations: toJsonValue(result.citations)
+            citations: toJsonValue(result.citations),
+            promptTemplate
           }
         });
 

@@ -8,6 +8,7 @@ export async function createDeepDive(input: {
   query: string;
   result?: PrismaTypes.InputJsonValue | null;
   citations?: PrismaTypes.InputJsonValue | null;
+  promptTemplate?: string | null;
 }) {
   return prisma.deepDive.create({
     data: {
@@ -15,7 +16,8 @@ export async function createDeepDive(input: {
       mode: input.mode,
       query: input.query,
       result: input.result ?? Prisma.JsonNull,
-      citations: input.citations ?? Prisma.JsonNull
+      citations: input.citations ?? Prisma.JsonNull,
+      promptTemplate: input.promptTemplate ?? null
     }
   });
 }
