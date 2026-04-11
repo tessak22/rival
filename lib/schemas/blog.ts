@@ -42,7 +42,8 @@ export const BLOG_SCHEMA = {
     recent_post_urls: {
       type: "array",
       items: { type: "string" },
-      description: "URLs of the same posts in the same order as recent_post_titles. Null entries if URL is not extractable."
+      description:
+        "URLs of the same posts in the same order as recent_post_titles. Null entries if URL is not extractable."
     },
     recent_post_dates: {
       type: "array",

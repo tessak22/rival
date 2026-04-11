@@ -40,6 +40,8 @@ import {
   DOCS_SCHEMA,
   GITHUB_EXPECTED_FIELDS,
   GITHUB_SCHEMA,
+  HOMEPAGE_EXPECTED_FIELDS,
+  HOMEPAGE_SCHEMA,
   PRICING_EXPECTED_FIELDS,
   PRICING_SCHEMA,
   PROFILE_EXPECTED_FIELDS,
@@ -125,6 +127,12 @@ const ROUTING_BY_TYPE: Record<string, RoutingDefinition> = {
     effort: "low",
     jsonSchema: PROFILE_SCHEMA,
     expectedFields: PROFILE_EXPECTED_FIELDS
+  },
+  homepage: {
+    endpoint: "extract/json",
+    effort: "low",
+    jsonSchema: HOMEPAGE_SCHEMA,
+    expectedFields: HOMEPAGE_EXPECTED_FIELDS
   },
   stack: {
     endpoint: "extract/json",
@@ -263,9 +271,9 @@ export const BLOG_URL_PATTERNS = ["/blog", "/articles", "/news", "/resources", "
 export function inferBlogPageType(url: string): "blog" | null {
   try {
     const { pathname } = new URL(url);
-    const lowerPath = pathname.toLowerCase();
+    const lowerPath = pathname.toLowerCase().replace(/\/+$/, "") || "/";
     for (const pattern of BLOG_URL_PATTERNS) {
-      if (lowerPath === pattern || lowerPath.startsWith(pattern + "/") || lowerPath.startsWith(pattern + "?")) {
+      if (lowerPath === pattern) {
         return "blog";
       }
     }
@@ -274,7 +282,6 @@ export function inferBlogPageType(url: string): "blog" | null {
   }
   return null;
 }
-
 
 function toMutableJsonSchema(schema: JsonSchema | undefined): ExtractJsonSchema {
   if (!schema) {
@@ -355,7 +362,6 @@ async function runPrimaryScan(input: ScanPageInput): Promise<{
         : undefined
     });
 
-
   // Blog fallback: extract/markdown then generate when extract/json returns empty.
   // Log schema_mismatch when recent_post_titles is empty on a confirmed blog index.
   if (shouldUseBlogFallback(input.type)) {
@@ -384,7 +390,7 @@ async function runPrimaryScan(input: ScanPageInput): Promise<{
       };
     }
 
-    // Fallback: extract/markdown then pass to generate to extract schema fields.
+    // Fallback: extract/markdown then automate with explicit blog-schema task.
     const markdownResponse = await extractMarkdown({
       competitorId: input.competitorId,
       pageId: input.pageId,
@@ -396,12 +402,12 @@ async function runPrimaryScan(input: ScanPageInput): Promise<{
       fallback: {
         triggered: true,
         reason: "extract/json returned empty result",
-        endpoint: "generate"
+        endpoint: "automate"
       }
     });
 
     const markdownContent = extractMarkdownContent(markdownResponse);
-    const generateInstructions = markdownContent
+    const automateTask = markdownContent
       ? [
           "Extract structured blog index data from this markdown content.",
           "Return JSON with these fields:",
@@ -419,25 +425,25 @@ async function runPrimaryScan(input: ScanPageInput): Promise<{
         ].join("\n")
       : "No markdown content could be extracted from this blog index page.";
 
-    const generateResponse = await generateDiff({
+    const automateResponse = await automateExtract({
       competitorId: input.competitorId,
       pageId: input.pageId,
       url: input.url,
-      previousContent: generateInstructions,
-      effort: "low",
-      nocache,
+      task: automateTask,
+      guardrails: DEFAULT_AUTOMATE_GUARDRAILS,
       geoTarget: input.geoTarget,
       isDemo: input.isDemo,
+      expectedFields: route.expectedFields ? [...route.expectedFields] : undefined,
       fallback: {
         triggered: true,
-        reason: "extract/json returned empty; extract/markdown passed to generate",
-        endpoint: "generate"
+        reason: "extract/json returned empty; extract/markdown fallback to automate",
+        endpoint: "automate"
       }
     });
 
     return {
-      endpointUsed: "generate",
-      rawResult: extractDataEnvelope(generateResponse),
+      endpointUsed: "automate",
+      rawResult: automateResponse.result,
       markdownResult: markdownContent,
       usedFallback: true
     };

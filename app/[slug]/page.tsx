@@ -38,6 +38,19 @@ function computeSchemaHealthByType(
     .sort((a, b) => b.score - a.score);
 }
 
+function toSafeExternalUrl(rawUrl: string | null | undefined): string | null {
+  if (!rawUrl) return null;
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      return parsed.toString();
+    }
+  } catch {
+    // ignore invalid/untrusted URL values from extracted payloads
+  }
+  return null;
+}
+
 export default async function CompetitorDetailPage({ params }: PageProps) {
   // TODO(auth): protect competitor detail routes before exposing a public deployment.
   const { slug } = await params;
@@ -86,9 +99,7 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
   // Blog scan data for the Blog tab.
   const blogScan = latestScans.find((scan) => scan.page.type === "blog");
   const blogData =
-    blogScan && blogScan.rawResult && typeof blogScan.rawResult === "object"
-      ? (blogScan.rawResult as BlogData)
-      : null;
+    blogScan && blogScan.rawResult && typeof blogScan.rawResult === "object" ? (blogScan.rawResult as BlogData) : null;
 
   // Detect previous blog scan for diff highlighting (developer_focused flip, post_frequency change, new topics).
   let previousBlogData: BlogData | null = null;
@@ -100,8 +111,7 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
       // This is the latest — skip; we want the previous one.
       continue;
     }
-    previousBlogData =
-      scan.rawResult && typeof scan.rawResult === "object" ? (scan.rawResult as BlogData) : null;
+    previousBlogData = scan.rawResult && typeof scan.rawResult === "object" ? (scan.rawResult as BlogData) : null;
     break;
   }
 
@@ -167,9 +177,7 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
           <div className="blog-tab">
             {/* Schema health + last scanned + changes flag */}
             <div className="blog-tab-header-row">
-              {blogHealthScore !== null && (
-                <SchemaHealthBadge score={blogHealthScore} label="blog schema" />
-              )}
+              {blogHealthScore !== null && <SchemaHealthBadge score={blogHealthScore} label="blog schema" />}
               <span className="muted scan-timestamp">
                 Last scanned: {blogScan.scannedAt.toISOString().slice(0, 10)}
               </span>
@@ -239,12 +247,13 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
                 <ol className="blog-post-list">
                   {blogData.recent_post_titles.map((title, i) => {
                     const url = blogData.recent_post_urls?.[i];
+                    const safeUrl = toSafeExternalUrl(url);
                     const date = blogData.recent_post_dates?.[i];
                     return (
                       <li key={i} className="blog-post-item">
                         <div className="blog-post-title">
-                          {url ? (
-                            <a href={url} target="_blank" rel="noopener noreferrer">
+                          {safeUrl ? (
+                            <a href={safeUrl} target="_blank" rel="noopener noreferrer">
                               {title}
                             </a>
                           ) : (
@@ -275,9 +284,7 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
                 </div>
               )}
 
-            {blogData == null && (
-              <p className="muted">Scan ran but no data was extracted. Check logs for details.</p>
-            )}
+            {blogData == null && <p className="muted">Scan ran but no data was extracted. Check logs for details.</p>}
           </div>
         )}
       </section>

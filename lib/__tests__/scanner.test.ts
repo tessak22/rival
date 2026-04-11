@@ -255,4 +255,45 @@ describe("scanPage", () => {
     expect(result.usedFallback).toBe(false);
     expect(automateExtractMock).not.toHaveBeenCalled();
   });
+
+  it("uses automate fallback for blog when extract/json is empty", async () => {
+    extractJsonMock.mockResolvedValueOnce({ data: {} });
+    extractMarkdownMock.mockResolvedValueOnce({
+      data: { content: "# Blog\n\n- Post A\n- Post B" }
+    });
+
+    const { scanPage } = await import("@/lib/scanner");
+
+    const result = await scanPage({
+      pageId: "page_blog",
+      url: "https://example.com/blog",
+      type: "blog"
+    });
+
+    expect(result.endpointUsed).toBe("automate");
+    expect(result.usedFallback).toBe(true);
+    expect(automateExtractMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fallback: expect.objectContaining({
+          endpoint: "automate"
+        })
+      })
+    );
+    expect(generateDiffMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("inferBlogPageType", () => {
+  it("classifies common blog index roots", async () => {
+    const { inferBlogPageType } = await import("@/lib/scanner");
+    expect(inferBlogPageType("https://example.com/blog")).toBe("blog");
+    expect(inferBlogPageType("https://example.com/resources/")).toBe("blog");
+    expect(inferBlogPageType("https://example.com/insights")).toBe("blog");
+  });
+
+  it("does not classify nested article/detail paths as blog index", async () => {
+    const { inferBlogPageType } = await import("@/lib/scanner");
+    expect(inferBlogPageType("https://example.com/blog/how-we-built-this")).toBeNull();
+    expect(inferBlogPageType("https://example.com/resources/case-study")).toBeNull();
+  });
 });
