@@ -4,5 +4,6 @@ export * from "./docs";
 export * from "./github";
 export * from "./pricing";
 export * from "./profile";
+export * from "./reviews";
 export * from "./social";
 export * from "./stack";

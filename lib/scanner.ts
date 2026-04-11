@@ -23,7 +23,8 @@
  * - `isDemo`: skips scans table persistence when true.
  *
  * Fallback behavior:
- * - pricing/careers: fallback to automate when extract/json errors or returns empty.
+ * - pricing/careers/reviews: fallback to automate when extract/json errors or returns empty.
+ * - reviews: content_blocked is expected and valid — log it and continue. Do not retry more than once.
  * - other page types: no implicit fallback in this module.
  */
 
@@ -41,6 +42,8 @@ import {
   PRICING_SCHEMA,
   PROFILE_EXPECTED_FIELDS,
   PROFILE_SCHEMA,
+  REVIEWS_EXPECTED_FIELDS,
+  REVIEWS_SCHEMA,
   SOCIAL_EXPECTED_FIELDS,
   SOCIAL_SCHEMA,
   STACK_EXPECTED_FIELDS,
@@ -122,6 +125,16 @@ const ROUTING_BY_TYPE: Record<string, RoutingDefinition> = {
     effort: "low",
     jsonSchema: STACK_SCHEMA,
     expectedFields: STACK_EXPECTED_FIELDS
+  },
+  // reviews: JS-heavy SPAs with active bot-detection. High effort required.
+  // content_blocked is expected and common — it is the most valuable experience-logging
+  // candidate in the codebase. Do NOT use geo_target for review pages.
+  // Fallback to automate once on empty or content_blocked; do not retry further.
+  reviews: {
+    endpoint: "extract/json",
+    effort: "high",
+    jsonSchema: REVIEWS_SCHEMA,
+    expectedFields: REVIEWS_EXPECTED_FIELDS
   },
   custom: {
     endpoint: "automate"
@@ -237,7 +250,11 @@ function buildAutomateTask(input: ScanPageInput): string {
 }
 
 function shouldUseAutomateFallback(type: string): boolean {
-  return type === "pricing" || type === "careers";
+  // reviews: fallback to automate once on empty or content_blocked.
+  // content_blocked results in an empty extracted payload, so the same
+  // empty-result check naturally triggers the automate fallback. The fallback
+  // runs at most once — there is no second retry loop.
+  return type === "pricing" || type === "careers" || type === "reviews";
 }
 
 function toMutableJsonSchema(schema: JsonSchema | undefined): ExtractJsonSchema {
