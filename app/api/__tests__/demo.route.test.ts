@@ -2,14 +2,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { Prisma } from "@prisma/client";
 
-const { scanPageMock, demoIpLockCreateMock, demoIpLockDeleteMock, demoScanCountMock, demoScanCreateMock } =
-  vi.hoisted(() => ({
+const { scanPageMock, demoIpLockCreateMock, demoIpLockDeleteMock, demoScanCountMock, demoScanCreateMock } = vi.hoisted(
+  () => ({
     scanPageMock: vi.fn(),
     demoIpLockCreateMock: vi.fn(),
     demoIpLockDeleteMock: vi.fn(),
     demoScanCountMock: vi.fn(),
     demoScanCreateMock: vi.fn()
-  }));
+  })
+);
 
 vi.mock("@/lib/scanner", () => ({ scanPage: scanPageMock }));
 vi.mock("@/lib/db/client", () => ({
@@ -323,9 +324,7 @@ describe("POST /api/demo", () => {
     const res = await POST(makeRequest({ url: "https://example.com" }));
     await drainStream(getBody(res));
 
-    expect(scanPageMock).toHaveBeenCalledWith(
-      expect.objectContaining({ isDemo: true })
-    );
+    expect(scanPageMock).toHaveBeenCalledWith(expect.objectContaining({ isDemo: true }));
   });
 
   it("passes customTask for custom page type", async () => {
@@ -346,8 +345,6 @@ describe("POST /api/demo", () => {
     const res = await POST(makeRequest({ url: "https://example.com/pricing" }));
     await drainStream(getBody(res));
 
-    expect(scanPageMock).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "pricing", customTask: undefined })
-    );
+    expect(scanPageMock).toHaveBeenCalledWith(expect.objectContaining({ type: "pricing", customTask: undefined }));
   });
 });

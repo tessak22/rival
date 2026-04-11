@@ -28,10 +28,10 @@ describe("parseSseChunk", () => {
   });
 
   it("parses multiple SSE blocks in one chunk", () => {
-    const chunk = [
-      'event: scan:started\ndata: {"url":"https://example.com"}',
-      'event: scan:complete\ndata: {"result":"ok"}'
-    ].join("\n\n") + "\n\n";
+    const chunk =
+      ['event: scan:started\ndata: {"url":"https://example.com"}', 'event: scan:complete\ndata: {"result":"ok"}'].join(
+        "\n\n"
+      ) + "\n\n";
 
     const result = parseSseChunk(chunk);
 
@@ -106,11 +106,8 @@ describe("parseSseChunk", () => {
   });
 
   it("handles mixed valid and invalid blocks", () => {
-    const chunk = [
-      "event: good\ndata: 1",
-      "event: bad\ndata: {broken",
-      'event: good2\ndata: {"ok":true}'
-    ].join("\n\n") + "\n\n";
+    const chunk =
+      ["event: good\ndata: 1", "event: bad\ndata: {broken", 'event: good2\ndata: {"ok":true}'].join("\n\n") + "\n\n";
 
     const result = parseSseChunk(chunk);
 
@@ -130,7 +127,7 @@ describe("parseSseChunk", () => {
   });
 
   it("handles multiple blank lines between blocks gracefully", () => {
-    const chunk = 'event: first\ndata: 1\n\n\n\nevent: second\ndata: 2\n\n';
+    const chunk = "event: first\ndata: 1\n\n\n\nevent: second\ndata: 2\n\n";
     const result = parseSseChunk(chunk);
 
     // The extra blank line block (empty string after filtering) is dropped

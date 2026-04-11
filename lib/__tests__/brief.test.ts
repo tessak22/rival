@@ -1,11 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const {
-  competitorFindUniqueMock,
-  scanFindManyMock,
-  competitorUpdateMock,
-  generateBriefMock
-} = vi.hoisted(() => ({
+const { competitorFindUniqueMock, scanFindManyMock, competitorUpdateMock, generateBriefMock } = vi.hoisted(() => ({
   competitorFindUniqueMock: vi.fn(),
   scanFindManyMock: vi.fn(),
   competitorUpdateMock: vi.fn(),
@@ -94,9 +89,7 @@ describe("generateCompetitorBrief", () => {
     scanFindManyMock.mockResolvedValueOnce([makeStaleScan()]);
     const { generateCompetitorBrief } = await import("@/lib/brief");
 
-    await expect(generateCompetitorBrief("cmp_1")).rejects.toThrow(
-      "No recent scans available for brief generation"
-    );
+    await expect(generateCompetitorBrief("cmp_1")).rejects.toThrow("No recent scans available for brief generation");
     expect(generateBriefMock).not.toHaveBeenCalled();
   });
 
@@ -104,9 +97,7 @@ describe("generateCompetitorBrief", () => {
     scanFindManyMock.mockResolvedValueOnce([]);
     const { generateCompetitorBrief } = await import("@/lib/brief");
 
-    await expect(generateCompetitorBrief("cmp_1")).rejects.toThrow(
-      "No recent scans available for brief generation"
-    );
+    await expect(generateCompetitorBrief("cmp_1")).rejects.toThrow("No recent scans available for brief generation");
   });
 
   it("calls generateBrief with competitor baseUrl and nocache=true by default", async () => {
@@ -126,18 +117,14 @@ describe("generateCompetitorBrief", () => {
     const { generateCompetitorBrief } = await import("@/lib/brief");
     await generateCompetitorBrief("cmp_1", false);
 
-    expect(generateBriefMock).toHaveBeenCalledWith(
-      expect.objectContaining({ nocache: false })
-    );
+    expect(generateBriefMock).toHaveBeenCalledWith(expect.objectContaining({ nocache: false }));
   });
 
   it("passes competitorId in generateBrief params", async () => {
     const { generateCompetitorBrief } = await import("@/lib/brief");
     await generateCompetitorBrief("cmp_1");
 
-    expect(generateBriefMock).toHaveBeenCalledWith(
-      expect.objectContaining({ competitorId: "cmp_1" })
-    );
+    expect(generateBriefMock).toHaveBeenCalledWith(expect.objectContaining({ competitorId: "cmp_1" }));
   });
 
   it("uses markdownResult when available", async () => {
