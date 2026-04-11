@@ -16,6 +16,9 @@ function isAuthorized(request: NextRequest): boolean {
 }
 
 const DEFAULT_CONCURRENCY = 3;
+// Any demo IP lock older than this is assumed to be orphaned (server crash
+// before the stream's finally block could call releaseLock).
+const STALE_LOCK_AGE_MS = 60 * 60 * 1000; // 1 hour
 
 async function processCompetitor(
   competitor: {
@@ -68,6 +71,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const staleThreshold = new Date(Date.now() - STALE_LOCK_AGE_MS);
+  const { count: staleLocksDeleted } = await prisma.demoIpLock.deleteMany({
+    where: { acquiredAt: { lt: staleThreshold } }
+  });
+
   const competitors = await prisma.competitor.findMany({
     include: { pages: true }
   });
@@ -85,6 +93,7 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({
     competitors: competitors.length,
+    staleLocksDeleted,
     summary
   });
 }

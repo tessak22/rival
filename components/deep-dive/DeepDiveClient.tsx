@@ -43,7 +43,12 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
       });
 
       if (!response.ok || !response.body) {
-        setError(`Request failed (${response.status})`);
+        try {
+          const body = (await response.json()) as { error?: string };
+          setError(body.error ?? `Request failed (${response.status})`);
+        } catch {
+          setError(`Request failed (${response.status})`);
+        }
         return;
       }
 
@@ -73,6 +78,7 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
           }
         }
       }
+
       if (buffer.trim()) {
         for (const parsed of parseSseChunk(buffer)) {
           const id = `${Date.now()}-${Math.random()}`;
@@ -88,8 +94,8 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
           }
         }
       }
-    } catch (error) {
-      setError(error instanceof Error ? error.message : "Deep dive request failed");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Deep dive request failed");
     } finally {
       setIsLoading(false);
     }
@@ -104,21 +110,11 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
         <p className="muted">{competitorName}</p>
         <div className="mode-row">
           <label>
-            <input
-              type="radio"
-              name="mode"
-              checked={mode === "fast"}
-              onChange={() => setMode("fast")}
-            />
+            <input type="radio" name="mode" checked={mode === "fast"} onChange={() => setMode("fast")} />
             Fast
           </label>
           <label>
-            <input
-              type="radio"
-              name="mode"
-              checked={mode === "balanced"}
-              onChange={() => setMode("balanced")}
-            />
+            <input type="radio" name="mode" checked={mode === "balanced"} onChange={() => setMode("balanced")} />
             Balanced
           </label>
           <button type="button" onClick={runDeepDive} disabled={isLoading}>
@@ -152,7 +148,11 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
         <header className="panel-header">
           <h2>Structured Report</h2>
         </header>
-        {result ? <pre className="json-view">{JSON.stringify(result, null, 2)}</pre> : <p className="muted">No report yet.</p>}
+        {result ? (
+          <pre className="json-view">{JSON.stringify(result, null, 2)}</pre>
+        ) : (
+          <p className="muted">No report yet.</p>
+        )}
       </section>
 
       <section className="panel">

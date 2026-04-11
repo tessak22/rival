@@ -142,3 +142,13 @@ model DemoScan {
   @@index([ipHash, scannedAt])
   @@map("demo_scans")
 }
+
+// One row per IP that currently has a scan in progress.
+// ipHash is the PRIMARY KEY so INSERT fails instantly if another scan is active.
+// Safe with Prisma connection pooling — no session affinity required.
+model DemoIpLock {
+  ipHash     String   @id @map("ip_hash")
+  acquiredAt DateTime @default(now()) @map("acquired_at") @db.Timestamptz(6)
+
+  @@map("demo_ip_locks")
+}

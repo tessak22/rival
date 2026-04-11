@@ -1,16 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const { scanPageMock, generateBriefMock, competitorFindManyMock } = vi.hoisted(() => ({
+const { scanPageMock, generateBriefMock, competitorFindManyMock, deleteStaleLocksMock } = vi.hoisted(() => ({
   scanPageMock: vi.fn(),
   generateBriefMock: vi.fn(),
-  competitorFindManyMock: vi.fn()
+  competitorFindManyMock: vi.fn(),
+  deleteStaleLocksMock: vi.fn()
 }));
 
 vi.mock("@/lib/scanner", () => ({ scanPage: scanPageMock }));
 vi.mock("@/lib/brief", () => ({ generateCompetitorBrief: generateBriefMock }));
 vi.mock("@/lib/db/client", () => ({
-  prisma: { competitor: { findMany: competitorFindManyMock } }
+  prisma: {
+    competitor: { findMany: competitorFindManyMock },
+    demoIpLock: { deleteMany: deleteStaleLocksMock }
+  }
 }));
 
 const PAGE = { id: "page_1", label: "Pricing", url: "https://example.com/pricing", type: "pricing", geoTarget: null };
@@ -28,10 +32,12 @@ describe("POST /api/cron", () => {
     scanPageMock.mockReset();
     generateBriefMock.mockReset();
     competitorFindManyMock.mockReset();
+    deleteStaleLocksMock.mockReset();
     vi.unstubAllEnvs();
     scanPageMock.mockResolvedValue({ status: "success" });
     generateBriefMock.mockResolvedValue({});
     competitorFindManyMock.mockResolvedValue([COMPETITOR]);
+    deleteStaleLocksMock.mockResolvedValue({ count: 0 });
   });
 
   it("returns 401 when CRON_SECRET is not configured", async () => {
@@ -55,9 +61,20 @@ describe("POST /api/cron", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.competitors).toBe(1);
+    expect(body.staleLocksDeleted).toBe(0);
     expect(body.summary).toHaveLength(1);
     expect(body.summary[0].pagesScanned).toBe(1);
     expect(body.summary[0].briefGenerated).toBe(true);
+  });
+
+  it("reports stale demo locks deleted by cron cleanup", async () => {
+    vi.stubEnv("CRON_SECRET", "secret");
+    deleteStaleLocksMock.mockResolvedValue({ count: 2 });
+    const { POST } = await import("@/app/api/cron/route");
+    const res = await POST(cronRequest("secret"));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.staleLocksDeleted).toBe(2);
   });
 
   it("records errors per page without throwing", async () => {

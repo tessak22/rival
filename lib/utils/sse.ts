@@ -24,4 +24,3 @@ export function parseSseChunk(chunk: string): ParsedSseEvent[] {
 
   return parsed;
 }
-
