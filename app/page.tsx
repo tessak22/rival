@@ -78,14 +78,39 @@ async function loadDashboardData() {
   });
   const competitorNames = new Map(competitors.map((competitor) => [competitor.id, competitor.name]));
 
+  // For homepage items, fetch the scan that preceded each changed scan so we can
+  // surface specific headline/positioning change messages in the Intel Feed.
+  const homepageFeedItems = feed.filter((item) => item.page.type === "homepage");
+  const previousHomepageScans = await Promise.all(
+    homepageFeedItems.map((item) =>
+      prisma.scan.findFirst({
+        where: {
+          pageId: item.pageId,
+          scannedAt: { lt: item.scannedAt }
+        },
+        orderBy: { scannedAt: "desc" },
+        select: { id: true, rawResult: true }
+      })
+    )
+  );
+  const previousHomepageScanByCurrentId = new Map(
+    homepageFeedItems.map((item, i) => [item.id, previousHomepageScans[i]])
+  );
+
   return {
     matrix,
     feed: feed.map((item) => ({
       id: item.id,
       competitorName: competitorNames.get(item.page.competitorId) ?? "Unknown competitor",
       pageLabel: item.page.label,
+      pageType: item.page.type,
       scannedAt: item.scannedAt,
-      diffSummary: item.diffSummary
+      diffSummary: item.diffSummary,
+      rawResult: item.page.type === "homepage" ? item.rawResult : undefined,
+      previousRawResult:
+        item.page.type === "homepage"
+          ? (previousHomepageScanByCurrentId.get(item.id)?.rawResult ?? undefined)
+          : undefined
     }))
   };
 }

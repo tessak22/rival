@@ -2,6 +2,7 @@ export * from "./careers";
 export * from "./changelog";
 export * from "./docs";
 export * from "./github";
+export * from "./homepage";
 export * from "./pricing";
 export * from "./profile";
 export * from "./social";

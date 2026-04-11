@@ -24,6 +24,7 @@
  *
  * Fallback behavior:
  * - pricing/careers: fallback to automate when extract/json errors or returns empty.
+ * - homepage: fallback to automate when extract/json returns empty or fewer than 3 fields populated.
  * - other page types: no implicit fallback in this module.
  */
 
@@ -37,6 +38,8 @@ import {
   DOCS_SCHEMA,
   GITHUB_EXPECTED_FIELDS,
   GITHUB_SCHEMA,
+  HOMEPAGE_EXPECTED_FIELDS,
+  HOMEPAGE_SCHEMA,
   PRICING_EXPECTED_FIELDS,
   PRICING_SCHEMA,
   PROFILE_EXPECTED_FIELDS,
@@ -77,6 +80,12 @@ type RoutingDefinition = {
 };
 
 const ROUTING_BY_TYPE: Record<string, RoutingDefinition> = {
+  homepage: {
+    endpoint: "extract/json",
+    effort: "low",
+    jsonSchema: HOMEPAGE_SCHEMA,
+    expectedFields: HOMEPAGE_EXPECTED_FIELDS
+  },
   pricing: {
     endpoint: "extract/json",
     effort: "high",
@@ -237,7 +246,31 @@ function buildAutomateTask(input: ScanPageInput): string {
 }
 
 function shouldUseAutomateFallback(type: string): boolean {
-  return type === "pricing" || type === "careers";
+  return type === "pricing" || type === "careers" || type === "homepage";
+}
+
+/**
+ * Count the number of non-empty top-level fields in an extracted JSON object.
+ * Used to decide whether a homepage result is sparse enough to warrant a fallback.
+ */
+function countPopulatedFields(value: unknown): number {
+  if (!isPlainObject(value)) return 0;
+  return Object.values(value).filter((v) => !valueIsEmpty(v)).length;
+}
+
+/**
+ * Infer page type from URL when not explicitly provided.
+ * A bare root domain (https://competitor.com or https://competitor.com/) implies homepage.
+ */
+export function inferPageTypeFromUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    const path = parsed.pathname.replace(/\/$/, "");
+    if (path === "") return "homepage";
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 function toMutableJsonSchema(schema: JsonSchema | undefined): ExtractJsonSchema {
@@ -354,11 +387,18 @@ async function runPrimaryScan(input: ScanPageInput): Promise<{
     };
   };
 
+  const HOMEPAGE_MIN_POPULATED_FIELDS = 3;
+
   try {
     const primary = await runJsonExtract();
     const extracted = extractDataEnvelope(primary);
 
     if (!valueIsEmpty(extracted)) {
+      // Homepage requires at least 3 populated fields to be considered a valid result.
+      if (input.type === "homepage" && countPopulatedFields(extracted) < HOMEPAGE_MIN_POPULATED_FIELDS) {
+        return runAutomateFallback("extract/json returned fewer than 3 populated fields");
+      }
+
       return {
         endpointUsed: "extract/json",
         rawResult: extracted,
