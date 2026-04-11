@@ -142,6 +142,49 @@ describe("schema content", () => {
     expect(leadershipItems.properties).toHaveProperty("title");
   });
 
+  it("profile schema has 12 fields total after issue #60 expansion", () => {
+    expect(Object.keys(PROFILE_SCHEMA.properties).length).toBe(12);
+  });
+
+  it("profile schema includes target_company_size as a string field", () => {
+    expect(PROFILE_SCHEMA.properties).toHaveProperty("target_company_size");
+    expect(PROFILE_SCHEMA.properties.target_company_size.type).toBe("string");
+  });
+
+  it("profile schema includes target_industries as an array of strings", () => {
+    expect(PROFILE_SCHEMA.properties).toHaveProperty("target_industries");
+    expect(PROFILE_SCHEMA.properties.target_industries.type).toBe("array");
+    expect(PROFILE_SCHEMA.properties.target_industries.items.type).toBe("string");
+  });
+
+  it("profile schema includes customer_logos as an array of strings", () => {
+    expect(PROFILE_SCHEMA.properties).toHaveProperty("customer_logos");
+    expect(PROFILE_SCHEMA.properties.customer_logos.type).toBe("array");
+    expect(PROFILE_SCHEMA.properties.customer_logos.items.type).toBe("string");
+  });
+
+  it("profile schema includes use_cases_stated as an array of strings", () => {
+    expect(PROFILE_SCHEMA.properties).toHaveProperty("use_cases_stated");
+    expect(PROFILE_SCHEMA.properties.use_cases_stated.type).toBe("array");
+    expect(PROFILE_SCHEMA.properties.use_cases_stated.items.type).toBe("string");
+  });
+
+  it("profile schema includes founded_year as a number field", () => {
+    expect(PROFILE_SCHEMA.properties).toHaveProperty("founded_year");
+    expect(PROFILE_SCHEMA.properties.founded_year.type).toBe("number");
+  });
+
+  it("profile schema includes team_size_stated as a string field", () => {
+    expect(PROFILE_SCHEMA.properties).toHaveProperty("team_size_stated");
+    expect(PROFILE_SCHEMA.properties.team_size_stated.type).toBe("string");
+  });
+
+  it("profile schema includes offices_or_locations as an array of strings", () => {
+    expect(PROFILE_SCHEMA.properties).toHaveProperty("offices_or_locations");
+    expect(PROFILE_SCHEMA.properties.offices_or_locations.type).toBe("array");
+    expect(PROFILE_SCHEMA.properties.offices_or_locations.items.type).toBe("string");
+  });
+
   it("social schema tracks follower counts and post topics", () => {
     expect(SOCIAL_SCHEMA.properties).toHaveProperty("followers");
     expect(SOCIAL_SCHEMA.properties).toHaveProperty("platform");

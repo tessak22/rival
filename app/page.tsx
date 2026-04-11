@@ -85,7 +85,8 @@ async function loadDashboardData() {
       competitorName: competitorNames.get(item.page.competitorId) ?? "Unknown competitor",
       pageLabel: item.page.label,
       scannedAt: item.scannedAt,
-      diffSummary: item.diffSummary
+      diffSummary: item.diffSummary,
+      pageType: item.page.type
     }))
   };
 }

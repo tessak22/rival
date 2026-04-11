@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { SchemaHealthBadge } from "@/components/competitor/SchemaHealthBadge";
 import { LogsTable } from "@/components/logs/LogsTable";
 import { prisma } from "@/lib/db/client";
+import type { ProfileData } from "@/lib/schemas/profile";
 
 export const dynamic = "force-dynamic";
 
@@ -72,6 +73,12 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
       }))
   );
 
+  const profileScan = latestScans.find((scan) => scan.page.type === "profile");
+  const profileData =
+    profileScan && profileScan.rawResult && typeof profileScan.rawResult === "object"
+      ? (profileScan.rawResult as ProfileData)
+      : null;
+
   return (
     <main className="competitor-page">
       <header className="page-header">
@@ -87,6 +94,110 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
           <pre className="json-view">{JSON.stringify(competitor.intelligenceBrief, null, 2)}</pre>
         ) : (
           <p className="muted">No brief generated yet.</p>
+        )}
+      </section>
+
+      <section className="panel">
+        <header className="panel-header">
+          <h2>Profile</h2>
+        </header>
+        {profileData ? (
+          <div className="profile-tab">
+            <dl className="profile-fields">
+              <dt>Mission Statement</dt>
+              <dd>{profileData.mission_statement ?? "—"}</dd>
+              <dt>Positioning</dt>
+              <dd>{profileData.positioning ?? "—"}</dd>
+              <dt>Key Leadership</dt>
+              <dd>
+                {profileData.key_leadership && profileData.key_leadership.length > 0 ? (
+                  <ul>
+                    {profileData.key_leadership.map((leader, i) => (
+                      <li key={i}>
+                        {leader.name} — {leader.title}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  "—"
+                )}
+              </dd>
+              <dt>Recent Partnerships</dt>
+              <dd>
+                {profileData.recent_partnerships && profileData.recent_partnerships.length > 0
+                  ? profileData.recent_partnerships.join(", ")
+                  : "—"}
+              </dd>
+              <dt>Recent Awards or Recognition</dt>
+              <dd>
+                {profileData.recent_awards_or_recognition && profileData.recent_awards_or_recognition.length > 0
+                  ? profileData.recent_awards_or_recognition.join(", ")
+                  : "—"}
+              </dd>
+            </dl>
+
+            <hr className="section-divider" />
+
+            <h3>Target Audience</h3>
+            <dl className="profile-fields">
+              <dt>Target Company Size</dt>
+              <dd className={profileData.target_company_size ? "diff-highlight diff-highlight--amber" : ""}>
+                {profileData.target_company_size ?? "—"}
+              </dd>
+              <dt>Target Industries</dt>
+              <dd>
+                {profileData.target_industries && profileData.target_industries.length > 0 ? (
+                  <div className="tag-chips diff-highlight diff-highlight--amber">
+                    {profileData.target_industries.map((industry, i) => (
+                      <span key={i} className="tag-chip">
+                        {industry}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="muted">Not stated</span>
+                )}
+              </dd>
+              <dt>Use Cases Stated</dt>
+              <dd>
+                {profileData.use_cases_stated && profileData.use_cases_stated.length > 0 ? (
+                  <ul className="diff-highlight diff-highlight--amber">
+                    {profileData.use_cases_stated.map((useCase, i) => (
+                      <li key={i}>{useCase}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <span className="muted">Not stated</span>
+                )}
+              </dd>
+            </dl>
+
+            <h3>Company Info</h3>
+            <div className="company-info-row">
+              <span>
+                <strong>Founded:</strong>{" "}
+                {profileData.founded_year != null ? String(profileData.founded_year) : "—"}
+              </span>
+              <span>
+                <strong>Team Size:</strong> {profileData.team_size_stated ?? "—"}
+              </span>
+              <span>
+                <strong>Offices:</strong>{" "}
+                {profileData.offices_or_locations && profileData.offices_or_locations.length > 0
+                  ? profileData.offices_or_locations.join(", ")
+                  : "—"}
+              </span>
+            </div>
+
+            {profileData.customer_logos && profileData.customer_logos.length > 0 && (
+              <div className="customer-logos">
+                <strong className="diff-highlight diff-highlight--amber">Named customers on About page:</strong>{" "}
+                <span>{profileData.customer_logos.join(", ")}</span>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="muted">No profile scan data available.</p>
         )}
       </section>
 

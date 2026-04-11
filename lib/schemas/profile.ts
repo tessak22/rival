@@ -51,6 +51,39 @@ export const PROFILE_SCHEMA = {
       type: "array",
       items: { type: "string" },
       description: "Awards, analyst placements, or press mentions. Signals buyer credibility narrative."
+    },
+    // ICP and audience intelligence fields — added in issue #60
+    target_company_size: {
+      type: "string",
+      description: "Explicit sizing language such as 'built for teams of X' or 'for enterprise'. Null if not stated on the page."
+    },
+    target_industries: {
+      type: "array",
+      items: { type: "string" },
+      description: "Industries or verticals explicitly called out on the About page. Empty array if none mentioned."
+    },
+    customer_logos: {
+      type: "array",
+      items: { type: "string" },
+      description: "Names of customers whose logos or names appear on the About page as social proof. Empty array if none."
+    },
+    use_cases_stated: {
+      type: "array",
+      items: { type: "string" },
+      description: "Explicit use case claims on the About page (e.g. 'for scheduling appointments'). 3-6 items. Empty array if none."
+    },
+    founded_year: {
+      type: "number",
+      description: "Year the company was founded if stated on the About page. Null if not present."
+    },
+    team_size_stated: {
+      type: "string",
+      description: "Stated headcount or team size string (e.g. 'a team of 12'). Null if not stated."
+    },
+    offices_or_locations: {
+      type: "array",
+      items: { type: "string" },
+      description: "Physical office locations mentioned on the About page. Empty array if not mentioned."
     }
   },
   required: ["mission_statement", "positioning", "key_leadership"]
@@ -64,4 +97,12 @@ export type ProfileData = {
   key_leadership?: Array<{ name?: string; title?: string }>;
   recent_partnerships?: string[];
   recent_awards_or_recognition?: string[];
+  // ICP and audience intelligence fields — added in issue #60
+  target_company_size?: string | null;
+  target_industries?: string[];
+  customer_logos?: string[];
+  use_cases_stated?: string[];
+  founded_year?: number | null;
+  team_size_stated?: string | null;
+  offices_or_locations?: string[];
 };
