@@ -3,11 +3,22 @@ import { notFound } from "next/navigation";
 import { SchemaHealthBadge } from "@/components/competitor/SchemaHealthBadge";
 import { LogsTable } from "@/components/logs/LogsTable";
 import { prisma } from "@/lib/db/client";
+import type { BlogData } from "@/lib/schemas/blog";
 
 export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
+};
+
+const CADENCE_RANK: Record<string, number> = {
+  daily: 7,
+  "2-3x per week": 5,
+  weekly: 4,
+  "2-3x per month": 3,
+  monthly: 2,
+  sporadic: 1,
+  unknown: 0
 };
 
 function computeSchemaHealthByType(
@@ -72,6 +83,57 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
       }))
   );
 
+  // Blog scan data for the Blog tab.
+  const blogScan = latestScans.find((scan) => scan.page.type === "blog");
+  const blogData =
+    blogScan && blogScan.rawResult && typeof blogScan.rawResult === "object"
+      ? (blogScan.rawResult as BlogData)
+      : null;
+
+  // Detect previous blog scan for diff highlighting (developer_focused flip, post_frequency change, new topics).
+  let previousBlogData: BlogData | null = null;
+  let seenBlogPage = false;
+  for (const scan of scans) {
+    if (scan.page.type !== "blog") continue;
+    if (!seenBlogPage) {
+      seenBlogPage = true;
+      // This is the latest — skip; we want the previous one.
+      continue;
+    }
+    previousBlogData =
+      scan.rawResult && typeof scan.rawResult === "object" ? (scan.rawResult as BlogData) : null;
+    break;
+  }
+
+  // Blog diff signals:
+  // - developer_focused flips → strategic audience signal
+  // - new item in primary_topics → content strategy signal
+  // - post_frequency increases → investment / launch signal
+  const blogAudienceFlipped =
+    previousBlogData !== null &&
+    blogData?.developer_focused !== undefined &&
+    previousBlogData.developer_focused !== undefined &&
+    blogData.developer_focused !== previousBlogData.developer_focused;
+
+  const blogFrequencyIncreased =
+    previousBlogData?.post_frequency !== undefined &&
+    blogData?.post_frequency !== undefined &&
+    blogData.post_frequency !== previousBlogData.post_frequency &&
+    (CADENCE_RANK[blogData.post_frequency] ?? 0) > (CADENCE_RANK[previousBlogData.post_frequency] ?? 0);
+
+  const prevTopicsSet = new Set(previousBlogData?.primary_topics ?? []);
+  const newBlogTopics = (blogData?.primary_topics ?? []).filter((topic) => !prevTopicsSet.has(topic));
+
+  // Blog schema health from logs for this page.
+  const blogPageLogs = blogScan ? logs.filter((log) => log.pageId === blogScan.pageId) : [];
+  const blogHealthScore =
+    blogPageLogs.length === 0
+      ? null
+      : blogPageLogs.reduce((acc, log) => {
+          const s = log.resultQuality === "full" ? 1 : log.resultQuality === "partial" ? 0.5 : 0;
+          return acc + s;
+        }, 0) / blogPageLogs.length;
+
   return (
     <main className="competitor-page">
       <header className="page-header">
@@ -89,6 +151,137 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
           <p className="muted">No brief generated yet.</p>
         )}
       </section>
+
+      {/* ── Blog Tab ────────────────────────────────────────────────────────── */}
+      <section className="panel">
+        <header className="panel-header">
+          <h2>Blog</h2>
+          <p className="muted panel-header-note">
+            Content strategy signals — topics, audience focus, and publishing cadence.
+          </p>
+        </header>
+
+        {blogScan == null ? (
+          <p className="muted">No blog scan data available. Add a blog index page to start.</p>
+        ) : (
+          <div className="blog-tab">
+            {/* Schema health + last scanned + changes flag */}
+            <div className="blog-tab-header-row">
+              {blogHealthScore !== null && (
+                <SchemaHealthBadge score={blogHealthScore} label="blog schema" />
+              )}
+              <span className="muted scan-timestamp">
+                Last scanned: {blogScan.scannedAt.toISOString().slice(0, 10)}
+              </span>
+              <span className={`flag${blogScan.hasChanges ? " flag--changes" : ""}`}>
+                {blogScan.hasChanges ? "Changes detected" : "No changes since last scan"}
+              </span>
+            </div>
+
+            {/* Post Frequency — prominent badge at top */}
+            <div className="blog-frequency-row">
+              <span className="blog-frequency-label">Post Frequency</span>
+              <span
+                className={`badge badge--frequency${blogFrequencyIncreased ? " diff-highlight diff-highlight--amber" : ""}`}
+              >
+                {blogData?.post_frequency ?? "unknown"}
+              </span>
+              {blogFrequencyIncreased && previousBlogData?.post_frequency && (
+                <span className="diff-badge diff-badge--amber">
+                  was {previousBlogData.post_frequency} — cadence increase is an investment signal
+                </span>
+              )}
+            </div>
+
+            {/* Developer Focused badge */}
+            <div className="blog-audience-row">
+              <span className="blog-audience-label">Audience Focus</span>
+              {blogData?.developer_focused !== undefined ? (
+                <span
+                  className={`badge${blogData.developer_focused ? " badge--developer" : " badge--buyer"}${blogAudienceFlipped ? " diff-highlight diff-highlight--amber" : ""}`}
+                >
+                  {blogData.developer_focused ? "Developer-focused" : "Buyer-focused"}
+                </span>
+              ) : (
+                <span className="badge badge--unknown">Unknown</span>
+              )}
+              {blogAudienceFlipped && (
+                <span className="diff-badge diff-badge--amber">audience focus shifted — strategic signal</span>
+              )}
+            </div>
+
+            {/* Primary Topics */}
+            {blogData?.primary_topics && blogData.primary_topics.length > 0 && (
+              <div className="blog-topics">
+                <h3>Primary Topics</h3>
+                <div className="tag-chips">
+                  {blogData.primary_topics.map((topic, i) => {
+                    const isNew = newBlogTopics.includes(topic);
+                    return (
+                      <span
+                        key={i}
+                        className={`tag-chip${isNew ? " tag-chip--new diff-highlight diff-highlight--amber" : ""}`}
+                        title={isNew ? "New topic since last scan" : undefined}
+                      >
+                        {topic}
+                        {isNew && <span className="new-badge"> new</span>}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Recent Posts — titles with dates; title links to URL if available, most recent first */}
+            {blogData?.recent_post_titles && blogData.recent_post_titles.length > 0 && (
+              <div className="blog-recent-posts">
+                <h3>Recent Posts</h3>
+                <ol className="blog-post-list">
+                  {blogData.recent_post_titles.map((title, i) => {
+                    const url = blogData.recent_post_urls?.[i];
+                    const date = blogData.recent_post_dates?.[i];
+                    return (
+                      <li key={i} className="blog-post-item">
+                        <div className="blog-post-title">
+                          {url ? (
+                            <a href={url} target="_blank" rel="noopener noreferrer">
+                              {title}
+                            </a>
+                          ) : (
+                            title
+                          )}
+                        </div>
+                        {date && <time className="blog-post-date muted">{date}</time>}
+                      </li>
+                    );
+                  })}
+                </ol>
+              </div>
+            )}
+
+            {/* Categories / Tags — secondary chip row beneath post list if present */}
+            {blogData?.has_categories_or_tags &&
+              blogData.visible_categories &&
+              blogData.visible_categories.length > 0 && (
+                <div className="blog-categories">
+                  <h3>Categories / Tags</h3>
+                  <div className="tag-chips tag-chips--secondary">
+                    {blogData.visible_categories.map((cat, i) => (
+                      <span key={i} className="tag-chip tag-chip--secondary">
+                        {cat}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+            {blogData == null && (
+              <p className="muted">Scan ran but no data was extracted. Check logs for details.</p>
+            )}
+          </div>
+        )}
+      </section>
+      {/* ── /Blog Tab ───────────────────────────────────────────────────────── */}
 
       <section className="panel">
         <header className="panel-header">

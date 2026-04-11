@@ -24,6 +24,7 @@
  *
  * Fallback behavior:
  * - pricing/careers: fallback to automate when extract/json errors or returns empty.
+ * - blog: fallback to extract/markdown then generate when extract/json returns empty.
  * - other page types: no implicit fallback in this module.
  */
 
@@ -31,6 +32,8 @@ import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/db/client";
 import {
+  BLOG_EXPECTED_FIELDS,
+  BLOG_SCHEMA,
   CAREERS_EXPECTED_FIELDS,
   CAREERS_SCHEMA,
   DOCS_EXPECTED_FIELDS,
@@ -88,6 +91,12 @@ const ROUTING_BY_TYPE: Record<string, RoutingDefinition> = {
     effort: "high",
     jsonSchema: CAREERS_SCHEMA,
     expectedFields: CAREERS_EXPECTED_FIELDS
+  },
+  blog: {
+    endpoint: "extract/json",
+    effort: "low",
+    jsonSchema: BLOG_SCHEMA,
+    expectedFields: BLOG_EXPECTED_FIELDS
   },
   changelog: {
     endpoint: "extract/markdown",
@@ -239,6 +248,33 @@ function buildAutomateTask(input: ScanPageInput): string {
 function shouldUseAutomateFallback(type: string): boolean {
   return type === "pricing" || type === "careers";
 }
+function shouldUseBlogFallback(type: string): boolean {
+  return type === "blog";
+}
+
+/** URL path segments that indicate a blog index page for the demo scanner. */
+export const BLOG_URL_PATTERNS = ["/blog", "/articles", "/news", "/resources", "/posts", "/insights"];
+
+/**
+ * Infer whether a URL is a blog index page for the demo scanner.
+ * Returns "blog" when the path matches common blog index path segments.
+ * Used for URL-based type inference — not for production routing.
+ */
+export function inferBlogPageType(url: string): "blog" | null {
+  try {
+    const { pathname } = new URL(url);
+    const lowerPath = pathname.toLowerCase();
+    for (const pattern of BLOG_URL_PATTERNS) {
+      if (lowerPath === pattern || lowerPath.startsWith(pattern + "/") || lowerPath.startsWith(pattern + "?")) {
+        return "blog";
+      }
+    }
+  } catch {
+    // invalid URL — not our concern here
+  }
+  return null;
+}
+
 
 function toMutableJsonSchema(schema: JsonSchema | undefined): ExtractJsonSchema {
   if (!schema) {
@@ -318,6 +354,94 @@ async function runPrimaryScan(input: ScanPageInput): Promise<{
           }
         : undefined
     });
+
+
+  // Blog fallback: extract/markdown then generate when extract/json returns empty.
+  // Log schema_mismatch when recent_post_titles is empty on a confirmed blog index.
+  if (shouldUseBlogFallback(input.type)) {
+    let primaryExtracted: unknown = null;
+    try {
+      const primary = await runJsonExtract();
+      primaryExtracted = extractDataEnvelope(primary);
+    } catch {
+      // primary extract/json failed — fall through to markdown→generate fallback
+    }
+
+    if (!valueIsEmpty(primaryExtracted)) {
+      const postTitles = isPlainObject(primaryExtracted)
+        ? ((primaryExtracted as Record<string, unknown>)["recent_post_titles"] as unknown[] | undefined)
+        : undefined;
+      if (!Array.isArray(postTitles) || postTitles.length === 0) {
+        console.warn("[scanner] blog: schema_mismatch — recent_post_titles is empty on confirmed blog index page", {
+          url: input.url
+        });
+      }
+      return {
+        endpointUsed: "extract/json",
+        rawResult: primaryExtracted,
+        markdownResult: null,
+        usedFallback: false
+      };
+    }
+
+    // Fallback: extract/markdown then pass to generate to extract schema fields.
+    const markdownResponse = await extractMarkdown({
+      competitorId: input.competitorId,
+      pageId: input.pageId,
+      url: input.url,
+      effort: "low",
+      nocache,
+      geoTarget: input.geoTarget,
+      isDemo: input.isDemo,
+      fallback: {
+        triggered: true,
+        reason: "extract/json returned empty result",
+        endpoint: "generate"
+      }
+    });
+
+    const markdownContent = extractMarkdownContent(markdownResponse);
+    const generateInstructions = markdownContent
+      ? [
+          "Extract structured blog index data from this markdown content.",
+          "Return JSON with these fields:",
+          "  recent_post_titles (array of recent post titles, most recent first),",
+          "  recent_post_urls (array of URLs in same order, null if not found),",
+          "  recent_post_dates (array of dates in same order, ISO date or displayed string, null if not visible),",
+          "  post_frequency (inferred cadence: daily/2-3x per week/weekly/2-3x per month/monthly/sporadic/unknown),",
+          "  primary_topics (3-6 synthesized content themes, not verbatim titles),",
+          "  developer_focused (true if written for technical/developer audience),",
+          "  has_categories_or_tags (true if category/tag filters are shown),",
+          "  visible_categories (array of category labels if present, empty array if none).",
+          "",
+          "Markdown content:",
+          markdownContent
+        ].join("\n")
+      : "No markdown content could be extracted from this blog index page.";
+
+    const generateResponse = await generateDiff({
+      competitorId: input.competitorId,
+      pageId: input.pageId,
+      url: input.url,
+      previousContent: generateInstructions,
+      effort: "low",
+      nocache,
+      geoTarget: input.geoTarget,
+      isDemo: input.isDemo,
+      fallback: {
+        triggered: true,
+        reason: "extract/json returned empty; extract/markdown passed to generate",
+        endpoint: "generate"
+      }
+    });
+
+    return {
+      endpointUsed: "generate",
+      rawResult: extractDataEnvelope(generateResponse),
+      markdownResult: markdownContent,
+      usedFallback: true
+    };
+  }
 
   if (!shouldUseAutomateFallback(input.type)) {
     const result = await runJsonExtract();
