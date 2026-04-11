@@ -1,5 +1,7 @@
 import type { HomepageData } from "@/lib/schemas/homepage";
 
+type ProfileChangeEvent = "target_company_size_changed" | "target_industry_added";
+
 type IntelFeedItem = {
   id: string;
   competitorName: string;
@@ -9,6 +11,7 @@ type IntelFeedItem = {
   diffSummary: string | null;
   rawResult?: unknown;
   previousRawResult?: unknown;
+  profileEvents?: ProfileChangeEvent[];
 };
 
 type IntelFeedProps = {
@@ -84,6 +87,18 @@ export function IntelFeed({ items }: IntelFeedProps) {
                   <time>{formatter.format(item.scannedAt)} UTC</time>
                 </div>
                 <p>{displaySummary}</p>
+                {item.profileEvents && item.profileEvents.length > 0 && (
+                  <ul className="intel-profile-events">
+                    {item.profileEvents.map((event) => (
+                      <li key={event} className="intel-profile-event">
+                        {event === "target_company_size_changed" &&
+                          `${item.competitorName} updated their stated target company size`}
+                        {event === "target_industry_added" &&
+                          `${item.competitorName} added a new target industry to their About page`}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </li>
             );
           })}
