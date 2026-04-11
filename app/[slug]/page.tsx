@@ -112,11 +112,34 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
               <dd>
                 {profileData.key_leadership && profileData.key_leadership.length > 0 ? (
                   <ul>
-                    {profileData.key_leadership.map((leader, i) => (
-                      <li key={i}>
-                        {leader.name} — {leader.title}
-                      </li>
-                    ))}
+                    {profileData.key_leadership.map((leader, i) => {
+                      if (!leader || typeof leader !== "object") {
+                        return (
+                          <li key={i} className="muted">
+                            Unknown leader
+                          </li>
+                        );
+                      }
+
+                      const name =
+                        typeof leader.name === "string" && leader.name.trim().length > 0 ? leader.name : null;
+                      const title =
+                        typeof leader.title === "string" && leader.title.trim().length > 0 ? leader.title : null;
+
+                      if (!name && !title) {
+                        return (
+                          <li key={i} className="muted">
+                            Unknown leader
+                          </li>
+                        );
+                      }
+
+                      return (
+                        <li key={i}>
+                          {name ?? "Unknown"} {title ? `— ${title}` : ""}
+                        </li>
+                      );
+                    })}
                   </ul>
                 ) : (
                   "—"
@@ -175,8 +198,7 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
             <h3>Company Info</h3>
             <div className="company-info-row">
               <span>
-                <strong>Founded:</strong>{" "}
-                {profileData.founded_year != null ? String(profileData.founded_year) : "—"}
+                <strong>Founded:</strong> {profileData.founded_year != null ? String(profileData.founded_year) : "—"}
               </span>
               <span>
                 <strong>Team Size:</strong> {profileData.team_size_stated ?? "—"}

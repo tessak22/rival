@@ -146,9 +146,9 @@ describe("schema content", () => {
     expect(Object.keys(PROFILE_SCHEMA.properties).length).toBe(12);
   });
 
-  it("profile schema includes target_company_size as a string field", () => {
+  it("profile schema includes target_company_size as a nullable string field", () => {
     expect(PROFILE_SCHEMA.properties).toHaveProperty("target_company_size");
-    expect(PROFILE_SCHEMA.properties.target_company_size.type).toBe("string");
+    expect(PROFILE_SCHEMA.properties.target_company_size.type).toEqual(["string", "null"]);
   });
 
   it("profile schema includes target_industries as an array of strings", () => {
@@ -169,14 +169,14 @@ describe("schema content", () => {
     expect(PROFILE_SCHEMA.properties.use_cases_stated.items.type).toBe("string");
   });
 
-  it("profile schema includes founded_year as a number field", () => {
+  it("profile schema includes founded_year as a nullable number field", () => {
     expect(PROFILE_SCHEMA.properties).toHaveProperty("founded_year");
-    expect(PROFILE_SCHEMA.properties.founded_year.type).toBe("number");
+    expect(PROFILE_SCHEMA.properties.founded_year.type).toEqual(["number", "null"]);
   });
 
-  it("profile schema includes team_size_stated as a string field", () => {
+  it("profile schema includes team_size_stated as a nullable string field", () => {
     expect(PROFILE_SCHEMA.properties).toHaveProperty("team_size_stated");
-    expect(PROFILE_SCHEMA.properties.team_size_stated.type).toBe("string");
+    expect(PROFILE_SCHEMA.properties.team_size_stated.type).toEqual(["string", "null"]);
   });
 
   it("profile schema includes offices_or_locations as an array of strings", () => {

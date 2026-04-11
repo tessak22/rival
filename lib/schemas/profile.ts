@@ -54,8 +54,9 @@ export const PROFILE_SCHEMA = {
     },
     // ICP and audience intelligence fields — added in issue #60
     target_company_size: {
-      type: "string",
-      description: "Explicit sizing language such as 'built for teams of X' or 'for enterprise'. Null if not stated on the page."
+      type: ["string", "null"],
+      description:
+        "Explicit sizing language such as 'built for teams of X' or 'for enterprise'. Null if not stated on the page."
     },
     target_industries: {
       type: "array",
@@ -65,19 +66,21 @@ export const PROFILE_SCHEMA = {
     customer_logos: {
       type: "array",
       items: { type: "string" },
-      description: "Names of customers whose logos or names appear on the About page as social proof. Empty array if none."
+      description:
+        "Names of customers whose logos or names appear on the About page as social proof. Empty array if none."
     },
     use_cases_stated: {
       type: "array",
       items: { type: "string" },
-      description: "Explicit use case claims on the About page (e.g. 'for scheduling appointments'). 3-6 items. Empty array if none."
+      description:
+        "Explicit use case claims on the About page (e.g. 'for scheduling appointments'). 3-6 items. Empty array if none."
     },
     founded_year: {
-      type: "number",
+      type: ["number", "null"],
       description: "Year the company was founded if stated on the About page. Null if not present."
     },
     team_size_stated: {
-      type: "string",
+      type: ["string", "null"],
       description: "Stated headcount or team size string (e.g. 'a team of 12'). Null if not stated."
     },
     offices_or_locations: {
