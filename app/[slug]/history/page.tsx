@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db/client";
 import { ScanEntry } from "./ScanEntry";
 
-const DEFAULT_TYPE = "homepage";
 const MAX_SCANS = 90;
 
 type Props = {
@@ -28,7 +27,7 @@ export default async function HistoryPage({ params, searchParams }: Props) {
   if (!competitor) notFound();
 
   const distinctTypes = [...new Set(competitor.pages.map((p) => p.type))].sort();
-  const selectedType = distinctTypes.includes(rawType ?? "") ? (rawType as string) : DEFAULT_TYPE;
+  const selectedType = distinctTypes.includes(rawType ?? "") ? (rawType as string) : (distinctTypes[0] ?? "");
 
   const scans = await prisma.scan.findMany({
     where: {
