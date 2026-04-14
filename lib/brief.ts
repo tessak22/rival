@@ -26,12 +26,27 @@ import { generateBrief } from "@/lib/tabstack/generate";
 import { isPlainObject, stringifyUnknown } from "@/lib/utils/types";
 import { Prisma } from "@prisma/client";
 
+// Page types included in brief context. Changelog, docs, and social are excluded:
+// changelog is long markdown with low positioning signal; docs is verbose reference
+// content; social is low-signal for structured brief output.
+const BRIEF_PAGE_TYPES = new Set(["homepage", "pricing", "profile", "reviews", "blog", "careers", "github"]);
+
+// Max characters per scan result to prevent exceeding /generate instruction limits.
+const MAX_RESULT_CHARS = 2000;
+
+function truncateResult(result: unknown): unknown {
+  const serialized = JSON.stringify(result);
+  if (serialized.length <= MAX_RESULT_CHARS) return result;
+  return serialized.slice(0, MAX_RESULT_CHARS) + "…[truncated]";
+}
+
 function latestScanContext(scans: Array<{ pageType: string; pageLabel: string; result: unknown }>): string {
+  const filtered = scans.filter((scan) => BRIEF_PAGE_TYPES.has(scan.pageType));
   return JSON.stringify(
-    scans.map((scan) => ({
+    filtered.map((scan) => ({
       page_type: scan.pageType,
       page_label: scan.pageLabel,
-      result: scan.result
+      result: truncateResult(scan.result)
     }))
   );
 }
