@@ -24,7 +24,9 @@
  *
  * Fallback behavior:
  * - pricing/careers/reviews: fallback to automate when extract/json errors or returns empty.
+ * - homepage: fallback to automate when extract/json returns empty or fewer than 3 fields populated.
  * - reviews: content_blocked is expected and valid — log it and continue. Do not retry more than once.
+ * - blog: fallback to extract/markdown then generate when extract/json returns empty.
  * - other page types: no implicit fallback in this module.
  */
 
@@ -32,12 +34,16 @@ import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/db/client";
 import {
+  BLOG_EXPECTED_FIELDS,
+  BLOG_SCHEMA,
   CAREERS_EXPECTED_FIELDS,
   CAREERS_SCHEMA,
   DOCS_EXPECTED_FIELDS,
   DOCS_SCHEMA,
   GITHUB_EXPECTED_FIELDS,
   GITHUB_SCHEMA,
+  HOMEPAGE_EXPECTED_FIELDS,
+  HOMEPAGE_SCHEMA,
   PRICING_EXPECTED_FIELDS,
   PRICING_SCHEMA,
   PROFILE_EXPECTED_FIELDS,
@@ -80,6 +86,12 @@ type RoutingDefinition = {
 };
 
 const ROUTING_BY_TYPE: Record<string, RoutingDefinition> = {
+  homepage: {
+    endpoint: "extract/json",
+    effort: "low",
+    jsonSchema: HOMEPAGE_SCHEMA,
+    expectedFields: HOMEPAGE_EXPECTED_FIELDS
+  },
   pricing: {
     endpoint: "extract/json",
     effort: "high",
@@ -91,6 +103,12 @@ const ROUTING_BY_TYPE: Record<string, RoutingDefinition> = {
     effort: "high",
     jsonSchema: CAREERS_SCHEMA,
     expectedFields: CAREERS_EXPECTED_FIELDS
+  },
+  blog: {
+    endpoint: "extract/json",
+    effort: "low",
+    jsonSchema: BLOG_SCHEMA,
+    expectedFields: BLOG_EXPECTED_FIELDS
   },
   changelog: {
     endpoint: "extract/markdown",
@@ -250,8 +268,24 @@ function buildAutomateTask(input: ScanPageInput): string {
 }
 
 function shouldUseAutomateFallback(type: string): boolean {
-  // reviews: fallback to automate once on empty, explicit content_blocked, or error.
-  return type === "pricing" || type === "careers" || type === "reviews";
+  // reviews: fallback to automate once on empty or content_blocked.
+  // content_blocked results in an empty extracted payload, so the same
+  // empty-result check naturally triggers the automate fallback. The fallback
+  // runs at most once — there is no second retry loop.
+  return type === "pricing" || type === "careers" || type === "homepage" || type === "reviews";
+}
+
+function shouldUseBlogFallback(type: string): boolean {
+  return type === "blog";
+}
+
+/**
+ * Count the number of non-empty top-level fields in an extracted JSON object.
+ * Used to decide whether a homepage result is sparse enough to warrant a fallback.
+ */
+function countPopulatedFields(value: unknown): number {
+  if (!isPlainObject(value)) return 0;
+  return Object.values(value).filter((v) => !valueIsEmpty(v)).length;
 }
 
 function extractedIndicatesContentBlocked(value: unknown): boolean {
@@ -265,6 +299,42 @@ function extractedIndicatesContentBlocked(value: unknown): boolean {
   if (typeof error === "string" && error.toLowerCase().includes("content_blocked")) return true;
 
   return false;
+}
+
+/**
+ * Infer page type from URL when not explicitly provided.
+ * A bare root domain (https://competitor.com or https://competitor.com/) implies homepage.
+ */
+export function inferPageTypeFromUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    const path = parsed.pathname.replace(/\/$/, "");
+    if (path === "") return "homepage";
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export const BLOG_URL_PATTERNS = ["/blog", "/articles", "/news", "/resources", "/posts", "/insights"];
+
+/**
+ * Infer page type from URL path for the demo scanner.
+ * Returns "blog" when the path matches common blog index path segments.
+ */
+export function inferBlogPageType(url: string): "blog" | null {
+  try {
+    const { pathname } = new URL(url);
+    const lowerPath = pathname.toLowerCase();
+    for (const pattern of BLOG_URL_PATTERNS) {
+      if (lowerPath === pattern || lowerPath.startsWith(pattern + "/") || lowerPath.startsWith(pattern + "?")) {
+        return "blog";
+      }
+    }
+  } catch {
+    // invalid URL — not our concern here
+  }
+  return null;
 }
 
 function toMutableJsonSchema(schema: JsonSchema | undefined): ExtractJsonSchema {
@@ -346,6 +416,93 @@ async function runPrimaryScan(input: ScanPageInput): Promise<{
         : undefined
     });
 
+  // Blog fallback: extract/markdown then generate when extract/json returns empty.
+  // Log schema_mismatch when recent_post_titles is empty on a confirmed blog index.
+  if (shouldUseBlogFallback(input.type)) {
+    let primaryExtracted: unknown = null;
+    try {
+      const primary = await runJsonExtract();
+      primaryExtracted = extractDataEnvelope(primary);
+    } catch {
+      // primary extract/json failed — fall through to markdown→generate fallback
+    }
+
+    if (!valueIsEmpty(primaryExtracted)) {
+      const postTitles = isPlainObject(primaryExtracted)
+        ? ((primaryExtracted as Record<string, unknown>)["recent_post_titles"] as unknown[] | undefined)
+        : undefined;
+      if (!Array.isArray(postTitles) || postTitles.length === 0) {
+        console.warn("[scanner] blog: schema_mismatch — recent_post_titles is empty on confirmed blog index page", {
+          url: input.url
+        });
+      }
+      return {
+        endpointUsed: "extract/json",
+        rawResult: primaryExtracted,
+        markdownResult: null,
+        usedFallback: false
+      };
+    }
+
+    // Fallback: extract/markdown then automate with explicit blog-schema task.
+    const markdownResponse = await extractMarkdown({
+      competitorId: input.competitorId,
+      pageId: input.pageId,
+      url: input.url,
+      effort: "low",
+      nocache,
+      geoTarget: input.geoTarget,
+      isDemo: input.isDemo,
+      fallback: {
+        triggered: true,
+        reason: "extract/json returned empty result",
+        endpoint: "automate"
+      }
+    });
+
+    const markdownContent = extractMarkdownContent(markdownResponse);
+    const automateTask = markdownContent
+      ? [
+          "Extract structured blog index data from this markdown content.",
+          "Return JSON with these fields:",
+          "  recent_post_titles (array of recent post titles, most recent first),",
+          "  recent_post_urls (array of URLs in same order, null if not found),",
+          "  recent_post_dates (array of dates in same order, ISO date or displayed string, null if not visible),",
+          "  post_frequency (inferred cadence: daily/2-3x per week/weekly/2-3x per month/monthly/sporadic/unknown),",
+          "  primary_topics (3-6 synthesized content themes, not verbatim titles),",
+          "  developer_focused (true if written for technical/developer audience),",
+          "  has_categories_or_tags (true if category/tag filters are shown),",
+          "  visible_categories (array of category labels if present, empty array if none).",
+          "",
+          "Markdown content:",
+          markdownContent
+        ].join("\n")
+      : "No markdown content could be extracted from this blog index page.";
+
+    const automateResponse = await automateExtract({
+      competitorId: input.competitorId,
+      pageId: input.pageId,
+      url: input.url,
+      task: automateTask,
+      guardrails: DEFAULT_AUTOMATE_GUARDRAILS,
+      geoTarget: input.geoTarget,
+      isDemo: input.isDemo,
+      expectedFields: route.expectedFields ? [...route.expectedFields] : undefined,
+      fallback: {
+        triggered: true,
+        reason: "extract/json returned empty; extract/markdown fallback to automate",
+        endpoint: "automate"
+      }
+    });
+
+    return {
+      endpointUsed: "automate",
+      rawResult: automateResponse.result,
+      markdownResult: markdownContent,
+      usedFallback: true
+    };
+  }
+
   if (!shouldUseAutomateFallback(input.type)) {
     const result = await runJsonExtract();
     return {
@@ -381,6 +538,8 @@ async function runPrimaryScan(input: ScanPageInput): Promise<{
     };
   };
 
+  const HOMEPAGE_MIN_POPULATED_FIELDS = 3;
+
   try {
     const primary = await runJsonExtract();
     if (input.type === "reviews" && extractedIndicatesContentBlocked(primary)) {
@@ -390,6 +549,11 @@ async function runPrimaryScan(input: ScanPageInput): Promise<{
     const extracted = extractDataEnvelope(primary);
 
     if (!valueIsEmpty(extracted)) {
+      // Homepage requires at least 3 populated fields to be considered a valid result.
+      if (input.type === "homepage" && countPopulatedFields(extracted) < HOMEPAGE_MIN_POPULATED_FIELDS) {
+        return runAutomateFallback("extract/json returned fewer than 3 populated fields");
+      }
+
       return {
         endpointUsed: "extract/json",
         rawResult: extracted,

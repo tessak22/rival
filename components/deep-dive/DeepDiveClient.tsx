@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { parseSseChunk } from "@/lib/utils/sse";
+import { DEEP_DIVE_TEMPLATES } from "@/lib/deep-dive-templates";
+import type { DeepDiveTemplateKey } from "@/lib/deep-dive-templates";
 
 type DeepDiveClientProps = {
   competitorId: string;
@@ -20,26 +22,47 @@ type Citation = {
   source_text?: string;
 };
 
+type SelectedTemplate = DeepDiveTemplateKey | "general";
+
+const GENERAL_TEMPLATE = {
+  key: "general" as const,
+  label: "General Research",
+  description: "Full competitive profile — product, pricing, positioning, and recent activity"
+};
+
+const ALL_TEMPLATES = [GENERAL_TEMPLATE, ...DEEP_DIVE_TEMPLATES];
+
+function getTemplateLabel(key: SelectedTemplate): string {
+  if (key === "general") return GENERAL_TEMPLATE.label;
+  const found = DEEP_DIVE_TEMPLATES.find((t) => t.key === key);
+  return found?.label ?? "General Research";
+}
+
 export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientProps) {
   const [mode, setMode] = useState<"fast" | "balanced">("balanced");
+  const [selectedTemplate, setSelectedTemplate] = useState<SelectedTemplate>("general");
   const [events, setEvents] = useState<ResearchEvent[]>([]);
   const [result, setResult] = useState<unknown>(null);
   const [citations, setCitations] = useState<Citation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [completedTemplate, setCompletedTemplate] = useState<SelectedTemplate | null>(null);
 
   async function runDeepDive() {
     setEvents([]);
     setResult(null);
     setCitations([]);
     setError(null);
+    setCompletedTemplate(null);
     setIsLoading(true);
+
+    const templateKey = selectedTemplate === "general" ? null : selectedTemplate;
 
     try {
       const response = await fetch("/api/deep-dive", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ competitorId, mode })
+        body: JSON.stringify({ competitorId, mode, promptTemplate: templateKey })
       });
 
       if (!response.ok || !response.body) {
@@ -71,6 +94,7 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
             const payload = parsed.data as { result?: unknown; citations?: Citation[] };
             setResult(payload.result ?? null);
             setCitations(Array.isArray(payload.citations) ? payload.citations : []);
+            setCompletedTemplate(selectedTemplate);
           }
           if (parsed.event === "research:error") {
             const payload = parsed.data as { error?: string };
@@ -87,6 +111,7 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
             const payload = parsed.data as { result?: unknown; citations?: Citation[] };
             setResult(payload.result ?? null);
             setCitations(Array.isArray(payload.citations) ? payload.citations : []);
+            setCompletedTemplate(selectedTemplate);
           }
           if (parsed.event === "research:error") {
             const payload = parsed.data as { error?: string };
@@ -108,6 +133,30 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
           <h2>Run Deep Dive</h2>
         </header>
         <p className="muted">{competitorName}</p>
+
+        <div className="template-selector">
+          <p className="template-selector-label">Research focus</p>
+          <div className="template-cards">
+            {ALL_TEMPLATES.map((template) => (
+              <label
+                key={template.key}
+                className={`template-card${selectedTemplate === template.key ? " template-card--selected" : ""}`}
+              >
+                <input
+                  type="radio"
+                  name="promptTemplate"
+                  value={template.key}
+                  checked={selectedTemplate === template.key}
+                  onChange={() => setSelectedTemplate(template.key as SelectedTemplate)}
+                  className="template-card-radio"
+                />
+                <strong className="template-card-title">{template.label}</strong>
+                <span className="template-card-desc">{template.description}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
         <div className="mode-row">
           <label>
             <input type="radio" name="mode" checked={mode === "fast"} onChange={() => setMode("fast")} />
@@ -146,7 +195,12 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
 
       <section className="panel">
         <header className="panel-header">
-          <h2>Structured Report</h2>
+          <h2>
+            Structured Report
+            {completedTemplate !== null ? (
+              <span className="template-badge">{getTemplateLabel(completedTemplate)}</span>
+            ) : null}
+          </h2>
         </header>
         {result ? (
           <pre className="json-view">{JSON.stringify(result, null, 2)}</pre>

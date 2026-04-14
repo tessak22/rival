@@ -285,3 +285,18 @@ describe("scanPage", () => {
     expect(automateExtractMock).not.toHaveBeenCalled();
   });
 });
+
+describe("inferBlogPageType", () => {
+  it("returns blog for common blog index paths", async () => {
+    const { inferBlogPageType } = await import("@/lib/scanner");
+    expect(inferBlogPageType("https://example.com/blog")).toBe("blog");
+    expect(inferBlogPageType("https://example.com/resources")).toBe("blog");
+    expect(inferBlogPageType("https://example.com/insights/ai")).toBe("blog");
+  });
+
+  it("returns null for non-blog paths and invalid URLs", async () => {
+    const { inferBlogPageType } = await import("@/lib/scanner");
+    expect(inferBlogPageType("https://example.com/pricing")).toBeNull();
+    expect(inferBlogPageType("not-a-url")).toBeNull();
+  });
+});
