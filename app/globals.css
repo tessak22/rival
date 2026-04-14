@@ -65,6 +65,7 @@ body {
   background: linear-gradient(180deg, rgba(17, 24, 33, 0.88), rgba(12, 18, 27, 0.96));
   border-radius: 14px;
   padding: 1rem;
+  min-width: 0;
 }
 
 .panel-header {
