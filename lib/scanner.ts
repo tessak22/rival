@@ -316,11 +316,13 @@ export function inferPageTypeFromUrl(url: string): string | null {
   }
 }
 
+/** URL path segments that indicate a blog index page for the demo scanner. */
 export const BLOG_URL_PATTERNS = ["/blog", "/articles", "/news", "/resources", "/posts", "/insights"];
 
 /**
- * Infer page type from URL path for the demo scanner.
+ * Infer whether a URL is a blog index page for the demo scanner.
  * Returns "blog" when the path matches common blog index path segments.
+ * Used for URL-based type inference — not for production routing.
  */
 export function inferBlogPageType(url: string): "blog" | null {
   try {

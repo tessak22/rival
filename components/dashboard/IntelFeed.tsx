@@ -122,9 +122,9 @@ export function IntelFeed({ items }: IntelFeedProps) {
                     {item.blogEvents.map((event, i) => (
                       <li key={i} className="intel-blog-event">
                         {event.type === "audience_focus_shifted" &&
-                          `${item.competitorName} blog appears to have shifted audience focus - now ${event.nowDeveloperFocused ? "developer-focused" : "buyer-focused"}`}
+                          `${item.competitorName} blog appears to have shifted audience focus — now ${event.nowDeveloperFocused ? "developer-focused" : "buyer-focused"}`}
                         {event.type === "frequency_increased" &&
-                          `${item.competitorName} is publishing more frequently on their blog (${event.fromFrequency} to ${event.toFrequency})`}
+                          `${item.competitorName} is publishing more frequently on their blog (${event.fromFrequency} → ${event.toFrequency})`}
                       </li>
                     ))}
                   </ul>
