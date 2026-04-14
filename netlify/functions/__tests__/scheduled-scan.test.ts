@@ -23,4 +23,14 @@ describe("scheduled-scan", () => {
       }
     );
   });
+
+  it("throws when /api/cron returns a non-ok response", async () => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 401 } as Response);
+    await expect(handler()).rejects.toThrow("/api/cron responded 401");
+  });
+
+  it("exports the correct cron schedule", async () => {
+    const { config } = await import("../scheduled-scan");
+    expect(config.schedule).toBe("0 6 * * *");
+  });
 });
