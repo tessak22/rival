@@ -5,14 +5,14 @@
  * Why low effort: homepages are typically static marketing pages or server-rendered
  * with hero content visible on first paint. Full JS rendering rarely needed.
  *
- * Fallback: /automate — triggered when extract/json returns empty or fewer than 3
+ * Fallback: /automate - triggered when extract/json returns empty or fewer than 3
  * fields populated. Use for SPAs that inject hero copy client-side (common with
  * Webflow, Framer, and custom React homepages).
  *
  * When to use vs alternatives:
  * - Use for root URL (https://competitor.com or https://competitor.com/).
  * - Use `profile` for the About page (leadership, mission, partnerships).
- * - Do not merge homepage with profile — they capture distinct positioning layers.
+ * - Do not merge homepage with profile - they capture distinct positioning layers.
  *
  * Key parameters:
  * - url: bare root domain (e.g. https://competitor.com)
@@ -24,9 +24,9 @@
  * - Log fallback_triggered: true with reason in api_logs.
  *
  * Highest-signal fields for repositioning detection:
- * - primary_tagline: main H1/hero headline — changes when competitor repositions.
- * - sub_tagline: supporting line beneath primary — often the first thing rewritten.
- * - key_differentiators: explicit superiority claims — track adds/removes closely.
+ * - primary_tagline: main H1/hero headline - changes when competitor repositions.
+ * - sub_tagline: supporting line beneath primary - often the first thing rewritten.
+ * - key_differentiators: explicit superiority claims - track adds/removes closely.
  */
 
 export const HOMEPAGE_SCHEMA = {

@@ -1,8 +1,44 @@
 import { IntelFeed } from "@/components/dashboard/IntelFeed";
 import { ThreatMatrix } from "@/components/dashboard/ThreatMatrix";
 import { prisma } from "@/lib/db/client";
+import type { ReviewsData } from "@/lib/schemas/reviews";
 
 export const dynamic = "force-dynamic";
+
+function computeReviewsEvents(
+  current: ReviewsData,
+  previous: ReviewsData | null
+): Array<
+  | { type: "rating_changed"; platform: string; fromRating: number; toRating: number }
+  | { type: "complaint_theme_added"; platform: string; theme: string }
+> {
+  if (!previous) return [];
+
+  const platform = current.platform ?? previous.platform ?? "review platform";
+  const events: ReturnType<typeof computeReviewsEvents> = [];
+
+  if (
+    current.overall_rating != null &&
+    previous.overall_rating != null &&
+    Math.abs(current.overall_rating - previous.overall_rating) > 0.1
+  ) {
+    events.push({
+      type: "rating_changed",
+      platform,
+      fromRating: previous.overall_rating,
+      toRating: current.overall_rating
+    });
+  }
+
+  const prevComplaintSet = new Set(previous.top_complaint_themes ?? []);
+  for (const theme of current.top_complaint_themes ?? []) {
+    if (!prevComplaintSet.has(theme)) {
+      events.push({ type: "complaint_theme_added", platform, theme });
+    }
+  }
+
+  return events;
+}
 
 async function loadDashboardData() {
   const competitors = await prisma.competitor.findMany({
@@ -78,8 +114,6 @@ async function loadDashboardData() {
   });
   const competitorNames = new Map(competitors.map((competitor) => [competitor.id, competitor.name]));
 
-  // For homepage items, fetch the scan that preceded each changed scan so we can
-  // surface specific headline/positioning change messages in the Intel Feed.
   const homepageFeedItems = feed.filter((item) => item.page.type === "homepage");
   const previousHomepageScans = await Promise.all(
     homepageFeedItems.map((item) =>
@@ -97,26 +131,47 @@ async function loadDashboardData() {
     homepageFeedItems.map((item, i) => [item.id, previousHomepageScans[i]])
   );
 
+  const reviewsFeedScans = feed.filter((item) => item.page.type === "reviews");
+  const previousReviewsScans = new Map<string, ReviewsData | null>();
+
+  for (const scan of reviewsFeedScans) {
+    const prev = await prisma.scan.findFirst({
+      where: { pageId: scan.pageId, scannedAt: { lt: scan.scannedAt } },
+      orderBy: { scannedAt: "desc" },
+      select: { rawResult: true }
+    });
+    const prevData = prev?.rawResult && typeof prev.rawResult === "object" ? (prev.rawResult as ReviewsData) : null;
+    previousReviewsScans.set(scan.id, prevData);
+  }
+
   return {
     matrix,
-    feed: feed.map((item) => ({
-      id: item.id,
-      competitorName: competitorNames.get(item.page.competitorId) ?? "Unknown competitor",
-      pageLabel: item.page.label,
-      pageType: item.page.type,
-      scannedAt: item.scannedAt,
-      diffSummary: item.diffSummary,
-      rawResult: item.page.type === "homepage" ? item.rawResult : undefined,
-      previousRawResult:
-        item.page.type === "homepage"
-          ? (previousHomepageScanByCurrentId.get(item.id)?.rawResult ?? undefined)
-          : undefined
-    }))
+    feed: feed.map((item) => {
+      const isReviews = item.page.type === "reviews";
+      const currentData =
+        isReviews && item.rawResult && typeof item.rawResult === "object" ? (item.rawResult as ReviewsData) : null;
+      const prevData = isReviews ? (previousReviewsScans.get(item.id) ?? null) : null;
+      const reviewsEvents = currentData ? computeReviewsEvents(currentData, prevData) : [];
+
+      return {
+        id: item.id,
+        competitorName: competitorNames.get(item.page.competitorId) ?? "Unknown competitor",
+        pageLabel: item.page.label,
+        pageType: item.page.type,
+        scannedAt: item.scannedAt,
+        diffSummary: item.diffSummary,
+        rawResult: item.page.type === "homepage" ? item.rawResult : undefined,
+        previousRawResult:
+          item.page.type === "homepage"
+            ? (previousHomepageScanByCurrentId.get(item.id)?.rawResult ?? undefined)
+            : undefined,
+        reviewsEvents: reviewsEvents.length > 0 ? reviewsEvents : undefined
+      };
+    })
   };
 }
 
 export default async function HomePage() {
-  // TODO(auth): protect dashboard routes before exposing a public deployment.
   const data = await loadDashboardData();
 
   return (

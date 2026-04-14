@@ -2,6 +2,14 @@ import type { HomepageData } from "@/lib/schemas/homepage";
 
 type ProfileChangeEvent = "target_company_size_changed" | "target_industry_added";
 
+type ReviewsChangeEvent =
+  | { type: "rating_changed"; platform: string; fromRating: number; toRating: number }
+  | { type: "complaint_theme_added"; platform: string; theme: string };
+
+type BlogChangeEvent =
+  | { type: "audience_focus_shifted"; nowDeveloperFocused: boolean }
+  | { type: "frequency_increased"; fromFrequency: string; toFrequency: string };
+
 type IntelFeedItem = {
   id: string;
   competitorName: string;
@@ -12,16 +20,14 @@ type IntelFeedItem = {
   rawResult?: unknown;
   previousRawResult?: unknown;
   profileEvents?: ProfileChangeEvent[];
+  reviewsEvents?: ReviewsChangeEvent[];
+  blogEvents?: BlogChangeEvent[];
 };
 
 type IntelFeedProps = {
   items: IntelFeedItem[];
 };
 
-/**
- * Derive a human-readable homepage change message from the raw scan results.
- * Returns null if no specific change pattern is detected.
- */
 function getHomepageChangeMessage(
   competitorName: string,
   current: HomepageData,
@@ -95,6 +101,30 @@ export function IntelFeed({ items }: IntelFeedProps) {
                           `${item.competitorName} updated their stated target company size`}
                         {event === "target_industry_added" &&
                           `${item.competitorName} added a new target industry to their About page`}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {item.reviewsEvents && item.reviewsEvents.length > 0 && (
+                  <ul className="intel-reviews-events">
+                    {item.reviewsEvents.map((event, i) => (
+                      <li key={i} className="intel-reviews-event">
+                        {event.type === "rating_changed" &&
+                          `${item.competitorName} ${event.platform} rating changed from ${event.fromRating.toFixed(1)} to ${event.toRating.toFixed(1)}`}
+                        {event.type === "complaint_theme_added" &&
+                          `${item.competitorName} has a new recurring complaint on ${event.platform}: ${event.theme}`}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {item.blogEvents && item.blogEvents.length > 0 && (
+                  <ul className="intel-blog-events">
+                    {item.blogEvents.map((event, i) => (
+                      <li key={i} className="intel-blog-event">
+                        {event.type === "audience_focus_shifted" &&
+                          `${item.competitorName} blog appears to have shifted audience focus - now ${event.nowDeveloperFocused ? "developer-focused" : "buyer-focused"}`}
+                        {event.type === "frequency_increased" &&
+                          `${item.competitorName} is publishing more frequently on their blog (${event.fromFrequency} to ${event.toFrequency})`}
                       </li>
                     ))}
                   </ul>

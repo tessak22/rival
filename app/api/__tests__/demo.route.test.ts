@@ -2,17 +2,23 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { Prisma } from "@prisma/client";
 
-const { scanPageMock, demoIpLockCreateMock, demoIpLockDeleteMock, demoScanCountMock, demoScanCreateMock } = vi.hoisted(
-  () => ({
-    scanPageMock: vi.fn(),
-    demoIpLockCreateMock: vi.fn(),
-    demoIpLockDeleteMock: vi.fn(),
-    demoScanCountMock: vi.fn(),
-    demoScanCreateMock: vi.fn()
-  })
-);
+const {
+  scanPageMock,
+  inferBlogPageTypeMock,
+  demoIpLockCreateMock,
+  demoIpLockDeleteMock,
+  demoScanCountMock,
+  demoScanCreateMock
+} = vi.hoisted(() => ({
+  scanPageMock: vi.fn(),
+  inferBlogPageTypeMock: vi.fn(),
+  demoIpLockCreateMock: vi.fn(),
+  demoIpLockDeleteMock: vi.fn(),
+  demoScanCountMock: vi.fn(),
+  demoScanCreateMock: vi.fn()
+}));
 
-vi.mock("@/lib/scanner", () => ({ scanPage: scanPageMock }));
+vi.mock("@/lib/scanner", () => ({ scanPage: scanPageMock, inferBlogPageType: inferBlogPageTypeMock }));
 vi.mock("@/lib/db/client", () => ({
   prisma: {
     demoIpLock: {
@@ -82,6 +88,7 @@ describe("POST /api/demo", () => {
   beforeEach(() => {
     vi.resetModules();
     scanPageMock.mockReset();
+    inferBlogPageTypeMock.mockReset();
     demoIpLockCreateMock.mockReset();
     demoIpLockDeleteMock.mockReset();
     demoScanCountMock.mockReset();
@@ -93,6 +100,7 @@ describe("POST /api/demo", () => {
     demoScanCountMock.mockResolvedValue(0);
     demoScanCreateMock.mockResolvedValue({});
     scanPageMock.mockResolvedValue(SCAN_RESULT);
+    inferBlogPageTypeMock.mockReturnValue(null);
   });
 
   it("returns 429 when a concurrent lock is held", async () => {
