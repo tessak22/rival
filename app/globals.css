@@ -583,3 +583,41 @@ body {
   color: var(--muted);
   margin-top: 0.5rem;
 }
+
+/* ── Profile section ─────────────────────────────────────────────────── */
+
+.profile-tab {
+  display: grid;
+  gap: 1rem;
+}
+
+.profile-fields {
+  display: grid;
+  grid-template-columns: minmax(120px, 200px) 1fr;
+  gap: 0.5rem 1rem;
+  align-items: start;
+}
+
+.profile-fields dt {
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  padding-top: 0.15rem;
+}
+
+.profile-fields dd {
+  margin: 0;
+}
+
+.company-info-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  font-size: 0.88rem;
+}
+
+.customer-logos {
+  font-size: 0.88rem;
+}
