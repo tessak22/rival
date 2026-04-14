@@ -2,10 +2,17 @@ import { notFound } from "next/navigation";
 
 import { DeepDiveClient } from "@/components/deep-dive/DeepDiveClient";
 import { prisma } from "@/lib/db/client";
+import { DEEP_DIVE_TEMPLATES } from "@/lib/deep-dive-templates";
 
 type PageProps = {
   params: { slug: string };
 };
+
+function getTemplateLabel(promptTemplate: string | null): string {
+  if (!promptTemplate) return "General Research";
+  const found = DEEP_DIVE_TEMPLATES.find((t) => t.key === promptTemplate);
+  return found?.label ?? "General Research";
+}
 
 export default async function DeepDivePage({ params }: PageProps) {
   const { slug } = params;
@@ -44,7 +51,10 @@ export default async function DeepDivePage({ params }: PageProps) {
             {previousDeepDives.map((item) => (
               <li key={item.id}>
                 <span>{item.mode}</span>
-                <strong>{item.createdAt.toLocaleString()}</strong>
+                <strong>
+                  {item.createdAt.toLocaleString()}
+                  <span className="template-badge">{getTemplateLabel(item.promptTemplate)}</span>
+                </strong>
                 {item.result ? (
                   <p className="muted">{JSON.stringify(item.result).replace(/\s+/g, " ").slice(0, 180)}...</p>
                 ) : (

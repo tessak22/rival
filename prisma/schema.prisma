@@ -66,13 +66,14 @@ model Scan {
 }
 
 model DeepDive {
-  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  competitorId String   @map("competitor_id") @db.Uuid
-  mode         String
-  query        String
-  result       Json?
-  citations    Json?
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  competitorId   String   @map("competitor_id") @db.Uuid
+  mode           String
+  query          String
+  result         Json?
+  citations      Json?
+  promptTemplate String?  @map("prompt_template")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   competitor Competitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
 

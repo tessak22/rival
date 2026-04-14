@@ -4,7 +4,7 @@ import { Prisma } from "@prisma/client";
 import type { NextRequest } from "next/server";
 
 import { prisma } from "@/lib/db/client";
-import { scanPage } from "@/lib/scanner";
+import { inferBlogPageType, scanPage } from "@/lib/scanner";
 
 const MAX_SCANS_PER_DAY = 3;
 const encoder = new TextEncoder();
@@ -19,11 +19,31 @@ function ipHash(ip: string): string {
 
 function inferPageType(rawUrl: string): string {
   const lower = rawUrl.toLowerCase();
+  // Review platforms first so keyword collisions (e.g. "pricing") do not misclassify.
+  if (
+    lower.includes("g2.com") ||
+    lower.includes("capterra.com") ||
+    lower.includes("trustpilot.com") ||
+    lower.includes("producthunt.com")
+  ) {
+    return "reviews";
+  }
   if (lower.includes("pricing")) return "pricing";
   if (lower.includes("changelog") || lower.includes("release")) return "changelog";
   if (lower.includes("career") || lower.includes("jobs")) return "careers";
   if (lower.includes("docs")) return "docs";
   if (lower.includes("github.com")) return "github";
+  if (inferBlogPageType(rawUrl)) return "blog";
+  // Review platforms — content_blocked is expected and the most valuable
+  // experience-logging signal in the codebase. Infer before generic checks.
+  if (
+    lower.includes("g2.com") ||
+    lower.includes("capterra.com") ||
+    lower.includes("trustpilot.com") ||
+    lower.includes("producthunt.com")
+  ) {
+    return "reviews";
+  }
   if (
     lower.includes("linkedin.com") ||
     lower.includes("twitter.com") ||

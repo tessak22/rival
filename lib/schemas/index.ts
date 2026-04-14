@@ -6,5 +6,6 @@ export * from "./github";
 export * from "./homepage";
 export * from "./pricing";
 export * from "./profile";
+export * from "./reviews";
 export * from "./social";
 export * from "./stack";
