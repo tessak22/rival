@@ -508,3 +508,78 @@ body {
   border-top: 1px solid #1f2d3d;
   margin: 1rem 0;
 }
+
+/* ── Homepage section ────────────────────────────────────────────────── */
+
+.homepage-tab {
+  display: grid;
+  gap: 1rem;
+}
+
+.homepage-section {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.homepage-label {
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 0;
+}
+
+.homepage-primary-tagline {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.homepage-sub-tagline {
+  font-size: 1rem;
+  color: var(--muted);
+  margin: 0;
+}
+
+.homepage-cta-badge {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 0.2rem 0.65rem;
+  font-size: 0.82rem;
+  color: var(--accent);
+  text-decoration: none;
+  gap: 0.3rem;
+}
+
+.homepage-field--changed {
+  border-left: 3px solid #ad7e2d;
+  padding-left: 0.5rem;
+}
+
+.homepage-change-badge {
+  display: inline-block;
+  border: 1px solid #ad7e2d;
+  border-radius: 999px;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.7rem;
+  color: #c9943a;
+  background: rgba(148, 107, 30, 0.15);
+  margin-left: 0.4rem;
+}
+
+.homepage-differentiators {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.homepage-meta {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 0.5rem;
+}
