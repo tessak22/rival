@@ -2,15 +2,21 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { Prisma } from "@prisma/client";
 
-const { scanPageMock, inferBlogPageTypeMock, demoIpLockCreateMock, demoIpLockDeleteMock, demoScanCountMock, demoScanCreateMock } =
-  vi.hoisted(() => ({
-    scanPageMock: vi.fn(),
-    inferBlogPageTypeMock: vi.fn(),
-    demoIpLockCreateMock: vi.fn(),
-    demoIpLockDeleteMock: vi.fn(),
-    demoScanCountMock: vi.fn(),
-    demoScanCreateMock: vi.fn()
-  }));
+const {
+  scanPageMock,
+  inferBlogPageTypeMock,
+  demoIpLockCreateMock,
+  demoIpLockDeleteMock,
+  demoScanCountMock,
+  demoScanCreateMock
+} = vi.hoisted(() => ({
+  scanPageMock: vi.fn(),
+  inferBlogPageTypeMock: vi.fn(),
+  demoIpLockCreateMock: vi.fn(),
+  demoIpLockDeleteMock: vi.fn(),
+  demoScanCountMock: vi.fn(),
+  demoScanCreateMock: vi.fn()
+}));
 
 vi.mock("@/lib/scanner", () => ({ scanPage: scanPageMock, inferBlogPageType: inferBlogPageTypeMock }));
 vi.mock("@/lib/db/client", () => ({
