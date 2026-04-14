@@ -19,3 +19,6 @@ notes-local/
 # Polyscope workspace context
 .context/
 .claude/worktrees/
+
+# Netlify local link state (per-developer)
+.netlify/
