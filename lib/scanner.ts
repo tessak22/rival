@@ -327,9 +327,9 @@ export const BLOG_URL_PATTERNS = ["/blog", "/articles", "/news", "/resources", "
 export function inferBlogPageType(url: string): "blog" | null {
   try {
     const { pathname } = new URL(url);
-    const lowerPath = pathname.toLowerCase().replace(/\/+$/, "") || "/";
+    const lowerPath = pathname.toLowerCase();
     for (const pattern of BLOG_URL_PATTERNS) {
-      if (lowerPath === pattern) {
+      if (lowerPath === pattern || lowerPath.startsWith(pattern + "/") || lowerPath.startsWith(pattern + "?")) {
         return "blog";
       }
     }

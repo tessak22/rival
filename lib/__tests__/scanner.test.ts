@@ -320,19 +320,11 @@ describe("inferBlogPageType", () => {
     expect(inferBlogPageType("https://example.com/insights")).toBe("blog");
   });
 
-  it("does not classify nested article/detail paths as blog index", async () => {
+  it("returns blog for subpaths of known blog patterns", async () => {
     const { inferBlogPageType } = await import("@/lib/scanner");
-    expect(inferBlogPageType("https://example.com/blog/how-we-built-this")).toBeNull();
-    expect(inferBlogPageType("https://example.com/resources/case-study")).toBeNull();
-  });
-});
-
-describe("inferBlogPageType", () => {
-  it("returns blog for common blog index paths", async () => {
-    const { inferBlogPageType } = await import("@/lib/scanner");
-    expect(inferBlogPageType("https://example.com/blog")).toBe("blog");
-    expect(inferBlogPageType("https://example.com/resources")).toBe("blog");
     expect(inferBlogPageType("https://example.com/insights/ai")).toBe("blog");
+    expect(inferBlogPageType("https://example.com/blog/how-we-built-this")).toBe("blog");
+    expect(inferBlogPageType("https://example.com/resources/case-study")).toBe("blog");
   });
 
   it("returns null for non-blog paths and invalid URLs", async () => {
