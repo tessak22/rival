@@ -621,3 +621,157 @@ body {
 .customer-logos {
   font-size: 0.88rem;
 }
+
+/* ── Reviews section ─────────────────────────────────────────────────── */
+
+.reviews-platform-tabs {
+  display: grid;
+  gap: 1rem;
+}
+
+.reviews-platform-card {
+  border: 1px solid #1f2d3d;
+  border-left: 3px solid #3a5e89;
+  background: rgba(10, 15, 22, 0.6);
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+.reviews-platform-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.reviews-platform-header h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.reviews-rating-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.reviews-rating-score {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.reviews-stars {
+  font-size: 1.1rem;
+  letter-spacing: 0.05em;
+  color: #c9943a;
+}
+
+.reviews-count {
+  font-size: 0.82rem;
+}
+
+.reviews-subscores-row {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.reviews-subscore {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.reviews-subscore-label {
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.reviews-subscore-value {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.reviews-recommended {
+  font-size: 0.85rem;
+  font-style: italic;
+  color: var(--muted);
+  margin: 0.5rem 0;
+}
+
+.reviews-themes {
+  margin-top: 0.75rem;
+}
+
+.reviews-themes h4 {
+  margin: 0 0 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.reviews-themes--complaints {
+  margin-top: 0.75rem;
+}
+
+.reviews-recent {
+  margin-top: 1rem;
+}
+
+.reviews-recent h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.reviews-recent-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.reviews-recent-item {
+  border-bottom: 1px solid #1f2d3d;
+  padding-bottom: 0.6rem;
+}
+
+.reviews-recent-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.reviews-recent-meta {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  font-size: 0.8rem;
+  margin-bottom: 0.25rem;
+}
+
+.reviews-recent-rating {
+  font-weight: 600;
+}
+
+.reviews-recent-date {
+  color: var(--muted);
+}
+
+.reviews-recent-summary {
+  margin: 0;
+  font-size: 0.88rem;
+}
