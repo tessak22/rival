@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { SchemaHealthBadge } from "@/components/competitor/SchemaHealthBadge";
@@ -59,10 +60,10 @@ function renderStars(rating: number): string {
   return "★".repeat(full) + (half ? "½" : "") + "☆".repeat(empty);
 }
 
-function toSafeExternalUrl(rawUrl: string | null | undefined): string | null {
+function toSafeExternalUrl(rawUrl: string | null | undefined, baseUrl?: string): string | null {
   if (!rawUrl) return null;
   try {
-    const parsed = new URL(rawUrl);
+    const parsed = baseUrl ? new URL(rawUrl, baseUrl) : new URL(rawUrl);
     if (parsed.protocol === "http:" || parsed.protocol === "https:") {
       return parsed.toString();
     }
@@ -269,6 +270,7 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
   return (
     <main className="competitor-page">
       <header className="page-header">
+        <Link href="/" className="back-link">← Dashboard</Link>
         <h1>{competitor.name}</h1>
         <p>{competitor.baseUrl}</p>
       </header>
@@ -1012,7 +1014,7 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
                 <ol className="blog-post-list">
                   {blogData.recent_post_titles.map((title, i) => {
                     const url = blogData.recent_post_urls?.[i];
-                    const safeUrl = toSafeExternalUrl(url);
+                    const safeUrl = toSafeExternalUrl(url, competitor.baseUrl);
                     const date = blogData.recent_post_dates?.[i];
                     return (
                       <li key={i} className="blog-post-item">
