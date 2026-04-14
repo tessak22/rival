@@ -454,7 +454,7 @@ body {
 }
 
 .badge--unknown {
-  border-color: #333f50;
+  border-color: #2b3d55;
   color: var(--muted);
 }
 
