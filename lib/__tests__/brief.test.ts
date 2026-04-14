@@ -242,7 +242,7 @@ describe("generateCompetitorBrief", () => {
   });
 
   it("ignores scans older than 7 days but includes scans within the window", async () => {
-    const recentScan = makeRecentScan({ pageId: "page_2", page: { type: "changelog", label: "Changelog" } });
+    const recentScan = makeRecentScan({ pageId: "page_2", page: { type: "blog", label: "Blog" } });
     const staleScan = makeStaleScan(); // pageId: page_1
     scanFindManyMock.mockResolvedValueOnce([recentScan, staleScan]);
 
@@ -253,7 +253,7 @@ describe("generateCompetitorBrief", () => {
     const call = generateBriefMock.mock.calls[0][0];
     const parsed = JSON.parse(call.contextData) as Array<{ page_type: string }>;
     expect(parsed).toHaveLength(1);
-    expect(parsed[0].page_type).toBe("changelog");
+    expect(parsed[0].page_type).toBe("blog");
   });
 
   it("propagates errors from generateBrief", async () => {
