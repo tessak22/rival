@@ -19,6 +19,15 @@ function ipHash(ip: string): string {
 
 function inferPageType(rawUrl: string): string {
   const lower = rawUrl.toLowerCase();
+  // Review platforms first so keyword collisions (e.g. "pricing") do not misclassify.
+  if (
+    lower.includes("g2.com") ||
+    lower.includes("capterra.com") ||
+    lower.includes("trustpilot.com") ||
+    lower.includes("producthunt.com")
+  ) {
+    return "reviews";
+  }
   if (lower.includes("pricing")) return "pricing";
   if (lower.includes("changelog") || lower.includes("release")) return "changelog";
   if (lower.includes("career") || lower.includes("jobs")) return "careers";

@@ -104,6 +104,7 @@ async function loadDashboardData() {
     };
   });
 
+  // Fetch changed scans for the Intel Feed, including rawResult for reviews diff events.
   const feed = await prisma.scan.findMany({
     where: { hasChanges: true },
     include: {
@@ -131,6 +132,7 @@ async function loadDashboardData() {
     homepageFeedItems.map((item, i) => [item.id, previousHomepageScans[i]])
   );
 
+  // For reviews pages in the feed, fetch the previous scan to compute diff events.
   const reviewsFeedScans = feed.filter((item) => item.page.type === "reviews");
   const previousReviewsScans = new Map<string, ReviewsData | null>();
 

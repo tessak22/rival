@@ -288,6 +288,19 @@ function countPopulatedFields(value: unknown): number {
   return Object.values(value).filter((v) => !valueIsEmpty(v)).length;
 }
 
+function extractedIndicatesContentBlocked(value: unknown): boolean {
+  const payload = extractDataEnvelope(value);
+  if (!isPlainObject(payload)) return false;
+
+  if (payload["content_blocked"] === true) return true;
+  const status = payload["status"];
+  if (typeof status === "string" && status.toLowerCase() === "content_blocked") return true;
+  const error = payload["error"];
+  if (typeof error === "string" && error.toLowerCase().includes("content_blocked")) return true;
+
+  return false;
+}
+
 /**
  * Infer page type from URL when not explicitly provided.
  * A bare root domain (https://competitor.com or https://competitor.com/) implies homepage.
@@ -529,6 +542,10 @@ async function runPrimaryScan(input: ScanPageInput): Promise<{
 
   try {
     const primary = await runJsonExtract();
+    if (input.type === "reviews" && extractedIndicatesContentBlocked(primary)) {
+      return runAutomateFallback("extract/json reported content_blocked");
+    }
+
     const extracted = extractDataEnvelope(primary);
 
     if (!valueIsEmpty(extracted)) {
