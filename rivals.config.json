@@ -1,5 +1,114 @@
 {
-  "competitors": [],
+  "competitors": [
+    {
+      "name": "Firecrawl",
+      "slug": "firecrawl",
+      "url": "https://firecrawl.dev",
+      "pages": [
+        { "label": "Homepage", "url": "https://firecrawl.dev", "type": "homepage" },
+        { "label": "Pricing", "url": "https://firecrawl.dev/pricing", "type": "pricing", "geo_target": "US" },
+        { "label": "Changelog", "url": "https://firecrawl.dev/changelog", "type": "changelog" },
+        { "label": "Careers", "url": "https://firecrawl.dev/careers", "type": "careers" },
+        { "label": "GitHub", "url": "https://github.com/mendableai/firecrawl", "type": "github" },
+        { "label": "Docs", "url": "https://docs.firecrawl.dev", "type": "docs" },
+        { "label": "Blog", "url": "https://firecrawl.dev/blog", "type": "blog" },
+        { "label": "About", "url": "https://www.firecrawl.dev/about", "type": "profile" },
+        { "label": "Twitter/X", "url": "https://x.com/firecrawl_dev", "type": "social" },
+        { "label": "Reviews", "url": "https://www.producthunt.com/products/extract-by-firecrawl/reviews", "type": "reviews" }
+      ]
+    },
+    {
+      "name": "Browserbase",
+      "slug": "browserbase",
+      "url": "https://browserbase.com",
+      "pages": [
+        { "label": "Homepage", "url": "https://browserbase.com", "type": "homepage" },
+        { "label": "Pricing", "url": "https://browserbase.com/pricing", "type": "pricing", "geo_target": "US" },
+        { "label": "Changelog", "url": "https://browserbase.com/changelog", "type": "changelog" },
+        { "label": "Careers", "url": "https://browserbase.com/careers", "type": "careers" },
+        { "label": "GitHub", "url": "https://github.com/browserbase/stagehand", "type": "github" },
+        { "label": "Docs", "url": "https://docs.browserbase.com", "type": "docs" },
+        { "label": "Blog", "url": "https://www.browserbase.com/blog", "type": "blog" },
+        { "label": "Twitter/X", "url": "https://x.com/browserbase", "type": "social" },
+        { "label": "Reviews", "url": "https://www.producthunt.com/products/browserbase/reviews", "type": "reviews" }
+      ]
+    },
+    {
+      "name": "Browser Use",
+      "slug": "browser-use",
+      "url": "https://browser-use.com",
+      "pages": [
+        { "label": "Homepage", "url": "https://browser-use.com", "type": "homepage" },
+        { "label": "Pricing", "url": "https://browser-use.com/pricing", "type": "pricing", "geo_target": "US" },
+        { "label": "Careers", "url": "https://browser-use.com/careers", "type": "careers" },
+        { "label": "Changelog", "url": "https://browser-use.com/changelog", "type": "changelog" },
+        { "label": "GitHub", "url": "https://github.com/browser-use/browser-use", "type": "github" },
+        { "label": "Docs", "url": "https://docs.browser-use.com", "type": "docs" },
+        { "label": "Blog", "url": "https://browser-use.com/blog", "type": "blog" },
+        { "label": "Twitter/X", "url": "https://x.com/browser_use", "type": "social" },
+        { "label": "Reviews", "url": "https://www.producthunt.com/products/browser-use/reviews", "type": "reviews" }
+      ]
+    },
+    {
+      "name": "Stagehand",
+      "slug": "stagehand",
+      "url": "https://stagehand.dev",
+      "pages": [
+        { "label": "Homepage", "url": "https://stagehand.dev", "type": "homepage" },
+        { "label": "GitHub", "url": "https://github.com/browserbase/stagehand", "type": "github" },
+        { "label": "Docs", "url": "https://docs.stagehand.dev", "type": "docs" },
+        { "label": "Changelog", "url": "https://stagehand.dev/changelog", "type": "changelog" },
+        { "label": "About", "url": "https://www.browserbase.com/stagehand", "type": "profile" },
+        { "label": "Twitter/X", "url": "https://x.com/stagehanddev", "type": "social" },
+        { "label": "Reviews", "url": "https://www.producthunt.com/products/stagehand-2/reviews", "type": "reviews" }
+      ]
+    },
+    {
+      "name": "Steel",
+      "slug": "steel",
+      "url": "https://steel.dev",
+      "pages": [
+        { "label": "Homepage", "url": "https://steel.dev", "type": "homepage" },
+        { "label": "Pricing", "url": "https://steel.dev/pricing", "type": "pricing", "geo_target": "US" },
+        { "label": "GitHub", "url": "https://github.com/steel-dev/steel-browser", "type": "github" },
+        { "label": "Docs", "url": "https://docs.steel.dev", "type": "docs" },
+        { "label": "Changelog", "url": "https://steel.dev/changelog", "type": "changelog" },
+        { "label": "Blog", "url": "https://steel.dev/blog", "type": "blog" },
+        { "label": "Twitter/X", "url": "https://x.com/steeldotdev", "type": "social" }
+      ]
+    },
+    {
+      "name": "Playwright",
+      "slug": "playwright",
+      "url": "https://playwright.dev",
+      "pages": [
+        { "label": "Homepage", "url": "https://playwright.dev", "type": "homepage" },
+        { "label": "GitHub", "url": "https://github.com/microsoft/playwright", "type": "github" },
+        { "label": "Docs", "url": "https://playwright.dev/docs/intro", "type": "docs" },
+        { "label": "Changelog", "url": "https://github.com/microsoft/playwright/releases", "type": "changelog" },
+        { "label": "About", "url": "https://playwright.dev/community/welcome", "type": "profile" },
+        { "label": "Twitter/X", "url": "https://x.com/playwrightweb", "type": "social" },
+        { "label": "Reviews", "url": "https://www.g2.com/products/playwright/reviews", "type": "reviews" }
+      ]
+    },
+    {
+      "name": "LangChain Browser Tools",
+      "slug": "langchain-browser",
+      "url": "https://langchain.com",
+      "pages": [
+        { "label": "Homepage", "url": "https://langchain.com", "type": "homepage" },
+        { "label": "Pricing", "url": "https://www.langchain.com/pricing", "type": "pricing", "geo_target": "US" },
+        { "label": "Careers", "url": "https://www.langchain.com/careers", "type": "careers" },
+        { "label": "Changelog", "url": "https://changelog.langchain.com/", "type": "changelog" },
+        { "label": "GitHub", "url": "https://github.com/langchain-ai/langchainjs", "type": "github" },
+        { "label": "Docs", "url": "https://js.langchain.com/docs/integrations/tools/", "type": "docs" },
+        { "label": "Blog", "url": "https://blog.langchain.dev", "type": "blog" },
+        { "label": "About", "url": "https://www.langchain.com/about", "type": "profile" },
+        { "label": "Twitter/X", "url": "https://x.com/langchainai", "type": "social" },
+        { "label": "Reviews", "url": "https://www.g2.com/products/langchain/reviews", "type": "reviews" }
+      ]
+    }
+  ],
   "schedule": "0 9 * * 1-5",
   "manual_stale_days": 30,
   "notifications": {
