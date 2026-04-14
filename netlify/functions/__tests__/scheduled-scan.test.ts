@@ -1,36 +1,28 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import handler from "../scheduled-scan";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import handler, { config } from "../scheduled-scan";
+
+vi.mock("../../../lib/run-scans", () => ({
+  runScans: vi.fn().mockResolvedValue({ competitors: 7, staleLocksDeleted: 0, summary: [] })
+}));
+
+import { runScans } from "../../../lib/run-scans";
 
 describe("scheduled-scan", () => {
-  beforeEach(() => {
-    vi.stubEnv("URL", "https://rival.netlify.app");
-    vi.stubEnv("CRON_SECRET", "test-secret");
-    global.fetch = vi.fn().mockResolvedValue({ ok: true } as Response);
-  });
-
   afterEach(() => {
-    vi.unstubAllEnvs();
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
-  it("POSTs to /api/cron with x-cron-secret header", async () => {
+  it("calls runScans directly", async () => {
     await handler();
-    expect(global.fetch).toHaveBeenCalledWith(
-      "https://rival.netlify.app/api/cron",
-      {
-        method: "POST",
-        headers: { "x-cron-secret": "test-secret" }
-      }
-    );
+    expect(runScans).toHaveBeenCalledOnce();
   });
 
-  it("throws when /api/cron returns a non-ok response", async () => {
-    global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 401 } as Response);
-    await expect(handler()).rejects.toThrow("/api/cron responded 401");
+  it("throws when runScans rejects", async () => {
+    vi.mocked(runScans).mockRejectedValueOnce(new Error("db down"));
+    await expect(handler()).rejects.toThrow("db down");
   });
 
-  it("exports the correct cron schedule", async () => {
-    const { config } = await import("../scheduled-scan");
+  it("exports the correct cron schedule", () => {
     expect(config.schedule).toBe("0 6 * * *");
   });
 });
