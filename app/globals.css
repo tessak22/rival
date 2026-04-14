@@ -893,3 +893,81 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+
+/* ── Intelligence Brief ──────────────────────────────────────────────── */
+
+.brief-body {
+  display: grid;
+  gap: 1rem;
+}
+
+.brief-threat-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.brief-threat-badge {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 0.2rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.brief-threat--high {
+  border-color: #8f3c3c;
+  background: rgba(123, 45, 45, 0.2);
+  color: #f17f7f;
+}
+
+.brief-threat--medium {
+  border-color: #ad7e2d;
+  background: rgba(148, 107, 30, 0.18);
+  color: #c9943a;
+}
+
+.brief-threat--low {
+  border-color: #2f8f62;
+  background: rgba(27, 95, 63, 0.18);
+  color: #6fd9a2;
+}
+
+.brief-threat-reasoning {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.brief-section {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.brief-section-label {
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 0;
+}
+
+.brief-section p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.brief-watch-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.brief-watch-list li {
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
