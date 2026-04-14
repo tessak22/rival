@@ -1,0 +1,7 @@
+[build]
+  command = "npx prisma generate && npm run build"
+  publish = ".next"
+  functions = "netlify/functions"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
