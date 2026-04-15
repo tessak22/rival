@@ -971,3 +971,128 @@ body {
   font-size: 0.9rem;
   line-height: 1.5;
 }
+
+/* ── Scan History ─────────────────────────────────────── */
+
+.history-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.history-title {
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin: 0.5rem 0 1.5rem;
+}
+
+.history-type-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.history-type-tab {
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 0.82rem;
+  text-decoration: none;
+  color: var(--muted);
+}
+
+.history-type-tab:hover {
+  border-color: var(--accent);
+  color: var(--fg);
+}
+
+.history-type-tab--active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.history-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.history-entry {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.history-entry-summary {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.7rem 1rem;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.history-entry-summary::-webkit-details-marker {
+  display: none;
+}
+
+.history-entry-date {
+  font-size: 0.82rem;
+  color: var(--muted);
+  min-width: 180px;
+  flex-shrink: 0;
+}
+
+.history-entry-diff {
+  font-size: 0.82rem;
+  color: var(--fg);
+  flex: 1;
+}
+
+.history-entry-body {
+  padding: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.history-kv-row {
+  display: flex;
+  gap: 1rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.83rem;
+}
+
+.history-kv-row:last-child {
+  border-bottom: none;
+}
+
+.history-kv-key {
+  min-width: 160px;
+  flex-shrink: 0;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.history-kv-value {
+  flex: 1;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.history-markdown {
+  font-size: 0.83rem;
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
+.history-empty {
+  color: var(--muted);
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 3rem 0;
+}
