@@ -20,7 +20,7 @@ function formatDate(date: Date): string {
     year: "numeric",
     hour: "numeric",
     minute: "2-digit",
-    timeZoneName: "short",
+    timeZoneName: "short"
   }).format(new Date(date));
 }
 
@@ -35,9 +35,7 @@ export function ScanEntry({ scan }: ScanEntryProps) {
         : "tag-chip--amber";
 
   const kvEntries =
-    scan.rawResult !== null &&
-    typeof scan.rawResult === "object" &&
-    !Array.isArray(scan.rawResult)
+    scan.rawResult !== null && typeof scan.rawResult === "object" && !Array.isArray(scan.rawResult)
       ? Object.entries(scan.rawResult as Record<string, unknown>)
       : [];
 

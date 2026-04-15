@@ -19,9 +19,9 @@ export default async function HistoryPage({ params, searchParams }: Props) {
     where: { slug },
     include: {
       pages: {
-        select: { type: true },
-      },
-    },
+        select: { type: true }
+      }
+    }
   });
 
   if (!competitor) notFound();
@@ -33,11 +33,11 @@ export default async function HistoryPage({ params, searchParams }: Props) {
     where: {
       page: {
         competitorId: competitor.id,
-        type: selectedType,
-      },
+        type: selectedType
+      }
     },
     orderBy: { scannedAt: "desc" },
-    take: MAX_SCANS,
+    take: MAX_SCANS
   });
 
   return (
@@ -61,9 +61,7 @@ export default async function HistoryPage({ params, searchParams }: Props) {
       </nav>
 
       {scans.length === 0 ? (
-        <p className="history-empty">
-          No scans yet for this page type. Scans run daily at 6am UTC.
-        </p>
+        <p className="history-empty">No scans yet for this page type. Scans run daily at 6am UTC.</p>
       ) : (
         <div className="history-timeline">
           {scans.map((scan) => (
