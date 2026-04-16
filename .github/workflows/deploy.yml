@@ -19,9 +19,6 @@ jobs:
 
       - run: npm ci
 
-      - name: Prisma Generate
-        run: npx prisma generate
-
       - name: Deploy to Netlify
         run: npx netlify-cli deploy --build --prod --dir=.next
         env:
