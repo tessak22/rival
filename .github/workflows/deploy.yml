@@ -20,6 +20,11 @@ jobs:
       - run: npm ci
 
       - name: Deploy to Netlify
+        # `prisma generate` is intentionally omitted here. Prisma 7 requires
+        # DATABASE_URL at generate time (via prisma.config.ts), which is not
+        # available in the GitHub Actions environment. The netlify.toml build
+        # command (`npx prisma generate && npm run build`) runs it inside
+        # Netlify's own build environment where DATABASE_URL is configured.
         run: npx netlify-cli deploy --build --prod --dir=.next
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
