@@ -212,7 +212,14 @@ produce a structured brief covering:
 1. Positioning opportunity — what gap does their weakness create?
 2. Content opportunity — what topics should you own based on their blind spots?
 3. Product opportunity — what are developers complaining about that you could solve?
-4. Threat level: High / Medium / Low with one sentence of reasoning
+4. Threat level — rate as High, Medium, or Low using this rubric, with one sentence of reasoning:
+   - High: Direct feature AND audience overlap, AND active momentum in the last ~30 days
+     (recent launches, relevant hiring, pricing moves, or notable GitHub/community growth).
+   - Medium: Partial overlap (audience OR use case, not both), OR full overlap with stalled
+     execution (no recent shipping, hiring, or pricing activity).
+   - Low: Adjacent space, different ICP, or clear wind-down signals.
+   Reserve High for competitors with BOTH overlap AND momentum. When evidence is mixed,
+   sparse, or ambiguous, default to Medium rather than High.
 5. Watch list: 2-3 signals to monitor next cycle
 Be direct and specific. No generic advice.
 
