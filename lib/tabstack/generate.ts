@@ -260,17 +260,24 @@ produce a structured brief covering:
      recent shipping, hiring, or pricing activity); OR (c) partial overlap — audience
      OR use case, but not both.
    - Low: Adjacent space, different ICP, or clear wind-down signals.
-   Important distinctions:
-   - Rate a competitor on what they actually sell, not on whether they publish source
-     code. Many companies ship an open-source project alongside a paid product
-     (open-core). Judge them on the paid offering, not the repo — an open-core
-     company running a managed cloud or paid service is rated like any other
-     commercial competitor, and if overlap + momentum are present, they are High.
-     Do NOT anchor on "Medium at most" just because the codebase is open-source.
-   - A pure library / framework / SDK with no paid offering is Medium at most,
-     regardless of stars or downloads. Popularity alone is not a High threat because
-     it does not compete for our revenue.
-   - Reserve High for offerings that directly compete for our revenue, not for
+   Important distinctions — apply in order:
+   - FIRST ask the revenue question: can a customer buy this specific product
+     today — with a credit card, a sales contract, or a managed/hosted SKU? If
+     NO, the threat is Medium at most, full stop. Corporate backing alone does
+     NOT count: a large company maintaining an open-source project as a
+     community investment, without selling a paid or managed version of it,
+     still fails the revenue question. Momentum, stars, downloads, corporate
+     sponsorship, and "widely used in industry" are not substitutes for a paid
+     offering.
+   - If the revenue answer is YES, then rate on what they actually sell. Many
+     companies ship an open-source project alongside a paid product (open-core).
+     Judge them on the paid offering, not the repo — an open-core company
+     running a managed cloud or paid service is rated like any other commercial
+     competitor, and if overlap + momentum are present, they are High. Do NOT
+     anchor on "Medium at most" just because the codebase is open-source.
+   - A pure library / framework / SDK with no paid counterpart is Medium at
+     most, regardless of stars, downloads, or corporate backing.
+   - Reserve High for offerings that directly compete for our REVENUE, not for
      mindshare or developer adoption alone.
    - When evidence is mixed, sparse, or ambiguous, default to Medium rather than High.
 5. Watch list: 2-3 signals to monitor next cycle
