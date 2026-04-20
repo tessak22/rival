@@ -3,5 +3,16 @@
   publish = ".next"
   functions = "netlify/functions"
 
+# Seed is production-only.
+#
+# The [build] block above applies to every Netlify context (production,
+# deploy-preview, branch-deploy). Seeding during a preview build would
+# upsert competitor and page rows against whatever DATABASE_URL that
+# context has — which, if shared with production, means any PR build
+# could mutate live data. Scope seeding to the production context so
+# previews stay read-only.
+[context.production]
+  command = "npx prisma generate && npm run build && npx tsx scripts/seed.ts"
+
 [[plugins]]
   package = "@netlify/plugin-nextjs"
