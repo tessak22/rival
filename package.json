@@ -15,6 +15,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:seed": "tsx scripts/seed.ts",
+    "refresh-briefs": "tsx scripts/refresh-briefs.ts",
     "validate:scan-cycle": "tsx scripts/validate-scan-cycle.ts"
   },
   "dependencies": {
