@@ -3,16 +3,24 @@
   publish = ".next"
   functions = "netlify/functions"
 
-# Seed is production-only.
+# Seed + bootstrap are production-only.
 #
 # The [build] block above applies to every Netlify context (production,
-# deploy-preview, branch-deploy). Seeding during a preview build would
-# upsert competitor and page rows against whatever DATABASE_URL that
-# context has — which, if shared with production, means any PR build
-# could mutate live data. Scope seeding to the production context so
-# previews stay read-only.
+# deploy-preview, branch-deploy). Writing to the DB during a preview build
+# would mutate whatever DATABASE_URL that context has — which, if shared
+# with production, means any PR build could touch live data. Scope DB
+# writes to the production context so previews stay read-only.
+#
+# Order matters:
+# 1. prisma generate — regenerates the client against the current schema.
+# 2. npm run build — Next.js production build.
+# 3. scripts/seed.ts — reconciles Competitor / CompetitorPage rows with
+#    rivals.config.json (idempotent upsert by slug).
+# 4. scripts/bootstrap-new-competitors.ts — runs a first scan cycle plus
+#    brief for any competitor that still has zero scans. Idempotent, and
+#    non-fatal by design so a Tabstack hiccup never blocks a deploy.
 [context.production]
-  command = "npx prisma generate && npm run build && npx tsx scripts/seed.ts"
+  command = "npx prisma generate && npm run build && npx tsx scripts/seed.ts && npx tsx scripts/bootstrap-new-competitors.ts"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
