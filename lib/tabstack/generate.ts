@@ -252,13 +252,27 @@ produce a structured brief covering:
 2. Content opportunity — what topics should you own based on their blind spots?
 3. Product opportunity — what are developers complaining about that you could solve?
 4. Threat level — rate as High, Medium, or Low using this rubric, with one sentence of reasoning:
-   - High: Direct feature AND audience overlap, AND active momentum in the last ~30 days
-     (recent launches, relevant hiring, pricing moves, or notable GitHub/community growth).
-   - Medium: Partial overlap (audience OR use case, not both), OR full overlap with stalled
-     execution (no recent shipping, hiring, or pricing activity).
+   - High: A direct commercial competitor — a paid, managed, or hosted offering — with
+     clear feature AND audience overlap AND active momentum in the last ~30 days
+     (launches, relevant hiring, pricing moves, or notable paying-customer / growth signals).
+   - Medium: (a) a pure open-source project (library, SDK, or framework) with NO paid
+     or managed counterpart; (b) a commercial competitor with stalled execution (no
+     recent shipping, hiring, or pricing activity); OR (c) partial overlap — audience
+     OR use case, but not both.
    - Low: Adjacent space, different ICP, or clear wind-down signals.
-   Reserve High for competitors with BOTH overlap AND momentum. When evidence is mixed,
-   sparse, or ambiguous, default to Medium rather than High.
+   Important distinctions:
+   - Rate a competitor on what they actually sell, not on whether they publish source
+     code. Many companies ship an open-source project alongside a paid product
+     (open-core). Judge them on the paid offering, not the repo — an open-core
+     company running a managed cloud or paid service is rated like any other
+     commercial competitor, and if overlap + momentum are present, they are High.
+     Do NOT anchor on "Medium at most" just because the codebase is open-source.
+   - A pure library / framework / SDK with no paid offering is Medium at most,
+     regardless of stars or downloads. Popularity alone is not a High threat because
+     it does not compete for our revenue.
+   - Reserve High for offerings that directly compete for our revenue, not for
+     mindshare or developer adoption alone.
+   - When evidence is mixed, sparse, or ambiguous, default to Medium rather than High.
 5. Watch list: 2-3 signals to monitor next cycle
 Be direct and specific. No generic advice.
 
