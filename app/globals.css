@@ -61,6 +61,26 @@ body {
   color: var(--text);
 }
 
+.page-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.page-header-titles {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.page-header-action {
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 0.25rem;
+  white-space: nowrap;
+}
+
 .page-header h1 {
   margin: 0;
   font-size: clamp(1.75rem, 5vw, 2.75rem);

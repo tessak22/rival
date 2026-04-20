@@ -273,11 +273,15 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
         <Link href="/" className="back-link">
           ← Dashboard
         </Link>
-        <h1>{competitor.name}</h1>
-        <p>{competitor.baseUrl}</p>
-        <Link href={`/${competitor.slug}/history`} className="tag-chip tag-chip--secondary">
-          View History
-        </Link>
+        <div className="page-header-row">
+          <div className="page-header-titles">
+            <h1>{competitor.name}</h1>
+            <p>{competitor.baseUrl}</p>
+          </div>
+          <Link href={`/${competitor.slug}/history`} className="tag-chip tag-chip--secondary page-header-action">
+            View History →
+          </Link>
+        </div>
       </header>
 
       <section className="panel">
