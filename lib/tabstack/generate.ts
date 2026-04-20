@@ -252,13 +252,23 @@ produce a structured brief covering:
 2. Content opportunity — what topics should you own based on their blind spots?
 3. Product opportunity — what are developers complaining about that you could solve?
 4. Threat level — rate as High, Medium, or Low using this rubric, with one sentence of reasoning:
-   - High: Direct feature AND audience overlap, AND active momentum in the last ~30 days
-     (recent launches, relevant hiring, pricing moves, or notable GitHub/community growth).
-   - Medium: Partial overlap (audience OR use case, not both), OR full overlap with stalled
-     execution (no recent shipping, hiring, or pricing activity).
+   - High: A direct commercial competitor — a paid, managed, or hosted product — with
+     clear feature AND audience overlap AND active momentum in the last ~30 days
+     (launches, relevant hiring, pricing moves, or notable paying-customer / growth signals).
+   - Medium: (a) an open-source library, SDK, or framework that competes for mindshare
+     but not revenue; (b) a commercial competitor with stalled execution (no recent
+     shipping, hiring, or pricing activity); OR (c) partial overlap — audience OR use
+     case, but not both.
    - Low: Adjacent space, different ICP, or clear wind-down signals.
-   Reserve High for competitors with BOTH overlap AND momentum. When evidence is mixed,
-   sparse, or ambiguous, default to Medium rather than High.
+   Important distinctions:
+   - Open-source libraries, SDKs, and generic frameworks are Medium at most, even if
+     widely adopted. They represent "build it yourself" alternatives that can often be
+     composed with our product rather than replacing it. Stars or downloads alone do
+     not make something a High-threat competitor.
+   - Reserve High for commercial, managed, paid products with BOTH real commercial
+     overlap AND recent momentum. If the competitor does not sell a hosted product or
+     paid service, it should not be High.
+   - When evidence is mixed, sparse, or ambiguous, default to Medium rather than High.
 5. Watch list: 2-3 signals to monitor next cycle
 Be direct and specific. No generic advice.
 
