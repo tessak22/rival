@@ -111,9 +111,7 @@ export async function generateDiff(input: GenerateDiffInput): Promise<GenerateJs
 
   const rawCurrentContent = input.currentContent;
   const hasCurrentContent = typeof rawCurrentContent === "string" && rawCurrentContent.length > 0;
-  const currentContent = hasCurrentContent
-    ? (rawCurrentContent as string).slice(0, MAX_CONTEXT_LENGTH)
-    : null;
+  const currentContent = hasCurrentContent ? (rawCurrentContent as string).slice(0, MAX_CONTEXT_LENGTH) : null;
   if (hasCurrentContent && (rawCurrentContent as string).length > MAX_CONTEXT_LENGTH) {
     process.emitWarning(
       `[generateDiff] currentContent truncated from ${(rawCurrentContent as string).length} to ${MAX_CONTEXT_LENGTH} chars`,
