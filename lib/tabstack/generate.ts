@@ -252,22 +252,26 @@ produce a structured brief covering:
 2. Content opportunity — what topics should you own based on their blind spots?
 3. Product opportunity — what are developers complaining about that you could solve?
 4. Threat level — rate as High, Medium, or Low using this rubric, with one sentence of reasoning:
-   - High: A direct commercial competitor — a paid, managed, or hosted product — with
+   - High: A direct commercial competitor — a paid, managed, or hosted offering — with
      clear feature AND audience overlap AND active momentum in the last ~30 days
      (launches, relevant hiring, pricing moves, or notable paying-customer / growth signals).
-   - Medium: (a) an open-source library, SDK, or framework that competes for mindshare
-     but not revenue; (b) a commercial competitor with stalled execution (no recent
-     shipping, hiring, or pricing activity); OR (c) partial overlap — audience OR use
-     case, but not both.
+   - Medium: (a) a pure open-source project (library, SDK, or framework) with NO paid
+     or managed counterpart; (b) a commercial competitor with stalled execution (no
+     recent shipping, hiring, or pricing activity); OR (c) partial overlap — audience
+     OR use case, but not both.
    - Low: Adjacent space, different ICP, or clear wind-down signals.
    Important distinctions:
-   - Open-source libraries, SDKs, and generic frameworks are Medium at most, even if
-     widely adopted. They represent "build it yourself" alternatives that can often be
-     composed with our product rather than replacing it. Stars or downloads alone do
-     not make something a High-threat competitor.
-   - Reserve High for commercial, managed, paid products with BOTH real commercial
-     overlap AND recent momentum. If the competitor does not sell a hosted product or
-     paid service, it should not be High.
+   - Rate a competitor on what they actually sell, not on whether they publish source
+     code. Many companies ship an open-source project alongside a paid product
+     (open-core). Judge them on the paid offering, not the repo — an open-core
+     company running a managed cloud or paid service is rated like any other
+     commercial competitor, and if overlap + momentum are present, they are High.
+     Do NOT anchor on "Medium at most" just because the codebase is open-source.
+   - A pure library / framework / SDK with no paid offering is Medium at most,
+     regardless of stars or downloads. Popularity alone is not a High threat because
+     it does not compete for our revenue.
+   - Reserve High for offerings that directly compete for our revenue, not for
+     mindshare or developer adoption alone.
    - When evidence is mixed, sparse, or ambiguous, default to Medium rather than High.
 5. Watch list: 2-3 signals to monitor next cycle
 Be direct and specific. No generic advice.
