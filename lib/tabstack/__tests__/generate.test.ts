@@ -90,6 +90,46 @@ describe("generateDiff", () => {
     expect(sdkCall.instructions).toContain("Compare these two versions");
   });
 
+  it("uses the two-version prompt when currentContent is provided (even if empty)", async () => {
+    const { generateDiff } = await import("@/lib/tabstack/generate");
+    generateJsonMock.mockResolvedValue({ added: [], changed: [], removed: [], summary: "" });
+
+    await generateDiff({
+      url: "https://example.com/changelog",
+      previousContent: "PREV_MARKER",
+      currentContent: "",
+      effort: "low",
+      nocache: true
+    });
+
+    const sdkCall = generateJsonMock.mock.calls[0][0];
+    // Empty string is an authoritative "everything removed" snapshot, not a
+    // signal to fall back to the single-version prompt. The instructions
+    // should be the two-version comparator with an empty current section.
+    expect(sdkCall.instructions).toContain("Compare the two versions");
+    expect(sdkCall.instructions).toContain("PREV_MARKER");
+    expect(sdkCall.instructions).toContain("Current version:");
+    expect(sdkCall.instructions).not.toContain("Compare these two versions of a competitor page.\nList");
+  });
+
+  it("passes both previousContent and currentContent into the two-version prompt", async () => {
+    const { generateDiff } = await import("@/lib/tabstack/generate");
+    generateJsonMock.mockResolvedValue({ added: [], changed: [], removed: [], summary: "" });
+
+    await generateDiff({
+      url: "https://example.com/changelog",
+      previousContent: "PREV_MARKER",
+      currentContent: "CURR_MARKER",
+      effort: "low",
+      nocache: true
+    });
+
+    const sdkCall = generateJsonMock.mock.calls[0][0];
+    expect(sdkCall.instructions).toContain("Compare the two versions");
+    expect(sdkCall.instructions).toContain("PREV_MARKER");
+    expect(sdkCall.instructions).toContain("CURR_MARKER");
+  });
+
   it("injects previousContent into instructions and maps high effort", async () => {
     const { generateDiff } = await import("@/lib/tabstack/generate");
     generateJsonMock.mockResolvedValue({ added: [], changed: [], removed: [], summary: "" });

@@ -257,6 +257,22 @@ function toPreviousContent(scan: { markdownResult: string | null; rawResult: unk
   return stringifyUnknown(scan.rawResult ?? "");
 }
 
+/**
+ * Normalize scan content so that cosmetic differences (line endings, trailing
+ * whitespace, stray blank lines) don't register as changes. Used only for the
+ * equality short-circuit in the diff flow — the original content is still sent
+ * to the diff LLM when a real difference exists.
+ */
+function normalizeForDiff(content: string): string {
+  return content
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.replace(/\s+$/, ""))
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 function buildAutomateTask(input: ScanPageInput): string {
   if (input.customTask && input.customTask.trim().length > 0) {
     return input.customTask.trim();
@@ -590,19 +606,34 @@ export async function scanPage(input: ScanPageInput): Promise<ScanPageOutput> {
   let hasChanges = false;
 
   if (previousScan) {
-    const diffResponse = await generateDiff({
-      competitorId: input.competitorId,
-      pageId,
-      url: input.url,
-      previousContent: toPreviousContent(previousScan),
-      effort: "low",
-      nocache,
-      geoTarget: input.geoTarget,
-      isDemo: input.isDemo
+    const previousContent = toPreviousContent(previousScan);
+    const currentContent = toPreviousContent({
+      markdownResult: scanResult.markdownResult,
+      rawResult: scanResult.rawResult
     });
-    const parsed = extractDiffPayload(diffResponse);
-    diffSummary = parsed.summary;
-    hasChanges = parsed.hasChanges;
+
+    if (normalizeForDiff(previousContent) === normalizeForDiff(currentContent)) {
+      // Normalized content is identical — skip the diff LLM call entirely.
+      // Prevents false positives from dynamic re-fetches and saves a
+      // generate.json round-trip on no-op scans.
+      hasChanges = false;
+      diffSummary = null;
+    } else {
+      const diffResponse = await generateDiff({
+        competitorId: input.competitorId,
+        pageId,
+        url: input.url,
+        previousContent,
+        currentContent,
+        effort: "low",
+        nocache,
+        geoTarget: input.geoTarget,
+        isDemo: input.isDemo
+      });
+      const parsed = extractDiffPayload(diffResponse);
+      diffSummary = parsed.summary;
+      hasChanges = parsed.hasChanges;
+    }
   }
 
   const createdScan = persistScan

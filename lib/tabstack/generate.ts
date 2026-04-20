@@ -78,6 +78,15 @@ export type GenerateDiffInput = {
   pageId?: string | null;
   url: string;
   previousContent: string;
+  /**
+   * The just-captured version of the page from the current scan cycle. When
+   * provided, the diff compares previousContent against this snapshot rather
+   * than whatever generate.json re-fetches from the live URL. This avoids
+   * false positives caused by dynamic content (rotating hero copy, timestamps,
+   * A/B variants) differing between the primary scan fetch and the diff fetch
+   * seconds later.
+   */
+  currentContent?: string;
   effort: TabstackEffort;
   nocache: boolean;
   geoTarget?: string | null;
@@ -100,7 +109,37 @@ export async function generateDiff(input: GenerateDiffInput): Promise<GenerateJs
     );
   }
 
-  const instructions = `Compare these two versions of a competitor page.
+  // Treat any string as an authoritative snapshot — including "". An empty
+  // currentContent is a valid "everything was removed" signal; falling back
+  // to the live-fetch prompt path here would both miss that diff and
+  // reintroduce the double-fetch false positives this module exists to fix.
+  const rawCurrentContent = input.currentContent;
+  const hasCurrentContent = typeof rawCurrentContent === "string";
+  const currentContent = hasCurrentContent ? rawCurrentContent.slice(0, MAX_CONTEXT_LENGTH) : null;
+  if (hasCurrentContent && rawCurrentContent.length > MAX_CONTEXT_LENGTH) {
+    process.emitWarning(
+      `[generateDiff] currentContent truncated from ${rawCurrentContent.length} to ${MAX_CONTEXT_LENGTH} chars`,
+      { code: "RIVAL_CONTEXT_TRUNCATED" }
+    );
+  }
+
+  const instructions = hasCurrentContent
+    ? `Compare the two versions of a competitor page provided below.
+Base your diff ONLY on these two snapshots — do not rely on any live content
+that may be fetched alongside this request. Both snapshots were captured by
+this system; the "Current version" is the authoritative new state.
+
+List what was added, changed, or removed in plain English.
+Be concise. Focus on developer-facing changes. If the two versions are
+effectively identical (only whitespace, ordering, or boilerplate differs),
+return empty added/changed/removed lists and an empty summary.
+
+Previous version:
+${previousContent}
+
+Current version:
+${currentContent}`
+    : `Compare these two versions of a competitor page.
 List what was added, changed, or removed in plain English.
 Be concise. Focus on developer-facing changes.
 

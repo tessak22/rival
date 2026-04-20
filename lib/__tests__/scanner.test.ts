@@ -122,6 +122,75 @@ describe("scanPage", () => {
     );
   });
 
+  it("skips the diff LLM call when the current markdown matches the previous scan", async () => {
+    scanFindFirstMock.mockResolvedValueOnce({
+      id: "scan_prev",
+      markdownResult: "## Updates\n\n- Shipped v2\n",
+      rawResult: { content: "## Updates\n\n- Shipped v2\n" }
+    });
+    extractMarkdownMock.mockResolvedValueOnce({
+      content: "## Updates\r\n\r\n- Shipped v2   \n",
+      url: "https://example.com/changelog"
+    });
+
+    const { scanPage } = await import("@/lib/scanner");
+
+    const result = await scanPage({
+      competitorId: "cmp_1",
+      pageId: "page_1",
+      url: "https://example.com/changelog",
+      type: "changelog"
+    });
+
+    expect(generateDiffMock).not.toHaveBeenCalled();
+    expect(result.hasChanges).toBe(false);
+    expect(result.diffSummary).toBeNull();
+    expect(scanCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          hasChanges: false,
+          diffSummary: null
+        })
+      })
+    );
+  });
+
+  it("passes currentContent to the diff call when content genuinely differs", async () => {
+    scanFindFirstMock.mockResolvedValueOnce({
+      id: "scan_prev",
+      markdownResult: "## Updates\n\n- Shipped v1",
+      rawResult: { content: "## Updates\n\n- Shipped v1" }
+    });
+    extractMarkdownMock.mockResolvedValueOnce({
+      content: "## Updates\n\n- Shipped v2",
+      url: "https://example.com/changelog"
+    });
+    generateDiffMock.mockResolvedValueOnce({
+      data: {
+        added: ["Shipped v2"],
+        changed: [],
+        removed: ["Shipped v1"],
+        summary: "Bumped shipped version"
+      }
+    });
+
+    const { scanPage } = await import("@/lib/scanner");
+
+    await scanPage({
+      competitorId: "cmp_1",
+      pageId: "page_1",
+      url: "https://example.com/changelog",
+      type: "changelog"
+    });
+
+    expect(generateDiffMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        previousContent: "## Updates\n\n- Shipped v1",
+        currentContent: "## Updates\n\n- Shipped v2"
+      })
+    );
+  });
+
   it("routes changelog pages to markdown and generates diff when previous scan exists", async () => {
     scanFindFirstMock.mockResolvedValueOnce({
       id: "scan_prev",
