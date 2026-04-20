@@ -109,6 +109,21 @@ async function main() {
   );
 
   for (const competitor of toBootstrap) {
+    // Re-check immediately before bootstrapping. The snapshot above can go
+    // stale if a concurrent cron run or a parallel deploy writes the first
+    // scan between now and this loop iteration — without this check, two
+    // near-simultaneous production builds could both bootstrap the same
+    // competitor and double-write scans + briefs. This shrinks the race
+    // window from "seconds" to "the gap between the count and the first
+    // scanPage call." It is not atomic; for a true lock a DB-level
+    // bootstrap-runs table or advisory lock would be needed.
+    const freshScanCount = await prisma.scan.count({
+      where: { page: { competitorId: competitor.id } }
+    });
+    if (freshScanCount > 0) {
+      console.log(`[bootstrap] ${competitor.slug}: scans now exist (likely concurrent run), skipping.`);
+      continue;
+    }
     await bootstrapCompetitor(competitor);
   }
 
