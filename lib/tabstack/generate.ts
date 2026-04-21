@@ -35,6 +35,7 @@ import type { GenerateJsonParams, GenerateJsonResponse } from "@tabstack/sdk/res
 
 import { logger, type LoggerCallMetadata, type TabstackEffort } from "@/lib/logger";
 import { getTabstackClient, toGeoTarget, toSdkEffort } from "@/lib/tabstack/client";
+import { buildSelfContext } from "@/lib/context/self-context";
 
 const MAX_CONTEXT_LENGTH = 50_000;
 
@@ -247,7 +248,9 @@ export async function generateBrief(input: GenerateBriefInput): Promise<Generate
     );
   }
 
-  const instructions = `You are a competitive intelligence analyst. Based on this competitor data,
+  const selfContext = await buildSelfContext({ isDemo: input.isDemo });
+
+  const instructions = `${selfContext ? `${selfContext}\n\n` : ""}You are a competitive intelligence analyst. Based on this competitor data,
 produce a structured brief covering:
 1. Positioning opportunity — what gap does their weakness create?
 2. Content opportunity — what topics should you own based on their blind spots?

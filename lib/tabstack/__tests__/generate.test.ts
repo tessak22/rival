@@ -2,15 +2,21 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // All mock functions defined in vi.hoisted so they are initialized before
 // vi.mock() factories run (vi.mock calls are hoisted above const declarations).
-const { generateJsonMock, loggerCallMock, getTabstackClientMock, toSdkEffortMock, toGeoTargetMock } = vi.hoisted(
-  () => ({
-    generateJsonMock: vi.fn(),
-    loggerCallMock: vi.fn(async (fn: () => Promise<unknown>, _meta?: unknown) => fn()),
-    getTabstackClientMock: vi.fn(),
-    toSdkEffortMock: vi.fn(),
-    toGeoTargetMock: vi.fn()
-  })
-);
+const {
+  generateJsonMock,
+  loggerCallMock,
+  getTabstackClientMock,
+  toSdkEffortMock,
+  toGeoTargetMock,
+  buildSelfContextMock
+} = vi.hoisted(() => ({
+  generateJsonMock: vi.fn(),
+  loggerCallMock: vi.fn(async (fn: () => Promise<unknown>, _meta?: unknown) => fn()),
+  getTabstackClientMock: vi.fn(),
+  toSdkEffortMock: vi.fn(),
+  toGeoTargetMock: vi.fn(),
+  buildSelfContextMock: vi.fn().mockResolvedValue(null)
+}));
 
 // Mock at the tabstack client wrapper boundary — not the raw @tabstack/sdk.
 // Real toSdkEffort and toGeoTarget behaviour is validated via the mocks below,
@@ -26,6 +32,10 @@ vi.mock("@/lib/tabstack/client", () => ({
 // result, so both SDK params and logger metadata can be asserted.
 vi.mock("@/lib/logger", () => ({
   logger: { call: loggerCallMock }
+}));
+
+vi.mock("@/lib/context/self-context", () => ({
+  buildSelfContext: buildSelfContextMock
 }));
 
 describe("generateDiff", () => {
@@ -356,6 +366,80 @@ describe("generateBrief", () => {
       expect.objectContaining({ code: "RIVAL_CONTEXT_TRUNCATED" })
     );
     warnSpy.mockRestore();
+  });
+});
+
+describe("generateBrief with self-context injection", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    loggerCallMock.mockClear();
+    generateJsonMock.mockClear();
+    process.env.TABSTACK_API_KEY = "test-key";
+    loggerCallMock.mockImplementation((fn: () => Promise<unknown>) => fn());
+    toSdkEffortMock.mockImplementation((effort: string) => (effort === "high" ? "max" : "standard"));
+    toGeoTargetMock.mockImplementation((code?: string | null) => {
+      if (!code) return undefined;
+      const n = code.trim().toUpperCase();
+      return /^[A-Z]{2}$/.test(n) ? { country: n } : undefined;
+    });
+    getTabstackClientMock.mockReturnValue({ generate: { json: generateJsonMock } });
+    buildSelfContextMock.mockReset().mockResolvedValue(null);
+  });
+
+  it("prepends self-context to instructions when buildSelfContext returns a string", async () => {
+    buildSelfContextMock.mockResolvedValue("CONTEXT — about the user's own company...\nName: Rival");
+    generateJsonMock.mockResolvedValue({});
+    const { generateBrief } = await import("@/lib/tabstack/generate");
+
+    await generateBrief({
+      competitorId: "cmp_1",
+      url: "https://acme.com",
+      contextData: JSON.stringify([{ page_type: "homepage", result: {} }]),
+      effort: "low",
+      nocache: true
+    });
+
+    const sdkCall = generateJsonMock.mock.calls[0][0];
+    const instructions = sdkCall.instructions as string;
+    expect(instructions).toContain("CONTEXT — about the user's own company");
+    expect(instructions).toContain("Additional competitor context:");
+    // Self-context should precede the analyst persona:
+    expect(instructions.indexOf("CONTEXT")).toBeLessThan(instructions.indexOf("competitive intelligence analyst"));
+  });
+
+  it("does NOT prepend self-context when buildSelfContext returns null", async () => {
+    buildSelfContextMock.mockResolvedValue(null);
+    generateJsonMock.mockResolvedValue({});
+    const { generateBrief } = await import("@/lib/tabstack/generate");
+
+    await generateBrief({
+      competitorId: "cmp_1",
+      url: "https://acme.com",
+      contextData: "[]",
+      effort: "low",
+      nocache: true
+    });
+
+    const sdkCall = generateJsonMock.mock.calls[0][0];
+    const instructions = sdkCall.instructions as string;
+    expect(instructions).not.toContain("CONTEXT — about the user's own company");
+    expect(instructions).toContain("competitive intelligence analyst");
+  });
+
+  it("passes isDemo through to buildSelfContext", async () => {
+    generateJsonMock.mockResolvedValue({});
+    const { generateBrief } = await import("@/lib/tabstack/generate");
+
+    await generateBrief({
+      competitorId: null,
+      url: "https://acme.com",
+      contextData: "[]",
+      effort: "low",
+      nocache: true,
+      isDemo: true
+    });
+
+    expect(buildSelfContextMock).toHaveBeenCalledWith(expect.objectContaining({ isDemo: true }));
   });
 });
 
