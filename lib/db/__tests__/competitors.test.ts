@@ -57,9 +57,13 @@ describe("lib/db/competitors", () => {
     it("includes self rows when includeSelf is true", async () => {
       const { listCompetitors } = await import("@/lib/db/competitors");
       await listCompetitors({ includeSelf: true });
+      // The where clause must be absent entirely — not merely `{ isSelf: undefined }`,
+      // which would still filter out rows where is_self is actually true.
+      expect(findManyMock).toHaveBeenCalledWith(
+        expect.not.objectContaining({ where: { isSelf: false } })
+      );
       const call = findManyMock.mock.calls[0][0];
-      // Either `where` is omitted, or `where` does NOT contain `isSelf: false`:
-      expect(call?.where?.isSelf).not.toBe(false);
+      expect(call?.where).toBeUndefined();
     });
   });
 

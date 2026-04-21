@@ -27,6 +27,7 @@ export default async function InsightsPage({ searchParams }: InsightsPageProps) 
   const params = await searchParams;
   const [competitors, endpointRows] = await Promise.all([
     prisma.competitor.findMany({
+      where: { isSelf: false },
       orderBy: { name: "asc" },
       select: { id: true, name: true }
     }),
