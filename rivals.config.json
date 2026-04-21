@@ -3,7 +3,15 @@
     "name": "Tabstack",
     "slug": "tabstack",
     "url": "https://tabstack.ai",
-    "pages": [{ "label": "Homepage", "url": "https://tabstack.ai", "type": "homepage" }]
+    "pages": [
+      { "label": "Homepage", "url": "https://tabstack.ai", "type": "homepage" },
+      { "label": "Pricing", "url": "https://tabstack.ai/pricing", "type": "pricing", "geo_target": "US" },
+      { "label": "Docs", "url": "https://docs.tabstack.ai", "type": "docs" },
+      { "label": "Blog", "url": "https://tabstack.ai/blog", "type": "blog" },
+      { "label": "GitHub", "url": "https://github.com/Mozilla-Ocho/tabstack-typescript", "type": "github" },
+      { "label": "Twitter/X", "url": "https://x.com/tabstack", "type": "social" },
+      { "label": "Careers", "url": "https://www.mozilla.org/en-US/careers/listings/", "type": "careers" }
+    ]
   },
   "competitors": [
     {
