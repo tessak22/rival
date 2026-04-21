@@ -1116,3 +1116,25 @@ body {
   text-align: center;
   padding: 3rem 0;
 }
+
+/* ── Self Profile Card ───────────────────────────────────────────────── */
+
+.self-profile-card {
+  margin-bottom: 1.5rem;
+}
+.self-profile-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.self-profile-card__eyebrow {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+.self-profile-card__empty {
+  margin: 0;
+}
