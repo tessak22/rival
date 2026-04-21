@@ -426,7 +426,10 @@ describe("generateBrief with self-context injection", () => {
     expect(instructions).toContain("competitive intelligence analyst");
   });
 
-  it("passes isDemo through to buildSelfContext", async () => {
+  it("does not inject self-context when isDemo is true", async () => {
+    buildSelfContextMock.mockImplementation(async (opts: { isDemo?: boolean } = {}) =>
+      opts.isDemo ? null : "CONTEXT — about the user's own company...\nName: Rival"
+    );
     generateJsonMock.mockResolvedValue({});
     const { generateBrief } = await import("@/lib/tabstack/generate");
 
@@ -439,6 +442,9 @@ describe("generateBrief with self-context injection", () => {
       isDemo: true
     });
 
+    const sdkCall = generateJsonMock.mock.calls[0][0];
+    const instructions = sdkCall.instructions as string;
+    expect(instructions).not.toContain("CONTEXT — about the user's own company");
     expect(buildSelfContextMock).toHaveBeenCalledWith(expect.objectContaining({ isDemo: true }));
   });
 });

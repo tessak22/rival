@@ -250,6 +250,9 @@ export async function generateBrief(input: GenerateBriefInput): Promise<Generate
 
   const selfContext = await buildSelfContext({ isDemo: input.isDemo });
 
+  // selfContext is bounded by buildSelfContext's internal payload cap
+  // (~800 chars). Combined with the contextData slice above, total
+  // instructions length stays well under Tabstack's /generate limits.
   const instructions = `${selfContext ? `${selfContext}\n\n` : ""}You are a competitive intelligence analyst. Based on this competitor data,
 produce a structured brief covering:
 1. Positioning opportunity — what gap does their weakness create?
