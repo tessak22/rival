@@ -1,14 +1,17 @@
 import Link from "next/link";
 import type { Competitor } from "@prisma/client";
 
-import { SelfBriefView } from "@/components/brief/SelfBriefView";
+function asOptionalString(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
 
-function hasBriefShape(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+function readPositioning(brief: unknown): string | null {
+  if (typeof brief !== "object" || brief === null || Array.isArray(brief)) return null;
+  return asOptionalString((brief as Record<string, unknown>).positioning_summary);
 }
 
 export function SelfProfileCard({ self }: { self: Competitor }) {
-  const brief = hasBriefShape(self.intelligenceBrief) ? self.intelligenceBrief : null;
+  const positioning = readPositioning(self.intelligenceBrief);
 
   return (
     <section className="self-profile-card panel">
@@ -21,8 +24,8 @@ export function SelfProfileCard({ self }: { self: Competitor }) {
           View details →
         </Link>
       </header>
-      {brief ? (
-        <SelfBriefView brief={brief} />
+      {positioning ? (
+        <p className="self-profile-card__positioning">{positioning}</p>
       ) : (
         <p className="muted self-profile-card__empty">
           Not yet analyzed — self-profile will populate on the next scan cycle.

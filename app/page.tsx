@@ -198,12 +198,12 @@ export default async function HomePage() {
   return (
     <main className="dashboard-page">
       <header className="page-header">
-        <h1>Rival Command</h1>
+        <h1>Rival</h1>
         <p>Threat posture, schema quality, and fresh competitor movement.</p>
       </header>
 
-      {data.self && <SelfProfileCard self={data.self} />}
       <ThreatMatrix competitors={data.matrix} />
+      {data.self && <SelfProfileCard self={data.self} />}
       <IntelFeed items={data.feed} />
     </main>
   );

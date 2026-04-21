@@ -1138,6 +1138,10 @@ body {
 .self-profile-card__empty {
   margin: 0;
 }
+.self-profile-card__positioning {
+  margin: 0;
+  color: var(--text, inherit);
+}
 .self-brief {
   display: grid;
   gap: 1rem;
