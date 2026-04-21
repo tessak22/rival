@@ -456,4 +456,22 @@ describe("generateSelfProfile", () => {
     // Assert it does NOT contain the competitor-brief distinguishing phrase
     expect(sdkCall.instructions).not.toContain("competitive intelligence analyst");
   });
+
+  it("passes competitorId and expectedFields to logger metadata", async () => {
+    const { generateSelfProfile, SELF_PROFILE_EXPECTED_FIELDS } = await import("@/lib/tabstack/generate");
+    generateJsonMock.mockResolvedValue({});
+
+    await generateSelfProfile({
+      competitorId: "self_1",
+      url: "https://rival.so",
+      contextData: "[]",
+      effort: "low",
+      nocache: true
+    });
+
+    const [, metadata] = loggerCallMock.mock.calls[0] as [unknown, Record<string, unknown>];
+    expect(metadata.competitorId).toBe("self_1");
+    expect(metadata.endpoint).toBe("generate");
+    expect(metadata.expectedFields).toEqual(SELF_PROFILE_EXPECTED_FIELDS);
+  });
 });

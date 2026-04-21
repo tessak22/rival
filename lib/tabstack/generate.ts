@@ -14,6 +14,7 @@
  * When to use vs alternatives:
  * - Use generateDiff after each scan cycle to summarize what changed.
  * - Use generateBrief after a full scan cycle to produce competitive positioning.
+ * - Use generateSelfProfile to analyze the user's own company surfaces and produce a self-profile used as context when evaluating competitors. Do not call on the demo path.
  * - Use /extract/json when you need raw structured data without LLM transformation.
  * - Use /research when you need open-web research beyond a single URL.
  *
@@ -348,7 +349,7 @@ export const SELF_PROFILE_SCHEMA = {
 
 export const SELF_PROFILE_EXPECTED_FIELDS: string[] = [...SELF_PROFILE_SCHEMA.required];
 
-export type GenerateSelfProfileInput = GenerateBriefInput;
+export type GenerateSelfProfileInput = Omit<GenerateBriefInput, "fallback" | "isDemo">;
 
 /**
  * Analyze the user's own company data and produce a structured self-profile.
@@ -401,8 +402,6 @@ ${contextData}`;
     effort: input.effort,
     nocache: input.nocache,
     geoTarget: geoTarget?.country,
-    isDemo: input.isDemo,
-    fallback: input.fallback,
     expectedFields: SELF_PROFILE_EXPECTED_FIELDS
   });
 }
