@@ -22,7 +22,7 @@ export function SelfProfileCard({ self }: { self: Competitor }) {
         </Link>
       </header>
       {brief ? (
-        <SelfBriefView brief={brief as never} />
+        <SelfBriefView brief={brief} />
       ) : (
         <p className="muted self-profile-card__empty">
           Not yet analyzed — self-profile will populate on the next scan cycle.

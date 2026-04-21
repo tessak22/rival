@@ -293,7 +293,7 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
         typeof competitor.intelligenceBrief === "object" &&
         !Array.isArray(competitor.intelligenceBrief) ? (
           competitor.isSelf ? (
-            <SelfBriefView brief={competitor.intelligenceBrief as never} />
+            <SelfBriefView brief={competitor.intelligenceBrief as Record<string, unknown>} />
           ) : (
             (() => {
               const brief = competitor.intelligenceBrief as Record<string, unknown>;

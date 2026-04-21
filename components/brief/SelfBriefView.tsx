@@ -1,38 +1,40 @@
-type SelfBrief = {
-  positioning_summary?: string;
-  icp_summary?: string;
-  pricing_summary?: string;
-  differentiators?: unknown;
-  recent_signals?: unknown;
-};
-
 function asStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.filter((item): item is string => typeof item === "string" && item.length > 0);
 }
 
-export function SelfBriefView({ brief }: { brief: SelfBrief }) {
+function asOptionalString(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+// Accepts Record<string, unknown> because the brief comes from a Prisma
+// JsonValue column with no compile-time shape guarantees. Narrowing and
+// coercion happen per field inside this component.
+export function SelfBriefView({ brief }: { brief: Record<string, unknown> }) {
+  const positioning = asOptionalString(brief.positioning_summary);
+  const icp = asOptionalString(brief.icp_summary);
+  const pricing = asOptionalString(brief.pricing_summary);
   const differentiators = asStringArray(brief.differentiators);
   const recentSignals = asStringArray(brief.recent_signals);
 
   return (
     <div className="self-brief">
-      {brief.positioning_summary && (
+      {positioning && (
         <section className="brief-section">
           <h3 className="brief-section-label">Positioning</h3>
-          <p>{brief.positioning_summary}</p>
+          <p>{positioning}</p>
         </section>
       )}
-      {brief.icp_summary && (
+      {icp && (
         <section className="brief-section">
           <h3 className="brief-section-label">ICP</h3>
-          <p>{brief.icp_summary}</p>
+          <p>{icp}</p>
         </section>
       )}
-      {brief.pricing_summary && (
+      {pricing && (
         <section className="brief-section">
           <h3 className="brief-section-label">Pricing</h3>
-          <p>{brief.pricing_summary}</p>
+          <p>{pricing}</p>
         </section>
       )}
       {differentiators.length > 0 && (

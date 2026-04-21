@@ -1123,8 +1123,8 @@ body {
   margin-bottom: 1.5rem;
 }
 .self-profile-card__header {
-  display: flex;
-  justify-content: space-between;
+  /* .panel-header already provides display:flex + justify-content:space-between;
+     only the cross-axis alignment needs to change for the eyebrow + title stack. */
   align-items: flex-start;
 }
 .self-profile-card__eyebrow {
@@ -1137,4 +1137,8 @@ body {
 }
 .self-profile-card__empty {
   margin: 0;
+}
+.self-brief {
+  display: grid;
+  gap: 1rem;
 }
