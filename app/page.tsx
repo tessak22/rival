@@ -47,6 +47,7 @@ function computeReviewsEvents(
 
 async function loadDashboardData() {
   const competitors = await prisma.competitor.findMany({
+    where: { isSelf: false },
     orderBy: { name: "asc" }
   });
   const competitorIds = competitors.map((competitor) => competitor.id);
