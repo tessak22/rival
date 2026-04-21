@@ -5,6 +5,11 @@ import type { ReviewsData } from "@/lib/schemas/reviews";
 
 export const dynamic = "force-dynamic";
 
+// How far back the Intel Feed looks for changed scans. Changes older than
+// this are "history," not "intel." Keep in sync with the window the UI
+// labels use if you surface it there.
+const INTEL_FEED_WINDOW_DAYS = 7;
+
 function computeReviewsEvents(
   current: ReviewsData,
   previous: ReviewsData | null
@@ -105,8 +110,16 @@ async function loadDashboardData() {
   });
 
   // Fetch changed scans for the Intel Feed, including rawResult for reviews diff events.
+  // Bounded to INTEL_FEED_WINDOW_DAYS so stale changes don't linger on the dashboard —
+  // a "change" from three weeks ago is not useful competitive intel, and the window
+  // also prevents legacy false-positive rows (pre-scanner-fix) from clogging the feed
+  // until they age out naturally.
+  const feedCutoff = new Date(Date.now() - INTEL_FEED_WINDOW_DAYS * 24 * 60 * 60 * 1000);
   const feed = await prisma.scan.findMany({
-    where: { hasChanges: true },
+    where: {
+      hasChanges: true,
+      scannedAt: { gte: feedCutoff }
+    },
     include: {
       page: true
     },
