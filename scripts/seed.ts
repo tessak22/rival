@@ -3,9 +3,9 @@ import path from "node:path";
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/client";
-import { parseRivalConfig, type RivalConfigEntry } from "@/lib/config/rival-config";
+import { parseRivalConfig, type ParsedRivalConfig, type RivalConfigEntry } from "@/lib/config/rival-config";
 
-async function loadConfig() {
+async function loadConfig(): Promise<ParsedRivalConfig> {
   const configPath = path.join(process.cwd(), "rivals.config.json");
   const raw = await fs.readFile(configPath, "utf8");
   return parseRivalConfig(JSON.parse(raw));
