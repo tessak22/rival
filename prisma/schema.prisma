@@ -19,6 +19,7 @@ model Competitor {
   intelligenceBrief Json?     @map("intelligence_brief")
   briefGeneratedAt  DateTime? @map("brief_generated_at") @db.Timestamptz(6)
   createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  isSelf            Boolean   @default(false) @map("is_self")
 
   pages         CompetitorPage[]
   deepDives     DeepDive[]
