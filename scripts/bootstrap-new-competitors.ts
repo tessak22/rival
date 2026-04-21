@@ -27,7 +27,7 @@
  * Runs automatically as part of the Netlify production build, after seed.
  */
 
-import { generateCompetitorBrief } from "@/lib/brief";
+import { generateCompetitorBrief, generateSelfBrief } from "@/lib/brief";
 import { prisma } from "@/lib/db/client";
 import { scanPage } from "@/lib/scanner";
 
@@ -35,6 +35,7 @@ async function bootstrapCompetitor(competitor: {
   id: string;
   slug: string;
   name: string;
+  isSelf: boolean;
   pages: Array<{ id: string; label: string; url: string; type: string; geoTarget: string | null }>;
 }) {
   console.log(`\n[bootstrap] ${competitor.slug}: scanning ${competitor.pages.length} page(s)...`);
@@ -69,9 +70,13 @@ async function bootstrapCompetitor(competitor: {
 
   console.log(`[bootstrap] ${competitor.slug}: generating brief...`);
   try {
-    const payload = await generateCompetitorBrief(competitor.id, true);
-    const threat = (payload as { threat_level?: string })?.threat_level ?? "—";
-    console.log(`[bootstrap] ${competitor.slug}: brief generated (threat=${threat}, scan errors=${scanErrors}).`);
+    const payload = competitor.isSelf
+      ? await generateSelfBrief(competitor.id, true)
+      : await generateCompetitorBrief(competitor.id, true);
+    const threat = competitor.isSelf ? "—" : ((payload as { threat_level?: string })?.threat_level ?? "—");
+    console.log(
+      `[bootstrap] ${competitor.slug}: brief generated (${competitor.isSelf ? "self-profile" : `threat=${threat}`}, scan errors=${scanErrors}).`
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.warn(`[bootstrap] ${competitor.slug}: brief failed: ${message}`);
