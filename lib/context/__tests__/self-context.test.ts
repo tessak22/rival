@@ -118,5 +118,30 @@ describe("buildSelfContext", () => {
     const { buildSelfContext } = await import("@/lib/context/self-context");
     const result = await buildSelfContext({ isDemo: true });
     expect(result).toBeNull();
+    // Demo path must short-circuit before the DB query; prevents a future
+    // refactor from leaking demo loads through the self lookup.
+    expect(competitorFindFirstMock).not.toHaveBeenCalled();
+  });
+
+  it("filters non-string array elements out of differentiators and recent_signals", async () => {
+    competitorFindFirstMock.mockResolvedValue({
+      id: "self_1",
+      name: "Rival",
+      isSelf: true,
+      intelligenceBrief: {
+        positioning_summary: "x",
+        icp_summary: "x",
+        pricing_summary: "x",
+        differentiators: ["valid", { object: "noise" }, 42, "", "also valid"],
+        recent_signals: [null, "signal", undefined]
+      },
+      manualData: null
+    });
+    const { buildSelfContext } = await import("@/lib/context/self-context");
+    const result = await buildSelfContext();
+    expect(result).toContain("valid; also valid");
+    expect(result).toContain("signal");
+    expect(result).not.toContain("[object Object]");
+    expect(result).not.toContain("42");
   });
 });

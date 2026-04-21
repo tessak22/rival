@@ -76,15 +76,26 @@ export async function buildSelfContext(options: BuildSelfContextOptions = {}): P
 
   const parts: string[] = [];
   parts.push(`Name: ${self.name}`);
-  if (fields.positioning_summary) parts.push(`Positioning: ${fields.positioning_summary}`);
-  if (fields.icp_summary) parts.push(`ICP: ${fields.icp_summary}`);
-  if (fields.pricing_summary) parts.push(`Pricing: ${fields.pricing_summary}`);
-  if (fields.differentiators?.length) {
-    parts.push(`What makes us distinct: ${fields.differentiators.join("; ")}`);
+  if (typeof fields.positioning_summary === "string" && fields.positioning_summary) {
+    parts.push(`Positioning: ${fields.positioning_summary}`);
   }
-  if (fields.recent_signals?.length) {
-    parts.push(`Recent signals: ${fields.recent_signals.join("; ")}`);
+  if (typeof fields.icp_summary === "string" && fields.icp_summary) {
+    parts.push(`ICP: ${fields.icp_summary}`);
   }
+  if (typeof fields.pricing_summary === "string" && fields.pricing_summary) {
+    parts.push(`Pricing: ${fields.pricing_summary}`);
+  }
+  // JSON columns have no runtime guarantees for array element types, so
+  // filter for strings before joining. Prevents "[object Object]" leaking
+  // into every downstream prompt if the brief schema ever drifts.
+  const diffs = Array.isArray(fields.differentiators)
+    ? fields.differentiators.filter((d): d is string => typeof d === "string" && d.length > 0)
+    : [];
+  if (diffs.length) parts.push(`What makes us distinct: ${diffs.join("; ")}`);
+  const signals = Array.isArray(fields.recent_signals)
+    ? fields.recent_signals.filter((s): s is string => typeof s === "string" && s.length > 0)
+    : [];
+  if (signals.length) parts.push(`Recent signals: ${signals.join("; ")}`);
   if (Object.keys(extras).length > 0) {
     parts.push(`User notes: ${JSON.stringify(extras)}`);
   }
