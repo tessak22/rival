@@ -183,7 +183,15 @@ export async function runResearch(input: ResearchInput): Promise<ResearchResult>
 
   return logger.call(
     async () => {
+      // NOTE: buildSelfContext runs inside logger.call's timed body, so
+      // durationMs in api_logs includes a ~10–50ms Prisma round-trip on top
+      // of the Tabstack SDK call. Negligible in balanced mode; small but
+      // measurable fraction in fast mode. Matches the pattern in generate.ts.
       const selfContext = await buildSelfContext({ isDemo: input.isDemo });
+      // "RESEARCH QUESTION:" separates the injected self-context from the
+      // natural-language query. The context block itself ends with a "Do
+      // not echo" directive (see buildSelfContext), which governs output
+      // behavior for both brief and research paths.
       const query = selfContext
         ? `${selfContext}\n\nRESEARCH QUESTION:\n${input.query}`
         : input.query;
