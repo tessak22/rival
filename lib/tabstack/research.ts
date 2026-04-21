@@ -46,6 +46,7 @@
 import type { ResearchEvent } from "@tabstack/sdk/resources/agent";
 
 import { logger, type LoggerCallMetadata, type TabstackMode } from "@/lib/logger";
+import { buildSelfContext } from "@/lib/context/self-context";
 import { getTabstackClient } from "@/lib/tabstack/client";
 import { isPlainObject, stringifyUnknown } from "@/lib/utils/types";
 
@@ -182,8 +183,13 @@ export async function runResearch(input: ResearchInput): Promise<ResearchResult>
 
   return logger.call(
     async () => {
+      const selfContext = await buildSelfContext({ isDemo: input.isDemo });
+      const query = selfContext
+        ? `${selfContext}\n\nRESEARCH QUESTION:\n${input.query}`
+        : input.query;
+
       const stream = await client.agent.research({
-        query: input.query,
+        query,
         mode: input.mode,
         nocache: input.nocache
       });
