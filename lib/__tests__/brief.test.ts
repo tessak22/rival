@@ -342,6 +342,35 @@ describe("generateSelfBrief", () => {
     await expect(generateSelfBrief("cmp_1")).rejects.toThrow(/no recent scans/i);
   });
 
+  it("throws when only stale scans exist", async () => {
+    competitorFindUniqueMock.mockResolvedValue({ ...COMPETITOR, isSelf: true });
+    scanFindManyMock.mockResolvedValue([makeStaleScan()]);
+    const { generateSelfBrief } = await import("@/lib/brief");
+    await expect(generateSelfBrief("cmp_1")).rejects.toThrow(/no recent scans/i);
+  });
+
+  it("throws when the target competitor is not the self row", async () => {
+    competitorFindUniqueMock.mockResolvedValue({ ...COMPETITOR, isSelf: false });
+    scanFindManyMock.mockResolvedValue([makeRecentScan()]);
+    const { generateSelfBrief } = await import("@/lib/brief");
+    await expect(generateSelfBrief("cmp_1")).rejects.toThrow(/not the self row/i);
+  });
+
+  it("forwards baseUrl and nocache to generateSelfProfile", async () => {
+    competitorFindUniqueMock.mockResolvedValue({ ...COMPETITOR, isSelf: true });
+    scanFindManyMock.mockResolvedValue([makeRecentScan()]);
+
+    const { generateSelfBrief } = await import("@/lib/brief");
+    await generateSelfBrief("cmp_1", false);
+
+    expect(generateSelfProfileMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: "https://acme.com",
+        nocache: false
+      })
+    );
+  });
+
   it("throws when the competitor is not found", async () => {
     competitorFindUniqueMock.mockResolvedValue(null);
     const { generateSelfBrief } = await import("@/lib/brief");
