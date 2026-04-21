@@ -1,11 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { competitorFindUniqueMock, scanFindManyMock, competitorUpdateMock, generateBriefMock } = vi.hoisted(() => ({
-  competitorFindUniqueMock: vi.fn(),
-  scanFindManyMock: vi.fn(),
-  competitorUpdateMock: vi.fn(),
-  generateBriefMock: vi.fn()
-}));
+const { competitorFindUniqueMock, scanFindManyMock, competitorUpdateMock, generateBriefMock, generateSelfProfileMock } =
+  vi.hoisted(() => ({
+    competitorFindUniqueMock: vi.fn(),
+    scanFindManyMock: vi.fn(),
+    competitorUpdateMock: vi.fn(),
+    generateBriefMock: vi.fn(),
+    generateSelfProfileMock: vi.fn().mockResolvedValue({
+      positioning_summary: "Rival is a competitive intelligence tool.",
+      icp_summary: "Developers tracking competitors.",
+      pricing_summary: "Open source, self-hosted.",
+      differentiators: ["Powered by Tabstack", "Open source"],
+      recent_signals: ["Added self-profile feature"]
+    })
+  }));
 
 vi.mock("@/lib/db/client", () => ({
   prisma: {
@@ -20,7 +28,8 @@ vi.mock("@/lib/db/client", () => ({
 }));
 
 vi.mock("@/lib/tabstack/generate", () => ({
-  generateBrief: generateBriefMock
+  generateBrief: generateBriefMock,
+  generateSelfProfile: generateSelfProfileMock
 }));
 
 const COMPETITOR = {
@@ -83,6 +92,13 @@ describe("generateCompetitorBrief", () => {
 
     await expect(generateCompetitorBrief("missing")).rejects.toThrow("Competitor not found");
     expect(generateBriefMock).not.toHaveBeenCalled();
+  });
+
+  it("throws when the target competitor is the self row", async () => {
+    competitorFindUniqueMock.mockResolvedValue({ ...COMPETITOR, isSelf: true });
+    scanFindManyMock.mockResolvedValue([makeRecentScan()]);
+    const { generateCompetitorBrief } = await import("@/lib/brief");
+    await expect(generateCompetitorBrief("cmp_1")).rejects.toThrow(/self row/i);
   });
 
   it("throws when no recent scans are available", async () => {
@@ -275,5 +291,111 @@ describe("generateCompetitorBrief", () => {
       const data = (lastCall[0] as { data: { threatLevel: string } }).data;
       expect(data.threatLevel).toBe(level);
     }
+  });
+});
+
+describe("generateSelfBrief", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    competitorFindUniqueMock.mockReset();
+    scanFindManyMock.mockReset();
+    competitorUpdateMock.mockReset();
+    generateSelfProfileMock.mockReset();
+    // Re-arm the default resolved value after reset:
+    generateSelfProfileMock.mockResolvedValue({
+      positioning_summary: "Rival is a competitive intelligence tool.",
+      icp_summary: "Developers tracking competitors.",
+      pricing_summary: "Open source, self-hosted.",
+      differentiators: ["Powered by Tabstack", "Open source"],
+      recent_signals: ["Added self-profile feature"]
+    });
+  });
+
+  it("stores the self-profile output on the self Competitor row with threatLevel null", async () => {
+    competitorFindUniqueMock.mockResolvedValue({
+      ...COMPETITOR,
+      isSelf: true
+    });
+    scanFindManyMock.mockResolvedValue([makeRecentScan()]);
+
+    const { generateSelfBrief } = await import("@/lib/brief");
+    const payload = await generateSelfBrief("cmp_1", true);
+
+    expect(payload).toMatchObject({
+      positioning_summary: expect.any(String),
+      icp_summary: expect.any(String),
+      pricing_summary: expect.any(String)
+    });
+    expect(competitorUpdateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "cmp_1" },
+        data: expect.objectContaining({
+          threatLevel: null,
+          intelligenceBrief: expect.any(Object)
+        })
+      })
+    );
+  });
+
+  it("throws when no recent scans exist", async () => {
+    competitorFindUniqueMock.mockResolvedValue({ ...COMPETITOR, isSelf: true });
+    scanFindManyMock.mockResolvedValue([]);
+    const { generateSelfBrief } = await import("@/lib/brief");
+    await expect(generateSelfBrief("cmp_1")).rejects.toThrow(/no recent scans/i);
+  });
+
+  it("throws when only stale scans exist", async () => {
+    competitorFindUniqueMock.mockResolvedValue({ ...COMPETITOR, isSelf: true });
+    scanFindManyMock.mockResolvedValue([makeStaleScan()]);
+    const { generateSelfBrief } = await import("@/lib/brief");
+    await expect(generateSelfBrief("cmp_1")).rejects.toThrow(/no recent scans/i);
+  });
+
+  it("throws when the target competitor is not the self row", async () => {
+    competitorFindUniqueMock.mockResolvedValue({ ...COMPETITOR, isSelf: false });
+    scanFindManyMock.mockResolvedValue([makeRecentScan()]);
+    const { generateSelfBrief } = await import("@/lib/brief");
+    await expect(generateSelfBrief("cmp_1")).rejects.toThrow(/not the self row/i);
+  });
+
+  it("forwards baseUrl and nocache to generateSelfProfile", async () => {
+    competitorFindUniqueMock.mockResolvedValue({ ...COMPETITOR, isSelf: true });
+    scanFindManyMock.mockResolvedValue([makeRecentScan()]);
+
+    const { generateSelfBrief } = await import("@/lib/brief");
+    await generateSelfBrief("cmp_1", false);
+
+    expect(generateSelfProfileMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: "https://acme.com",
+        nocache: false
+      })
+    );
+  });
+
+  it("throws when the competitor is not found", async () => {
+    competitorFindUniqueMock.mockResolvedValue(null);
+    const { generateSelfBrief } = await import("@/lib/brief");
+    await expect(generateSelfBrief("nope")).rejects.toThrow(/not found/i);
+  });
+
+  it("includes ALL page types in the self-profile context (no filter)", async () => {
+    competitorFindUniqueMock.mockResolvedValue({ ...COMPETITOR, isSelf: true });
+    scanFindManyMock.mockResolvedValue([
+      makeRecentScan({ id: "s_changelog", pageId: "p_changelog", page: { type: "changelog", label: "Changelog" } }),
+      makeRecentScan({ id: "s_docs", pageId: "p_docs", page: { type: "docs", label: "Docs" } }),
+      makeRecentScan({ id: "s_social", pageId: "p_social", page: { type: "social", label: "Twitter" } }),
+      makeRecentScan({ id: "s_home", pageId: "p_home", page: { type: "homepage", label: "Home" } })
+    ]);
+
+    const { generateSelfBrief } = await import("@/lib/brief");
+    await generateSelfBrief("cmp_1", true);
+
+    const call = generateSelfProfileMock.mock.calls[0][0];
+    const context = call.contextData as string;
+    expect(context).toContain("changelog");
+    expect(context).toContain("docs");
+    expect(context).toContain("social");
+    expect(context).toContain("homepage");
   });
 });

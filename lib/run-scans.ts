@@ -1,4 +1,4 @@
-import { generateCompetitorBrief } from "./brief";
+import { generateCompetitorBrief, generateSelfBrief } from "./brief";
 import { prisma } from "./db/client";
 import { scanPage } from "./scanner";
 
@@ -7,6 +7,7 @@ const STALE_LOCK_AGE_MS = 60 * 60 * 1000; // 1 hour
 
 type CompetitorWithPages = {
   id: string;
+  isSelf: boolean;
   pages: Array<{
     id: string;
     label: string;
@@ -48,7 +49,11 @@ async function processCompetitor(competitor: CompetitorWithPages, briefNocache: 
   }
 
   try {
-    await generateCompetitorBrief(competitor.id, briefNocache);
+    if (competitor.isSelf) {
+      await generateSelfBrief(competitor.id, briefNocache);
+    } else {
+      await generateCompetitorBrief(competitor.id, briefNocache);
+    }
     item.briefGenerated = true;
   } catch (error) {
     item.errors.push(`brief: ${error instanceof Error ? error.message : "brief failed"}`);

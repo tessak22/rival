@@ -1,4 +1,10 @@
 {
+  "self": {
+    "name": "Tabstack",
+    "slug": "tabstack",
+    "url": "https://tabstack.ai",
+    "pages": [{ "label": "Homepage", "url": "https://tabstack.ai", "type": "homepage" }]
+  },
   "competitors": [
     {
       "name": "Firecrawl",

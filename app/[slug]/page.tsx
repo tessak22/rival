@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { SchemaHealthBadge } from "@/components/competitor/SchemaHealthBadge";
+import { SelfBriefView } from "@/components/brief/SelfBriefView";
 import { LogsTable } from "@/components/logs/LogsTable";
 import { prisma } from "@/lib/db/client";
 import type { BlogData } from "@/lib/schemas/blog";
@@ -286,49 +287,53 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
 
       <section className="panel">
         <header className="panel-header">
-          <h2>Intelligence Brief</h2>
+          <h2>{competitor.isSelf ? "Your Profile" : "Intelligence Brief"}</h2>
         </header>
         {competitor.intelligenceBrief &&
         typeof competitor.intelligenceBrief === "object" &&
         !Array.isArray(competitor.intelligenceBrief) ? (
-          (() => {
-            const brief = competitor.intelligenceBrief as Record<string, unknown>;
-            const threatLevel = typeof brief["threat_level"] === "string" ? brief["threat_level"] : null;
-            return (
-              <div className="brief-body">
-                {threatLevel && (
-                  <div className="brief-threat-row">
-                    <span className={`brief-threat-badge brief-threat--${threatLevel.toLowerCase()}`}>
-                      {threatLevel} Threat
-                    </span>
-                    {typeof brief["threat_reasoning"] === "string" && (
-                      <p className="brief-threat-reasoning">{brief["threat_reasoning"]}</p>
-                    )}
-                  </div>
-                )}
-                {(["positioning_opportunity", "content_opportunity", "product_opportunity"] as const).map((key) =>
-                  typeof brief[key] === "string" ? (
-                    <div key={key} className="brief-section">
-                      <h3 className="brief-section-label">{key.replace(/_/g, " ")}</h3>
-                      <p>{brief[key] as string}</p>
-                    </div>
-                  ) : null
-                )}
-                {Array.isArray(brief["watch_list"]) && brief["watch_list"].length > 0 && (
-                  <div className="brief-section">
-                    <h3 className="brief-section-label">Watch List</h3>
-                    <ul className="brief-watch-list">
-                      {(brief["watch_list"] as unknown[]).map((item, i) =>
-                        typeof item === "string" ? <li key={i}>{item}</li> : null
+          competitor.isSelf ? (
+            <SelfBriefView brief={competitor.intelligenceBrief as Record<string, unknown>} />
+          ) : (
+            (() => {
+              const brief = competitor.intelligenceBrief as Record<string, unknown>;
+              const threatLevel = typeof brief["threat_level"] === "string" ? brief["threat_level"] : null;
+              return (
+                <div className="brief-body">
+                  {threatLevel && (
+                    <div className="brief-threat-row">
+                      <span className={`brief-threat-badge brief-threat--${threatLevel.toLowerCase()}`}>
+                        {threatLevel} Threat
+                      </span>
+                      {typeof brief["threat_reasoning"] === "string" && (
+                        <p className="brief-threat-reasoning">{brief["threat_reasoning"]}</p>
                       )}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            );
-          })()
+                    </div>
+                  )}
+                  {(["positioning_opportunity", "content_opportunity", "product_opportunity"] as const).map((key) =>
+                    typeof brief[key] === "string" ? (
+                      <div key={key} className="brief-section">
+                        <h3 className="brief-section-label">{key.replace(/_/g, " ")}</h3>
+                        <p>{brief[key] as string}</p>
+                      </div>
+                    ) : null
+                  )}
+                  {Array.isArray(brief["watch_list"]) && brief["watch_list"].length > 0 && (
+                    <div className="brief-section">
+                      <h3 className="brief-section-label">Watch List</h3>
+                      <ul className="brief-watch-list">
+                        {(brief["watch_list"] as unknown[]).map((item, i) =>
+                          typeof item === "string" ? <li key={i}>{item}</li> : null
+                        )}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              );
+            })()
+          )
         ) : (
-          <p className="muted">No brief generated yet.</p>
+          <p className="muted">{competitor.isSelf ? "Self-profile not yet generated." : "No brief generated yet."}</p>
         )}
       </section>
 

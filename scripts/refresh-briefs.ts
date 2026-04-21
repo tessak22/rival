@@ -18,7 +18,7 @@
  *     bounded cost — don't loop this script.
  */
 
-import { generateCompetitorBrief } from "@/lib/brief";
+import { generateCompetitorBrief, generateSelfBrief } from "@/lib/brief";
 import { prisma } from "@/lib/db/client";
 
 type BriefOutcome =
@@ -31,7 +31,7 @@ function formatRow(slug: string, before: string, after: string, detail: string):
 
 async function main() {
   const competitors = await prisma.competitor.findMany({
-    select: { id: true, slug: true, name: true, threatLevel: true },
+    select: { id: true, slug: true, name: true, threatLevel: true, isSelf: true },
     orderBy: { slug: "asc" }
   });
 
@@ -49,7 +49,9 @@ async function main() {
   for (const competitor of competitors) {
     const before = competitor.threatLevel ?? "—";
     try {
-      const payload = await generateCompetitorBrief(competitor.id, true);
+      const payload = competitor.isSelf
+        ? await generateSelfBrief(competitor.id, true)
+        : await generateCompetitorBrief(competitor.id, true);
       const threatRaw = (payload as { threat_level?: unknown })?.threat_level;
       const reasoningRaw = (payload as { threat_reasoning?: unknown })?.threat_reasoning;
       const after = typeof threatRaw === "string" ? threatRaw : "—";

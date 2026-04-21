@@ -22,7 +22,7 @@
  */
 
 import { prisma } from "@/lib/db/client";
-import { generateBrief } from "@/lib/tabstack/generate";
+import { generateBrief, generateSelfProfile } from "@/lib/tabstack/generate";
 import { isPlainObject, stringifyUnknown } from "@/lib/utils/types";
 import { Prisma } from "@prisma/client";
 
@@ -72,6 +72,74 @@ function toJsonValue(value: unknown): Prisma.InputJsonValue | Prisma.NullableJso
   return stringifyUnknown(value);
 }
 
+export async function generateSelfBrief(competitorId: string, nocache = true) {
+  const competitor = await prisma.competitor.findUnique({
+    where: { id: competitorId },
+    include: { pages: true }
+  });
+
+  if (!competitor) {
+    throw new Error("Competitor not found");
+  }
+
+  if (!competitor.isSelf) {
+    throw new Error(`Competitor ${competitorId} is not the self row`);
+  }
+
+  const staleThreshold = new Date(Date.now() - 1000 * 60 * 60 * 24 * 7);
+  const scans = await prisma.scan.findMany({
+    where: { page: { competitorId } },
+    include: { page: true },
+    orderBy: { scannedAt: "desc" }
+  });
+
+  const latestByPage = new Map<string, { pageType: string; pageLabel: string; result: unknown }>();
+  for (const scan of scans) {
+    if (latestByPage.has(scan.pageId)) continue;
+    if (scan.scannedAt < staleThreshold) continue;
+    latestByPage.set(scan.pageId, {
+      pageType: scan.page.type,
+      pageLabel: scan.page.label,
+      result: scan.markdownResult ?? scan.rawResult
+    });
+  }
+
+  if (latestByPage.size === 0) {
+    throw new Error("No recent scans available for self-profile generation");
+  }
+
+  // Self brief includes ALL page types. Unlike competitor briefs, we want every
+  // signal from the user's own surfaces so the injected context is maximally useful.
+  const contextData = JSON.stringify(
+    [...latestByPage.values()].map((scan) => ({
+      page_type: scan.pageType,
+      page_label: scan.pageLabel,
+      result: truncateResult(scan.result)
+    }))
+  );
+
+  const response = await generateSelfProfile({
+    competitorId,
+    url: competitor.baseUrl,
+    contextData,
+    effort: "low",
+    nocache
+  });
+
+  const payload = extractBriefPayload(response);
+
+  await prisma.competitor.update({
+    where: { id: competitorId },
+    data: {
+      intelligenceBrief: toJsonValue(payload),
+      threatLevel: null,
+      briefGeneratedAt: new Date()
+    }
+  });
+
+  return payload;
+}
+
 export async function generateCompetitorBrief(competitorId: string, nocache = true) {
   const competitor = await prisma.competitor.findUnique({
     where: { id: competitorId },
@@ -80,6 +148,10 @@ export async function generateCompetitorBrief(competitorId: string, nocache = tr
 
   if (!competitor) {
     throw new Error("Competitor not found");
+  }
+
+  if (competitor.isSelf) {
+    throw new Error(`Competitor ${competitorId} is the self row; use generateSelfBrief instead`);
   }
 
   const staleThreshold = new Date(Date.now() - 1000 * 60 * 60 * 24 * 7); // 7 days

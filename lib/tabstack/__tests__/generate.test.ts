@@ -2,15 +2,21 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // All mock functions defined in vi.hoisted so they are initialized before
 // vi.mock() factories run (vi.mock calls are hoisted above const declarations).
-const { generateJsonMock, loggerCallMock, getTabstackClientMock, toSdkEffortMock, toGeoTargetMock } = vi.hoisted(
-  () => ({
-    generateJsonMock: vi.fn(),
-    loggerCallMock: vi.fn(async (fn: () => Promise<unknown>, _meta?: unknown) => fn()),
-    getTabstackClientMock: vi.fn(),
-    toSdkEffortMock: vi.fn(),
-    toGeoTargetMock: vi.fn()
-  })
-);
+const {
+  generateJsonMock,
+  loggerCallMock,
+  getTabstackClientMock,
+  toSdkEffortMock,
+  toGeoTargetMock,
+  buildSelfContextMock
+} = vi.hoisted(() => ({
+  generateJsonMock: vi.fn(),
+  loggerCallMock: vi.fn(async (fn: () => Promise<unknown>, _meta?: unknown) => fn()),
+  getTabstackClientMock: vi.fn(),
+  toSdkEffortMock: vi.fn(),
+  toGeoTargetMock: vi.fn(),
+  buildSelfContextMock: vi.fn().mockResolvedValue(null)
+}));
 
 // Mock at the tabstack client wrapper boundary — not the raw @tabstack/sdk.
 // Real toSdkEffort and toGeoTarget behaviour is validated via the mocks below,
@@ -26,6 +32,10 @@ vi.mock("@/lib/tabstack/client", () => ({
 // result, so both SDK params and logger metadata can be asserted.
 vi.mock("@/lib/logger", () => ({
   logger: { call: loggerCallMock }
+}));
+
+vi.mock("@/lib/context/self-context", () => ({
+  buildSelfContext: buildSelfContextMock
 }));
 
 describe("generateDiff", () => {
@@ -359,6 +369,86 @@ describe("generateBrief", () => {
   });
 });
 
+describe("generateBrief with self-context injection", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    loggerCallMock.mockClear();
+    generateJsonMock.mockClear();
+    process.env.TABSTACK_API_KEY = "test-key";
+    loggerCallMock.mockImplementation((fn: () => Promise<unknown>) => fn());
+    toSdkEffortMock.mockImplementation((effort: string) => (effort === "high" ? "max" : "standard"));
+    toGeoTargetMock.mockImplementation((code?: string | null) => {
+      if (!code) return undefined;
+      const n = code.trim().toUpperCase();
+      return /^[A-Z]{2}$/.test(n) ? { country: n } : undefined;
+    });
+    getTabstackClientMock.mockReturnValue({ generate: { json: generateJsonMock } });
+    buildSelfContextMock.mockReset().mockResolvedValue(null);
+  });
+
+  it("prepends self-context to instructions when buildSelfContext returns a string", async () => {
+    buildSelfContextMock.mockResolvedValue("CONTEXT — about the user's own company...\nName: Rival");
+    generateJsonMock.mockResolvedValue({});
+    const { generateBrief } = await import("@/lib/tabstack/generate");
+
+    await generateBrief({
+      competitorId: "cmp_1",
+      url: "https://acme.com",
+      contextData: JSON.stringify([{ page_type: "homepage", result: {} }]),
+      effort: "low",
+      nocache: true
+    });
+
+    const sdkCall = generateJsonMock.mock.calls[0][0];
+    const instructions = sdkCall.instructions as string;
+    expect(instructions).toContain("CONTEXT — about the user's own company");
+    expect(instructions).toContain("Additional competitor context:");
+    // Self-context should precede the analyst persona:
+    expect(instructions.indexOf("CONTEXT")).toBeLessThan(instructions.indexOf("competitive intelligence analyst"));
+  });
+
+  it("does NOT prepend self-context when buildSelfContext returns null", async () => {
+    buildSelfContextMock.mockResolvedValue(null);
+    generateJsonMock.mockResolvedValue({});
+    const { generateBrief } = await import("@/lib/tabstack/generate");
+
+    await generateBrief({
+      competitorId: "cmp_1",
+      url: "https://acme.com",
+      contextData: "[]",
+      effort: "low",
+      nocache: true
+    });
+
+    const sdkCall = generateJsonMock.mock.calls[0][0];
+    const instructions = sdkCall.instructions as string;
+    expect(instructions).not.toContain("CONTEXT — about the user's own company");
+    expect(instructions).toContain("competitive intelligence analyst");
+  });
+
+  it("does not inject self-context when isDemo is true", async () => {
+    buildSelfContextMock.mockImplementation(async (opts: { isDemo?: boolean } = {}) =>
+      opts.isDemo ? null : "CONTEXT — about the user's own company...\nName: Rival"
+    );
+    generateJsonMock.mockResolvedValue({});
+    const { generateBrief } = await import("@/lib/tabstack/generate");
+
+    await generateBrief({
+      competitorId: null,
+      url: "https://acme.com",
+      contextData: "[]",
+      effort: "low",
+      nocache: true,
+      isDemo: true
+    });
+
+    const sdkCall = generateJsonMock.mock.calls[0][0];
+    const instructions = sdkCall.instructions as string;
+    expect(instructions).not.toContain("CONTEXT — about the user's own company");
+    expect(buildSelfContextMock).toHaveBeenCalledWith(expect.objectContaining({ isDemo: true }));
+  });
+});
+
 describe("schema exports", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -379,5 +469,99 @@ describe("schema exports", () => {
     expect(BRIEF_SCHEMA.required).toContain("threat_level");
     expect(BRIEF_SCHEMA.required).toContain("watch_list");
     expect(BRIEF_SCHEMA.required).toContain("positioning_opportunity");
+  });
+});
+
+describe("generateSelfProfile", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    loggerCallMock.mockClear();
+    generateJsonMock.mockClear();
+    process.env.TABSTACK_API_KEY = "test-key";
+    loggerCallMock.mockImplementation((fn: () => Promise<unknown>) => fn());
+    toSdkEffortMock.mockImplementation((effort: string) => (effort === "high" ? "max" : "standard"));
+    toGeoTargetMock.mockImplementation((code?: string | null) => {
+      if (!code) return undefined;
+      const n = code.trim().toUpperCase();
+      return /^[A-Z]{2}$/.test(n) ? { country: n } : undefined;
+    });
+    getTabstackClientMock.mockReturnValue({ generate: { json: generateJsonMock } });
+  });
+
+  it("calls tabstack /generate with SELF_PROFILE_SCHEMA and the provided context", async () => {
+    const { generateSelfProfile, SELF_PROFILE_EXPECTED_FIELDS } = await import("@/lib/tabstack/generate");
+    const mockProfile = {
+      positioning_summary: "CI tool for devs",
+      icp_summary: "Developer teams",
+      pricing_summary: "Open source",
+      differentiators: ["Fast", "Simple"],
+      recent_signals: ["New release"]
+    };
+    generateJsonMock.mockResolvedValue(mockProfile);
+
+    const contextData = JSON.stringify([{ page_type: "homepage", result: { headline: "CI for devs" } }]);
+    const response = await generateSelfProfile({
+      competitorId: "self_1",
+      url: "https://rival.so",
+      contextData,
+      effort: "low",
+      nocache: true
+    });
+
+    expect(response).toBeDefined();
+    expect(SELF_PROFILE_EXPECTED_FIELDS).toEqual(
+      expect.arrayContaining([
+        "positioning_summary",
+        "icp_summary",
+        "pricing_summary",
+        "differentiators",
+        "recent_signals"
+      ])
+    );
+
+    // Assert the mocked tabstack client was called with json_schema === SELF_PROFILE_SCHEMA
+    const { SELF_PROFILE_SCHEMA } = await import("@/lib/tabstack/generate");
+    const sdkCall = generateJsonMock.mock.calls[0][0];
+    expect(sdkCall.json_schema).toEqual(SELF_PROFILE_SCHEMA);
+
+    // Assert instructions contain the contextData substring
+    expect(sdkCall.instructions).toContain(contextData);
+  });
+
+  it("uses the self-profile instruction prompt (not the competitor-brief prompt)", async () => {
+    const { generateSelfProfile } = await import("@/lib/tabstack/generate");
+    generateJsonMock.mockResolvedValue({});
+
+    await generateSelfProfile({
+      competitorId: "self_1",
+      url: "https://rival.so",
+      contextData: "[]",
+      effort: "low",
+      nocache: true
+    });
+
+    const sdkCall = generateJsonMock.mock.calls[0][0];
+    // Assert the call's instructions contains "self-profile" distinguishing phrase
+    expect(sdkCall.instructions).toContain("self-profile");
+    // Assert it does NOT contain the competitor-brief distinguishing phrase
+    expect(sdkCall.instructions).not.toContain("competitive intelligence analyst");
+  });
+
+  it("passes competitorId and expectedFields to logger metadata", async () => {
+    const { generateSelfProfile, SELF_PROFILE_EXPECTED_FIELDS } = await import("@/lib/tabstack/generate");
+    generateJsonMock.mockResolvedValue({});
+
+    await generateSelfProfile({
+      competitorId: "self_1",
+      url: "https://rival.so",
+      contextData: "[]",
+      effort: "low",
+      nocache: true
+    });
+
+    const [, metadata] = loggerCallMock.mock.calls[0] as [unknown, Record<string, unknown>];
+    expect(metadata.competitorId).toBe("self_1");
+    expect(metadata.endpoint).toBe("generate");
+    expect(metadata.expectedFields).toEqual(SELF_PROFILE_EXPECTED_FIELDS);
   });
 });

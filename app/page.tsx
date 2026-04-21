@@ -1,6 +1,8 @@
 import { IntelFeed } from "@/components/dashboard/IntelFeed";
+import { SelfProfileCard } from "@/components/dashboard/SelfProfileCard";
 import { ThreatMatrix } from "@/components/dashboard/ThreatMatrix";
 import { prisma } from "@/lib/db/client";
+import { getSelfCompetitor } from "@/lib/db/competitors";
 import type { ReviewsData } from "@/lib/schemas/reviews";
 
 export const dynamic = "force-dynamic";
@@ -47,11 +49,12 @@ function computeReviewsEvents(
 
 async function loadDashboardData() {
   const competitors = await prisma.competitor.findMany({
+    where: { isSelf: false },
     orderBy: { name: "asc" }
   });
   const competitorIds = competitors.map((competitor) => competitor.id);
 
-  const [recentScans, recentLogs] = await Promise.all([
+  const [recentScans, recentLogs, self] = await Promise.all([
     prisma.scan.findMany({
       where: { page: { competitorId: { in: competitorIds } } },
       select: {
@@ -73,7 +76,8 @@ async function loadDashboardData() {
       },
       orderBy: { calledAt: "desc" },
       take: 5000
-    })
+    }),
+    getSelfCompetitor()
   ]);
 
   const latestScanByCompetitor = new Map<string, Date>();
@@ -118,7 +122,8 @@ async function loadDashboardData() {
   const feed = await prisma.scan.findMany({
     where: {
       hasChanges: true,
-      scannedAt: { gte: feedCutoff }
+      scannedAt: { gte: feedCutoff },
+      page: { competitorId: { in: competitorIds } }
     },
     include: {
       page: true
@@ -160,6 +165,7 @@ async function loadDashboardData() {
   }
 
   return {
+    self,
     matrix,
     feed: feed.map((item) => {
       const isReviews = item.page.type === "reviews";
@@ -196,6 +202,7 @@ export default async function HomePage() {
         <p>Threat posture, schema quality, and fresh competitor movement.</p>
       </header>
 
+      {data.self && <SelfProfileCard self={data.self} />}
       <ThreatMatrix competitors={data.matrix} />
       <IntelFeed items={data.feed} />
     </main>

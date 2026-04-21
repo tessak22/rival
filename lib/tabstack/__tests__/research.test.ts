@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ResearchEvent } from "@tabstack/sdk/resources/agent";
 
-const { researchMock, loggerCallMock, getTabstackClientMock } = vi.hoisted(() => ({
+const { researchMock, loggerCallMock, getTabstackClientMock, buildSelfContextMock } = vi.hoisted(() => ({
   researchMock: vi.fn(),
   loggerCallMock: vi.fn(async (fn: () => Promise<unknown>) => fn()),
-  getTabstackClientMock: vi.fn()
+  getTabstackClientMock: vi.fn(),
+  buildSelfContextMock: vi.fn().mockResolvedValue(null)
 }));
 
 vi.mock("@/lib/logger", () => ({
@@ -13,6 +14,10 @@ vi.mock("@/lib/logger", () => ({
 
 vi.mock("@/lib/tabstack/client", () => ({
   getTabstackClient: getTabstackClientMock
+}));
+
+vi.mock("@/lib/context/self-context", () => ({
+  buildSelfContext: buildSelfContextMock
 }));
 
 function makeStream(events: ResearchEvent[]): AsyncIterable<ResearchEvent> {
@@ -38,6 +43,7 @@ describe("runResearch", () => {
     researchMock.mockReset();
     getTabstackClientMock.mockReset();
     getTabstackClientMock.mockReturnValue({ agent: { research: researchMock } });
+    buildSelfContextMock.mockReset().mockResolvedValue(null);
     process.env.TABSTACK_API_KEY = "test-key";
   });
 
@@ -285,5 +291,71 @@ describe("runResearch", () => {
     researchMock.mockRejectedValue(new Error("Network failure"));
 
     await expect(runResearch({ query: "q", mode: "fast" })).rejects.toThrow("Network failure");
+  });
+});
+
+describe("runResearch with self-context injection", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    loggerCallMock.mockReset();
+    loggerCallMock.mockImplementation(async (fn: () => Promise<unknown>) => fn());
+    researchMock.mockReset();
+    getTabstackClientMock.mockReset();
+    getTabstackClientMock.mockReturnValue({ agent: { research: researchMock } });
+    buildSelfContextMock.mockReset().mockResolvedValue(null);
+    process.env.TABSTACK_API_KEY = "test-key";
+  });
+
+  it("prepends self-context to the query when buildSelfContext returns a string", async () => {
+    buildSelfContextMock.mockResolvedValue("CONTEXT — about the user's own company...\nName: Rival");
+    researchMock.mockResolvedValue(makeStream([{ event: "complete", data: { result: "r", citations: [] } }]));
+
+    const { runResearch } = await import("@/lib/tabstack/research");
+    await runResearch({
+      competitorId: "cmp_1",
+      query: "What are customers saying about Acme?",
+      mode: "fast"
+    });
+
+    const researchCall = researchMock.mock.calls[0][0] as { query: string };
+    const query = researchCall.query;
+    expect(query).toContain("CONTEXT — about the user's own company");
+    expect(query).toContain("What are customers saying about Acme?");
+    // Self-context should come first:
+    expect(query.indexOf("CONTEXT")).toBeLessThan(query.indexOf("What are customers saying"));
+  });
+
+  it("leaves the research query untouched when buildSelfContext returns null", async () => {
+    buildSelfContextMock.mockResolvedValue(null);
+    researchMock.mockResolvedValue(makeStream([{ event: "complete", data: { result: "r", citations: [] } }]));
+
+    const { runResearch } = await import("@/lib/tabstack/research");
+    await runResearch({
+      competitorId: "cmp_1",
+      query: "What are customers saying?",
+      mode: "fast"
+    });
+
+    const researchCall = researchMock.mock.calls[0][0] as { query: string };
+    expect(researchCall.query).toBe("What are customers saying?");
+  });
+
+  it("does not inject self-context for demo research calls", async () => {
+    buildSelfContextMock.mockImplementation(async (opts: { isDemo?: boolean } = {}) =>
+      opts.isDemo ? null : "CONTEXT — about the user's own company..."
+    );
+    researchMock.mockResolvedValue(makeStream([{ event: "complete", data: { result: "r", citations: [] } }]));
+
+    const { runResearch } = await import("@/lib/tabstack/research");
+    await runResearch({
+      competitorId: null,
+      query: "Anything",
+      mode: "fast",
+      isDemo: true
+    });
+
+    const researchCall = researchMock.mock.calls[0][0] as { query: string };
+    expect(researchCall.query).not.toContain("CONTEXT — about the user's own company");
+    expect(buildSelfContextMock).toHaveBeenCalledWith(expect.objectContaining({ isDemo: true }));
   });
 });

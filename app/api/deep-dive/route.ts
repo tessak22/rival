@@ -69,7 +69,8 @@ export async function POST(request: NextRequest) {
           competitorId: competitor.id,
           query,
           mode,
-          nocache: true
+          nocache: true,
+          isDemo: false
         });
 
         for (const event of result.events) {
