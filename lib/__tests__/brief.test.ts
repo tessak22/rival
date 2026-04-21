@@ -1,24 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const {
-  competitorFindUniqueMock,
-  scanFindManyMock,
-  competitorUpdateMock,
-  generateBriefMock,
-  generateSelfProfileMock
-} = vi.hoisted(() => ({
-  competitorFindUniqueMock: vi.fn(),
-  scanFindManyMock: vi.fn(),
-  competitorUpdateMock: vi.fn(),
-  generateBriefMock: vi.fn(),
-  generateSelfProfileMock: vi.fn().mockResolvedValue({
-    positioning_summary: "Rival is a competitive intelligence tool.",
-    icp_summary: "Developers tracking competitors.",
-    pricing_summary: "Open source, self-hosted.",
-    differentiators: ["Powered by Tabstack", "Open source"],
-    recent_signals: ["Added self-profile feature"]
-  })
-}));
+const { competitorFindUniqueMock, scanFindManyMock, competitorUpdateMock, generateBriefMock, generateSelfProfileMock } =
+  vi.hoisted(() => ({
+    competitorFindUniqueMock: vi.fn(),
+    scanFindManyMock: vi.fn(),
+    competitorUpdateMock: vi.fn(),
+    generateBriefMock: vi.fn(),
+    generateSelfProfileMock: vi.fn().mockResolvedValue({
+      positioning_summary: "Rival is a competitive intelligence tool.",
+      icp_summary: "Developers tracking competitors.",
+      pricing_summary: "Open source, self-hosted.",
+      differentiators: ["Powered by Tabstack", "Open source"],
+      recent_signals: ["Added self-profile feature"]
+    })
+  }));
 
 vi.mock("@/lib/db/client", () => ({
   prisma: {

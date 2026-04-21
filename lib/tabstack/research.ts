@@ -192,9 +192,7 @@ export async function runResearch(input: ResearchInput): Promise<ResearchResult>
       // natural-language query. The context block itself ends with a "Do
       // not echo" directive (see buildSelfContext), which governs output
       // behavior for both brief and research paths.
-      const query = selfContext
-        ? `${selfContext}\n\nRESEARCH QUESTION:\n${input.query}`
-        : input.query;
+      const query = selfContext ? `${selfContext}\n\nRESEARCH QUESTION:\n${input.query}` : input.query;
 
       const stream = await client.agent.research({
         query,

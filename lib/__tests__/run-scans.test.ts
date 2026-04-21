@@ -42,8 +42,16 @@ describe("runScans", () => {
 
   it("calls generateSelfBrief for isSelf rows and generateCompetitorBrief for others", async () => {
     competitorFindManyMock.mockResolvedValue([
-      { id: "cmp_a", isSelf: false, pages: [{ id: "pg_a", label: "Home", url: "https://a.co", type: "homepage", geoTarget: null }] },
-      { id: "cmp_self", isSelf: true, pages: [{ id: "pg_s", label: "Home", url: "https://rival.so", type: "homepage", geoTarget: null }] }
+      {
+        id: "cmp_a",
+        isSelf: false,
+        pages: [{ id: "pg_a", label: "Home", url: "https://a.co", type: "homepage", geoTarget: null }]
+      },
+      {
+        id: "cmp_self",
+        isSelf: true,
+        pages: [{ id: "pg_s", label: "Home", url: "https://rival.so", type: "homepage", geoTarget: null }]
+      }
     ]);
 
     const { runScans } = await import("@/lib/run-scans");
@@ -56,9 +64,7 @@ describe("runScans", () => {
   });
 
   it("marks briefGenerated=true for self when generateSelfBrief succeeds", async () => {
-    competitorFindManyMock.mockResolvedValue([
-      { id: "cmp_self", isSelf: true, pages: [] }
-    ]);
+    competitorFindManyMock.mockResolvedValue([{ id: "cmp_self", isSelf: true, pages: [] }]);
 
     const { runScans } = await import("@/lib/run-scans");
     const result = await runScans();
@@ -70,9 +76,7 @@ describe("runScans", () => {
 
   it("records an error on self row when generateSelfBrief fails", async () => {
     generateSelfBriefMock.mockRejectedValue(new Error("tabstack timeout"));
-    competitorFindManyMock.mockResolvedValue([
-      { id: "cmp_self", isSelf: true, pages: [] }
-    ]);
+    competitorFindManyMock.mockResolvedValue([{ id: "cmp_self", isSelf: true, pages: [] }]);
 
     const { runScans } = await import("@/lib/run-scans");
     const result = await runScans();
