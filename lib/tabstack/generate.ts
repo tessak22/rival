@@ -308,3 +308,101 @@ ${contextData}`;
     expectedFields: BRIEF_EXPECTED_FIELDS
   });
 }
+
+// ---------------------------------------------------------------------------
+// Self-profile
+// ---------------------------------------------------------------------------
+
+/**
+ * Output schema for self-profile generation.
+ * Covers positioning, ICP, pricing, differentiators, and recent signals.
+ */
+export const SELF_PROFILE_SCHEMA = {
+  type: "object",
+  properties: {
+    positioning_summary: {
+      type: "string",
+      description: "1–2 sentences describing who this company is and what it sells."
+    },
+    icp_summary: {
+      type: "string",
+      description: "1–2 sentences describing the company's ideal customer profile."
+    },
+    pricing_summary: {
+      type: "string",
+      description: "Brief description of the monetization model (free, paid, freemium, OSS+paid, etc.)."
+    },
+    differentiators: {
+      type: "array",
+      items: { type: "string" },
+      description: "3–5 bullets naming what makes this company distinct."
+    },
+    recent_signals: {
+      type: "array",
+      items: { type: "string" },
+      description: "3–5 bullets of recent changes visible from changelog, blog, or careers."
+    }
+  },
+  required: ["positioning_summary", "icp_summary", "pricing_summary", "differentiators", "recent_signals"]
+} as const;
+
+export const SELF_PROFILE_EXPECTED_FIELDS: string[] = [...SELF_PROFILE_SCHEMA.required];
+
+export type GenerateSelfProfileInput = GenerateBriefInput;
+
+/**
+ * Analyze the user's own company data and produce a structured self-profile.
+ * This output is stored on the self Competitor row and later injected as context
+ * into every competitor-facing AI call (brief, research, compare).
+ */
+export async function generateSelfProfile(input: GenerateSelfProfileInput): Promise<GenerateJsonResponse> {
+  const client = getTabstackClient();
+  const geoTarget = toGeoTarget(input.geoTarget);
+  const contextData = input.contextData.slice(0, MAX_CONTEXT_LENGTH);
+  if (input.contextData.length > MAX_CONTEXT_LENGTH) {
+    process.emitWarning(
+      `[generateSelfProfile] contextData truncated from ${input.contextData.length} to ${MAX_CONTEXT_LENGTH} chars`,
+      { code: "RIVAL_CONTEXT_TRUNCATED" }
+    );
+  }
+
+  const instructions = `You are analyzing a company's own public surfaces (website, pricing,
+docs, changelog, careers, blog, social) to produce a concise self-profile. This
+profile will later be used as context when evaluating competitors, so it must be
+factual and compact.
+
+Produce:
+1. positioning_summary — 1–2 sentences: who they are, what they sell.
+2. icp_summary — 1–2 sentences: who they serve (technical ICP + use case).
+3. pricing_summary — monetization model in one short paragraph.
+4. differentiators — 3–5 bullets of what makes them distinct (not marketing fluff).
+5. recent_signals — 3–5 bullets of recent changes visible in changelog, blog, or careers.
+
+Be direct and specific. No generic commentary. Do not speculate — only describe
+what the data shows.
+
+Company data:
+${contextData}`;
+
+  const requestPayload: GenerateJsonParams = {
+    url: input.url,
+    instructions,
+    json_schema: SELF_PROFILE_SCHEMA,
+    effort: toSdkEffort(input.effort),
+    nocache: input.nocache,
+    geo_target: geoTarget
+  };
+
+  return logger.call(() => client.generate.json(requestPayload), {
+    competitorId: input.competitorId,
+    pageId: input.pageId,
+    endpoint: "generate",
+    url: input.url,
+    effort: input.effort,
+    nocache: input.nocache,
+    geoTarget: geoTarget?.country,
+    isDemo: input.isDemo,
+    fallback: input.fallback,
+    expectedFields: SELF_PROFILE_EXPECTED_FIELDS
+  });
+}

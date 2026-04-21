@@ -381,3 +381,79 @@ describe("schema exports", () => {
     expect(BRIEF_SCHEMA.required).toContain("positioning_opportunity");
   });
 });
+
+describe("generateSelfProfile", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    loggerCallMock.mockClear();
+    generateJsonMock.mockClear();
+    process.env.TABSTACK_API_KEY = "test-key";
+    loggerCallMock.mockImplementation((fn: () => Promise<unknown>) => fn());
+    toSdkEffortMock.mockImplementation((effort: string) => (effort === "high" ? "max" : "standard"));
+    toGeoTargetMock.mockImplementation((code?: string | null) => {
+      if (!code) return undefined;
+      const n = code.trim().toUpperCase();
+      return /^[A-Z]{2}$/.test(n) ? { country: n } : undefined;
+    });
+    getTabstackClientMock.mockReturnValue({ generate: { json: generateJsonMock } });
+  });
+
+  it("calls tabstack /generate with SELF_PROFILE_SCHEMA and the provided context", async () => {
+    const { generateSelfProfile, SELF_PROFILE_EXPECTED_FIELDS } = await import("@/lib/tabstack/generate");
+    const mockProfile = {
+      positioning_summary: "CI tool for devs",
+      icp_summary: "Developer teams",
+      pricing_summary: "Open source",
+      differentiators: ["Fast", "Simple"],
+      recent_signals: ["New release"]
+    };
+    generateJsonMock.mockResolvedValue(mockProfile);
+
+    const contextData = JSON.stringify([{ page_type: "homepage", result: { headline: "CI for devs" } }]);
+    const response = await generateSelfProfile({
+      competitorId: "self_1",
+      url: "https://rival.so",
+      contextData,
+      effort: "low",
+      nocache: true
+    });
+
+    expect(response).toBeDefined();
+    expect(SELF_PROFILE_EXPECTED_FIELDS).toEqual(
+      expect.arrayContaining([
+        "positioning_summary",
+        "icp_summary",
+        "pricing_summary",
+        "differentiators",
+        "recent_signals"
+      ])
+    );
+
+    // Assert the mocked tabstack client was called with json_schema === SELF_PROFILE_SCHEMA
+    const { SELF_PROFILE_SCHEMA } = await import("@/lib/tabstack/generate");
+    const sdkCall = generateJsonMock.mock.calls[0][0];
+    expect(sdkCall.json_schema).toEqual(SELF_PROFILE_SCHEMA);
+
+    // Assert instructions contain the contextData substring
+    expect(sdkCall.instructions).toContain(contextData);
+  });
+
+  it("uses the self-profile instruction prompt (not the competitor-brief prompt)", async () => {
+    const { generateSelfProfile } = await import("@/lib/tabstack/generate");
+    generateJsonMock.mockResolvedValue({});
+
+    await generateSelfProfile({
+      competitorId: "self_1",
+      url: "https://rival.so",
+      contextData: "[]",
+      effort: "low",
+      nocache: true
+    });
+
+    const sdkCall = generateJsonMock.mock.calls[0][0];
+    // Assert the call's instructions contains "self-profile" distinguishing phrase
+    expect(sdkCall.instructions).toContain("self-profile");
+    // Assert it does NOT contain the competitor-brief distinguishing phrase
+    expect(sdkCall.instructions).not.toContain("competitive intelligence analyst");
+  });
+});
