@@ -1146,3 +1146,28 @@ body {
   display: grid;
   gap: 1rem;
 }
+
+/* ── Site Footer ─────────────────────────────────────────────────────── */
+
+.site-footer {
+  margin-top: 4rem;
+  padding: 1.5rem 2rem 2rem;
+  border-top: 1px solid rgba(149, 167, 192, 0.12);
+  text-align: center;
+}
+.site-footer__line {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+.site-footer__link {
+  color: var(--muted);
+  text-decoration: underline;
+  text-decoration-color: rgba(149, 167, 192, 0.35);
+  text-underline-offset: 3px;
+  transition: color 120ms ease;
+}
+.site-footer__link:hover {
+  color: var(--accent);
+  text-decoration-color: var(--accent);
+}
