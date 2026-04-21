@@ -58,7 +58,7 @@ describe("buildSelfContext", () => {
     expect(result).toContain("Rival");
     expect(result).toContain("CI tool for devs");
     expect(result).toContain("Powered by Tabstack");
-    expect(result!.length).toBeLessThanOrEqual(1200); // 800 payload cap + framing overhead
+    expect(result?.length ?? 0).toBeLessThanOrEqual(1200); // 800 payload cap + framing overhead
   });
 
   it("lets manual_data override brief fields", async () => {
