@@ -150,6 +150,10 @@ export async function generateCompetitorBrief(competitorId: string, nocache = tr
     throw new Error("Competitor not found");
   }
 
+  if (competitor.isSelf) {
+    throw new Error(`Competitor ${competitorId} is the self row; use generateSelfBrief instead`);
+  }
+
   const staleThreshold = new Date(Date.now() - 1000 * 60 * 60 * 24 * 7); // 7 days
   const scans = await prisma.scan.findMany({
     where: { page: { competitorId } },

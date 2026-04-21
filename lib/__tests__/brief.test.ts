@@ -99,6 +99,13 @@ describe("generateCompetitorBrief", () => {
     expect(generateBriefMock).not.toHaveBeenCalled();
   });
 
+  it("throws when the target competitor is the self row", async () => {
+    competitorFindUniqueMock.mockResolvedValue({ ...COMPETITOR, isSelf: true });
+    scanFindManyMock.mockResolvedValue([makeRecentScan()]);
+    const { generateCompetitorBrief } = await import("@/lib/brief");
+    await expect(generateCompetitorBrief("cmp_1")).rejects.toThrow(/self row/i);
+  });
+
   it("throws when no recent scans are available", async () => {
     scanFindManyMock.mockResolvedValueOnce([makeStaleScan()]);
     const { generateCompetitorBrief } = await import("@/lib/brief");

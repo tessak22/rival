@@ -122,7 +122,8 @@ async function loadDashboardData() {
   const feed = await prisma.scan.findMany({
     where: {
       hasChanges: true,
-      scannedAt: { gte: feedCutoff }
+      scannedAt: { gte: feedCutoff },
+      page: { competitorId: { in: competitorIds } }
     },
     include: {
       page: true
