@@ -86,6 +86,23 @@ async function main() {
     return;
   }
 
+  // Demote any previously-flagged self rows whose slug no longer matches the
+  // current config's self. The partial unique index on is_self=true means the
+  // subsequent upsert would otherwise fail when rotating the self slug or
+  // removing the self block entirely. Safe to run even when no prior self
+  // exists — updateMany returns count: 0.
+  const newSelfSlug = config.self?.slug ?? null;
+  const demoted = await prisma.competitor.updateMany({
+    where: {
+      isSelf: true,
+      ...(newSelfSlug ? { slug: { not: newSelfSlug } } : {})
+    },
+    data: { isSelf: false }
+  });
+  if (demoted.count > 0) {
+    console.log(`Demoted ${demoted.count} previously-self competitor row(s) whose slug no longer matches config.self.`);
+  }
+
   for (const { entry, isSelf } of entries) {
     const { record, configUrls } = await upsertEntry(entry, isSelf);
 
