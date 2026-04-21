@@ -32,6 +32,7 @@ vi.mock("@/lib/brief", () => ({
 
 describe("runScans", () => {
   beforeEach(() => {
+    vi.resetModules();
     competitorFindManyMock.mockReset();
     demoIpLockDeleteManyMock.mockReset().mockResolvedValue({ count: 0 });
     scanPageMock.mockReset().mockResolvedValue({});
