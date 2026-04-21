@@ -19,6 +19,10 @@ model Competitor {
   intelligenceBrief Json?     @map("intelligence_brief")
   briefGeneratedAt  DateTime? @map("brief_generated_at") @db.Timestamptz(6)
   createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  // Partial unique index on is_self = true is enforced in the migration
+  // (competitors_is_self_unique) and cannot be expressed in Prisma DSL.
+  // Do not regenerate this migration from the schema alone — the partial
+  // index will be lost.
   isSelf            Boolean   @default(false) @map("is_self")
 
   pages         CompetitorPage[]
