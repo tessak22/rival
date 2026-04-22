@@ -6,7 +6,9 @@ export type MatrixAxisKey =
   | "brand_trust_score"
   | "pricing_score"
   | "market_maturity_score"
-  | "feature_breadth_score";
+  | "feature_breadth_score"
+  | "managed_service_score"
+  | "llm_included_score";
 
 export type MatrixAxisConfig = {
   key: MatrixAxisKey;
@@ -28,13 +30,13 @@ export type MatrixConfig = {
 };
 
 export const DEFAULT_MATRIX_CONFIG: MatrixConfig = {
-  x_axis: { key: "openness_score", label_low: "Open Source", label_high: "Proprietary" },
-  y_axis: { key: "brand_trust_score", label_low: "Low Trust", label_high: "High Trust" },
+  x_axis: { key: "managed_service_score", label_low: "Self-hosted", label_high: "Managed API" },
+  y_axis: { key: "llm_included_score", label_low: "Bring Your Own LLM", label_high: "LLM Built-in" },
   quadrant_labels: {
-    top_left: "Trusted OSS",
-    top_right: "Established Leaders",
-    bottom_left: "Emerging Players",
-    bottom_right: "Niche Specialists"
+    top_left: "DIY + AI-Ready",
+    top_right: "Managed + AI-Ready",
+    bottom_left: "DIY + Traditional",
+    bottom_right: "Managed + Traditional"
   }
 };
 
@@ -78,7 +80,9 @@ const VALID_AXIS_KEYS = new Set<MatrixAxisKey>([
   "brand_trust_score",
   "pricing_score",
   "market_maturity_score",
-  "feature_breadth_score"
+  "feature_breadth_score",
+  "managed_service_score",
+  "llm_included_score"
 ]);
 
 function isValidAxisKey(key: unknown): key is MatrixAxisKey {
