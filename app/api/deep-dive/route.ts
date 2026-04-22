@@ -84,12 +84,25 @@ export async function POST(request: NextRequest) {
 
         let completeEventData: unknown = undefined;
 
-        for await (const event of researchStream) {
-          controller.enqueue(sse("research:progress", { event: event.event ?? "unknown", data: event.data }));
-
-          if (event.event === "complete") {
-            completeEventData = event.data;
+        // Manual iteration so we can catch per-call SyntaxErrors from the SDK.
+        // The Tabstack server sends keepalives as `data: :keepalive` — a data field
+        // with a colon-prefixed value. The SDK calls JSON.parse(":keepalive"), throws
+        // a SyntaxError, and terminates for-await. With manual next() we can break
+        // gracefully and proceed with whatever data we already received.
+        const iter = researchStream[Symbol.asyncIterator]();
+        while (true) {
+          let next: IteratorResult<Awaited<ReturnType<typeof iter.next>>["value"]>;
+          try {
+            next = await iter.next();
+          } catch (err) {
+            // Keepalive SyntaxError — break and deliver whatever we have
+            if (err instanceof SyntaxError) break;
+            throw err;
           }
+          if (next.done) break;
+          const event = next.value;
+          controller.enqueue(sse("research:progress", { event: event.event ?? "unknown", data: event.data }));
+          if (event.event === "complete") completeEventData = event.data;
           if (event.event === "error") {
             status = "error";
             rawError = typeof event.data === "string" ? event.data : JSON.stringify(event.data);
