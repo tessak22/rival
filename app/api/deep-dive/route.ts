@@ -1,6 +1,9 @@
 import type { NextRequest } from "next/server";
 import { Prisma } from "@prisma/client";
 
+// Allow up to 120s — balanced research mode takes 1-2 minutes
+export const maxDuration = 120;
+
 import { prisma } from "@/lib/db/client";
 import { getTabstackClient } from "@/lib/tabstack/client";
 import { extractResult, extractCitations } from "@/lib/tabstack/research";
