@@ -32,9 +32,8 @@ export default async function MatrixPage() {
   }
 
   const competitors = await prisma.competitor.findMany({
-    where: { isSelf: false },
-    select: { id: true, name: true, slug: true, intelligenceBrief: true },
-    orderBy: { name: "asc" }
+    select: { id: true, name: true, slug: true, intelligenceBrief: true, isSelf: true },
+    orderBy: [{ isSelf: "desc" }, { name: "asc" }]
   });
 
   const points: MatrixPoint[] = [];
@@ -47,7 +46,7 @@ export default async function MatrixPage() {
       missingScores++;
       continue;
     }
-    points.push({ name: c.name, slug: c.slug, x, y });
+    points.push({ name: c.name, slug: c.slug, x, y, isSelf: c.isSelf });
   }
 
   const hasEnoughData = points.length >= 2;
