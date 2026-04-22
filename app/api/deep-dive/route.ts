@@ -3,7 +3,6 @@ import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/db/client";
 import { getTabstackClient } from "@/lib/tabstack/client";
-import { buildSelfContext } from "@/lib/context/self-context";
 import { extractResult, extractCitations } from "@/lib/tabstack/research";
 import { buildPromptForTemplate } from "@/lib/deep-dive-templates";
 
@@ -69,30 +68,13 @@ export async function POST(request: NextRequest) {
       try {
         controller.enqueue(sse("research:started", { competitorId: competitor.id, mode, promptTemplate }));
 
-        // Build query — inject self context for comparative framing, same as runResearch.
-        // Cap combined query at 4000 chars to stay under Tabstack's /research limit.
-        const MAX_QUERY_LENGTH = 4000;
-        const selfContext = await buildSelfContext({ isDemo: false });
-        const baseQuery =
+        // /research has a strict query length limit — skip selfContext injection here.
+        // Self-context framing is most valuable for /generate (comparative briefs);
+        // deep dive research is raw open-web intelligence gathering where it adds
+        // length overhead without meaningfully improving results.
+        const query =
           (promptTemplate ? buildPromptForTemplate(promptTemplate, competitor.name) : null) ??
           buildResearchQuery(competitor.name);
-        let query: string;
-        if (selfContext) {
-          const combined = `${selfContext}\n\nRESEARCH QUESTION:\n${baseQuery}`;
-          if (combined.length <= MAX_QUERY_LENGTH) {
-            query = combined;
-          } else {
-            // Truncate selfContext to fit — baseQuery always takes priority
-            const overhead = `\n\nRESEARCH QUESTION:\n${baseQuery}`.length;
-            const contextBudget = MAX_QUERY_LENGTH - overhead;
-            query =
-              contextBudget > 0
-                ? `${selfContext.slice(0, contextBudget)}\n\nRESEARCH QUESTION:\n${baseQuery}`
-                : baseQuery.slice(0, MAX_QUERY_LENGTH);
-          }
-        } else {
-          query = baseQuery.slice(0, MAX_QUERY_LENGTH);
-        }
 
         // Stream directly from SDK — each event is forwarded immediately, avoiding timeout
         const researchStream = await client.agent.research({ query, mode: mode as "fast" | "balanced", nocache: true });
