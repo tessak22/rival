@@ -15,18 +15,19 @@ type Props = {
 
 const SVG_W = 560;
 const SVG_H = 560;
-const M = 70; // margin
+const M = 70; // margin outside plot border
 const PLOT = SVG_W - M * 2; // 420px plot area
+const INSET = 24; // minimum px from plot border to any dot center
 const MID_X = M + PLOT / 2;
 const MID_Y = M + PLOT / 2;
 
 function toSvgX(score: number): number {
-  return M + (score / 10) * PLOT;
+  return M + INSET + (score / 10) * (PLOT - 2 * INSET);
 }
 
 function toSvgY(score: number): number {
   // SVG y increases downward; score 10 = top of plot
-  return M + PLOT - (score / 10) * PLOT;
+  return M + PLOT - INSET - (score / 10) * (PLOT - 2 * INSET);
 }
 
 const monoSm = {
