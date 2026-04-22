@@ -157,8 +157,10 @@ export function PositioningMatrix({ points, config }: Props) {
         return points.map((pt) => {
           const cx = toSvgX(pt.x);
           const cy = toSvgY(pt.y);
-          const labelYOffset = labelOffsets.get(pt.slug) ?? 0;
-          const labelY = cy + labelYOffset + 4;
+          const dotOffset = labelOffsets.get(pt.slug) ?? 0;
+          // Dot and label move together so clustered items separate visually
+          const dotCy = cy + dotOffset;
+          const labelY = dotCy + 4;
           const nearRight = cx > M + PLOT - 90;
           const isOverridden = pt.xOverride || pt.yOverride;
           const overrideTitle = [
@@ -169,38 +171,28 @@ export function PositioningMatrix({ points, config }: Props) {
             .join(", ");
           return (
             <g key={pt.slug}>
-              {labelYOffset !== 0 && (
-                <line
-                  x1={cx}
-                  y1={cy}
-                  x2={nearRight ? cx - 10 : cx + 10}
-                  y2={labelY}
-                  stroke="var(--ink-faint)"
-                  strokeWidth={0.5}
-                />
-              )}
               {pt.isSelf ? (
                 <>
                   <title>{pt.name} (you)</title>
-                  <circle cx={cx} cy={cy} r={8} fill="var(--paper)" stroke="var(--ink)" strokeWidth={2} />
-                  <circle cx={cx} cy={cy} r={4} fill="var(--ink)" />
+                  <circle cx={cx} cy={dotCy} r={8} fill="var(--paper)" stroke="var(--ink)" strokeWidth={2} />
+                  <circle cx={cx} cy={dotCy} r={4} fill="var(--ink)" />
                 </>
               ) : isOverridden ? (
                 <>
                   <title>{`${pt.name} — ${overrideTitle}`}</title>
                   <rect
                     x={cx - 7}
-                    y={cy - 7}
+                    y={dotCy - 7}
                     width={14}
                     height={14}
-                    transform={`rotate(45, ${cx}, ${cy})`}
+                    transform={`rotate(45, ${cx}, ${dotCy})`}
                     fill="var(--ink)"
                   />
                 </>
               ) : (
                 <>
                   <title>{pt.name}</title>
-                  <circle cx={cx} cy={cy} r={6} fill="var(--ink)" />
+                  <circle cx={cx} cy={dotCy} r={6} fill="var(--ink)" />
                 </>
               )}
               <text
