@@ -5,6 +5,7 @@ export type MatrixPoint = {
   slug: string;
   x: number; // 0–10
   y: number; // 0–10
+  isSelf?: boolean;
 };
 
 type Props = {
@@ -122,15 +123,23 @@ export function PositioningMatrix({ points, config }: Props) {
         const nearRight = cx > M + PLOT - 90;
         return (
           <g key={pt.slug}>
-            <circle cx={cx} cy={cy} r={6} fill="var(--ink)" />
+            {pt.isSelf ? (
+              <>
+                <circle cx={cx} cy={cy} r={8} fill="var(--paper)" stroke="var(--ink)" strokeWidth={2} />
+                <circle cx={cx} cy={cy} r={4} fill="var(--ink)" />
+              </>
+            ) : (
+              <circle cx={cx} cy={cy} r={6} fill="var(--ink)" />
+            )}
             <text
-              x={nearRight ? cx - 10 : cx + 10}
+              x={nearRight ? cx - 12 : cx + 12}
               y={cy + 4}
               textAnchor={nearRight ? "end" : "start"}
               fill="var(--ink)"
               style={{ fontSize: 12, fontFamily: "var(--font-sans)", fontWeight: 600, letterSpacing: "-0.01em" }}
             >
               {pt.name}
+              {pt.isSelf && " ★"}
             </text>
           </g>
         );

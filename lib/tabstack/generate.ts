@@ -401,9 +401,50 @@ export const SELF_PROFILE_SCHEMA = {
       type: "array",
       items: { type: "string" },
       description: "3–5 bullets of recent changes visible from changelog, blog, or careers."
+    },
+    openness_score: {
+      type: "number",
+      minimum: 0,
+      maximum: 10,
+      description: "0 = fully open source, transparent, no lock-in; 10 = fully proprietary, closed, high lock-in"
+    },
+    brand_trust_score: {
+      type: "number",
+      minimum: 0,
+      maximum: 10,
+      description: "0 = low brand recognition and trust; 10 = high brand recognition and trust"
+    },
+    pricing_score: {
+      type: "number",
+      minimum: 0,
+      maximum: 10,
+      description: "0 = entirely free or open source; 10 = premium or enterprise pricing only"
+    },
+    market_maturity_score: {
+      type: "number",
+      minimum: 0,
+      maximum: 10,
+      description: "0 = early-stage or emerging; 10 = established and mature market presence"
+    },
+    feature_breadth_score: {
+      type: "number",
+      minimum: 0,
+      maximum: 10,
+      description: "0 = narrow specialist with a single focused use case; 10 = broad generalist covering many use cases"
     }
   },
-  required: ["positioning_summary", "icp_summary", "pricing_summary", "differentiators", "recent_signals"]
+  required: [
+    "positioning_summary",
+    "icp_summary",
+    "pricing_summary",
+    "differentiators",
+    "recent_signals",
+    "openness_score",
+    "brand_trust_score",
+    "pricing_score",
+    "market_maturity_score",
+    "feature_breadth_score"
+  ]
 } as const;
 
 export const SELF_PROFILE_EXPECTED_FIELDS: string[] = [...SELF_PROFILE_SCHEMA.required];
@@ -437,6 +478,11 @@ Produce:
 3. pricing_summary — monetization model in one short paragraph.
 4. differentiators — 3–5 bullets of what makes them distinct (not marketing fluff).
 5. recent_signals — 3–5 bullets of recent changes visible in changelog, blog, or careers.
+6. Positioning axis scores — using only the data provided, rate each of the five
+   dimensions on a 0–10 scale as defined in the output schema: openness_score,
+   brand_trust_score, pricing_score, market_maturity_score, feature_breadth_score.
+   Base each score on explicit signals in the data; do not use general market
+   knowledge as a substitute for absent data.
 
 Be direct and specific. No generic commentary. Do not speculate — only describe
 what the data shows.
