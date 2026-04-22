@@ -54,6 +54,7 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
   const [completedTemplate, setCompletedTemplate] = useState<SelectedTemplate | null>(null);
 
   async function runDeepDive() {
+    if (isLoading) return;
     setEvents([]);
     setResult(null);
     setCitations([]);

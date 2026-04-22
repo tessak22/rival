@@ -94,40 +94,48 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        const result = extractResult(completeEventData);
-        const citations = extractCitations(completeEventData);
+        if (status === "error") {
+          controller.enqueue(sse("research:error", { error: rawError }));
+        } else {
+          const result = extractResult(completeEventData);
+          const citations = extractCitations(completeEventData);
 
-        await prisma.deepDive.create({
-          data: {
-            competitorId: competitor.id,
-            mode: mode as string,
-            query,
-            result: toJsonValue(result),
-            citations: toJsonValue(citations),
-            promptTemplate: promptTemplate ?? null
-          }
-        });
+          await prisma.deepDive.create({
+            data: {
+              competitorId: competitor.id,
+              mode: mode as string,
+              query,
+              result: toJsonValue(result),
+              citations: toJsonValue(citations),
+              promptTemplate: promptTemplate ?? null
+            }
+          });
 
-        controller.enqueue(sse("research:complete", { result, citations }));
+          controller.enqueue(sse("research:complete", { result, citations }));
+        }
       } catch (error) {
         status = "error";
         rawError = error instanceof Error ? error.message : "Deep dive failed";
         controller.enqueue(sse("research:error", { error: rawError }));
       } finally {
-        // Log to api_logs manually — logger.call can't wrap a live-streaming path
-        await prisma.apiLog.create({
-          data: {
-            competitorId: competitor.id,
-            endpoint: "research",
-            mode,
-            nocache: true,
-            status,
-            rawError: rawError ?? null,
-            durationMs: Date.now() - startTime,
-            resultQuality: status === "success" ? "full" : "empty",
-            isDemo: false
-          }
-        });
+        // Fail-open: log write must never prevent stream close
+        try {
+          await prisma.apiLog.create({
+            data: {
+              competitorId: competitor.id,
+              endpoint: "research",
+              mode,
+              nocache: true,
+              status,
+              rawError: rawError ?? null,
+              durationMs: Date.now() - startTime,
+              resultQuality: status === "success" ? "full" : "empty",
+              isDemo: false
+            }
+          });
+        } catch {
+          // api_log failure is non-fatal
+        }
         controller.close();
       }
     }
