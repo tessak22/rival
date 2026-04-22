@@ -155,7 +155,7 @@
     "y_axis": {
       "key": "llm_included_score",
       "label_low": "Bring Your Own LLM",
-      "label_high": "LLM Built-in"
+      "label_high": "AI in the API"
     },
     "quadrant_labels": {
       "top_left": "DIY + AI-Ready",
