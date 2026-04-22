@@ -1,26 +1,38 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const { runResearchMock, competitorFindUniqueMock, deepDiveCreateMock } = vi.hoisted(() => ({
-  runResearchMock: vi.fn(),
-  competitorFindUniqueMock: vi.fn(),
-  deepDiveCreateMock: vi.fn()
+const { researchMock, competitorFindUniqueMock, deepDiveCreateMock, apiLogCreateMock, buildSelfContextMock } =
+  vi.hoisted(() => ({
+    researchMock: vi.fn(),
+    competitorFindUniqueMock: vi.fn(),
+    deepDiveCreateMock: vi.fn(),
+    apiLogCreateMock: vi.fn(),
+    buildSelfContextMock: vi.fn().mockResolvedValue(null)
+  }));
+
+vi.mock("@/lib/tabstack/client", () => ({
+  getTabstackClient: () => ({ agent: { research: researchMock } })
 }));
 
-vi.mock("@/lib/tabstack/research", () => ({ runResearch: runResearchMock }));
+vi.mock("@/lib/context/self-context", () => ({
+  buildSelfContext: buildSelfContextMock
+}));
+
 vi.mock("@/lib/db/client", () => ({
   prisma: {
     competitor: { findUnique: competitorFindUniqueMock },
-    deepDive: { create: deepDiveCreateMock }
+    deepDive: { create: deepDiveCreateMock },
+    apiLog: { create: apiLogCreateMock }
   }
 }));
 
-const COMPETITOR = { id: "cmp_1", name: "Acme" };
-const RESEARCH_RESULT = {
-  result: { summary: "Acme is a strong competitor" },
-  citations: ["https://example.com"],
-  events: [{ event: "progress", data: "Researching..." }]
-};
+// Async generator that mimics the Tabstack research stream
+async function* mockStream() {
+  yield { event: "progress", data: "Researching..." };
+  yield { event: "complete", data: { result: { summary: "Acme is a strong competitor" }, citations: [] } };
+}
+
+const COMPETITOR = { id: "cmp_1", name: "Acme", baseUrl: "https://acme.com" };
 
 function jsonRequest(body: unknown): NextRequest {
   return new NextRequest("http://localhost/api/deep-dive", {
@@ -32,12 +44,17 @@ function jsonRequest(body: unknown): NextRequest {
 
 describe("POST /api/deep-dive", () => {
   beforeEach(() => {
-    runResearchMock.mockReset();
+    vi.resetModules();
+    researchMock.mockReset();
     competitorFindUniqueMock.mockReset();
     deepDiveCreateMock.mockReset();
-    runResearchMock.mockResolvedValue(RESEARCH_RESULT);
+    apiLogCreateMock.mockReset();
+    buildSelfContextMock.mockReset();
+    researchMock.mockReturnValue(mockStream());
     competitorFindUniqueMock.mockResolvedValue(COMPETITOR);
     deepDiveCreateMock.mockResolvedValue({});
+    apiLogCreateMock.mockResolvedValue({});
+    buildSelfContextMock.mockResolvedValue(null);
   });
 
   it("returns 400 when competitorId is missing", async () => {
@@ -62,15 +79,16 @@ describe("POST /api/deep-dive", () => {
     expect(res.headers.get("content-type")).toBe("text/event-stream");
   });
 
-  it("defaults mode to balanced", async () => {
+  it("defaults mode to balanced and passes nocache: true to SDK", async () => {
     const { POST } = await import("@/app/api/deep-dive/route");
     await POST(jsonRequest({ competitorId: "cmp_1" }));
-    expect(runResearchMock).toHaveBeenCalledWith(expect.objectContaining({ mode: "balanced", nocache: true }));
+    expect(researchMock).toHaveBeenCalledWith(expect.objectContaining({ mode: "balanced", nocache: true }));
   });
 
   it("respects provided mode", async () => {
+    researchMock.mockReturnValue(mockStream());
     const { POST } = await import("@/app/api/deep-dive/route");
     await POST(jsonRequest({ competitorId: "cmp_1", mode: "fast" }));
-    expect(runResearchMock).toHaveBeenCalledWith(expect.objectContaining({ mode: "fast" }));
+    expect(researchMock).toHaveBeenCalledWith(expect.objectContaining({ mode: "fast" }));
   });
 });

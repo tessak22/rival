@@ -2,7 +2,9 @@ import type { NextRequest } from "next/server";
 import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/db/client";
-import { runResearch } from "@/lib/tabstack/research";
+import { getTabstackClient } from "@/lib/tabstack/client";
+import { buildSelfContext } from "@/lib/context/self-context";
+import { extractResult, extractCitations } from "@/lib/tabstack/research";
 import { buildPromptForTemplate } from "@/lib/deep-dive-templates";
 
 type DeepDiveRequest = {
@@ -56,56 +58,84 @@ export async function POST(request: NextRequest) {
     });
   }
 
+  const client = getTabstackClient();
+
   const stream = new ReadableStream({
     start: async (controller) => {
+      const startTime = Date.now();
+      let status: "success" | "error" = "success";
+      let rawError: string | undefined;
+
       try {
         controller.enqueue(sse("research:started", { competitorId: competitor.id, mode, promptTemplate }));
 
-        // If a known template key is provided, use its prompt; otherwise fall back to general research
-        const builtPrompt = promptTemplate ? buildPromptForTemplate(promptTemplate, competitor.name) : null;
-        const query = builtPrompt ?? buildResearchQuery(competitor.name);
+        // Build query — inject self context for comparative framing, same as runResearch
+        const selfContext = await buildSelfContext({ isDemo: false });
+        const baseQuery =
+          (promptTemplate ? buildPromptForTemplate(promptTemplate, competitor.name) : null) ??
+          buildResearchQuery(competitor.name);
+        const query = selfContext ? `${selfContext}\n\nRESEARCH QUESTION:\n${baseQuery}` : baseQuery;
 
-        const result = await runResearch({
-          competitorId: competitor.id,
-          query,
-          mode,
-          nocache: true,
-          isDemo: false
-        });
+        // Stream directly from SDK — each event is forwarded immediately, avoiding timeout
+        const researchStream = await client.agent.research({ query, mode: mode as "fast" | "balanced", nocache: true });
 
-        for (const event of result.events) {
-          controller.enqueue(
-            sse("research:progress", {
-              event: event.event ?? "unknown",
-              data: event.data
-            })
-          );
+        let completeEventData: unknown = undefined;
+
+        for await (const event of researchStream) {
+          controller.enqueue(sse("research:progress", { event: event.event ?? "unknown", data: event.data }));
+
+          if (event.event === "complete") {
+            completeEventData = event.data;
+          }
+          if (event.event === "error") {
+            status = "error";
+            rawError = typeof event.data === "string" ? event.data : JSON.stringify(event.data);
+            break;
+          }
         }
 
-        await prisma.deepDive.create({
-          data: {
-            competitorId: competitor.id,
-            mode,
-            query,
-            result: toJsonValue(result.result),
-            citations: toJsonValue(result.citations),
-            promptTemplate
-          }
-        });
+        if (status === "error") {
+          controller.enqueue(sse("research:error", { error: rawError }));
+        } else {
+          const result = extractResult(completeEventData);
+          const citations = extractCitations(completeEventData);
 
-        controller.enqueue(
-          sse("research:complete", {
-            result: result.result,
-            citations: result.citations
-          })
-        );
+          await prisma.deepDive.create({
+            data: {
+              competitorId: competitor.id,
+              mode: mode as string,
+              query,
+              result: toJsonValue(result),
+              citations: toJsonValue(citations),
+              promptTemplate: promptTemplate ?? null
+            }
+          });
+
+          controller.enqueue(sse("research:complete", { result, citations }));
+        }
       } catch (error) {
-        controller.enqueue(
-          sse("research:error", {
-            error: error instanceof Error ? error.message : "Deep dive failed"
-          })
-        );
+        status = "error";
+        rawError = error instanceof Error ? error.message : "Deep dive failed";
+        controller.enqueue(sse("research:error", { error: rawError }));
       } finally {
+        // Fail-open: log write must never prevent stream close
+        try {
+          await prisma.apiLog.create({
+            data: {
+              competitorId: competitor.id,
+              endpoint: "research",
+              mode,
+              nocache: true,
+              status,
+              rawError: rawError ?? null,
+              durationMs: Date.now() - startTime,
+              resultQuality: status === "success" ? "full" : "empty",
+              isDemo: false
+            }
+          });
+        } catch {
+          // api_log failure is non-fatal
+        }
         controller.close();
       }
     }
