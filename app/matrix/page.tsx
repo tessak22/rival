@@ -33,7 +33,7 @@ export default async function MatrixPage() {
 
   const competitors = await prisma.competitor.findMany({
     select: { id: true, name: true, slug: true, intelligenceBrief: true, isSelf: true },
-    orderBy: [{ isSelf: "desc" }, { name: "asc" }]
+    orderBy: [{ isSelf: "asc" }, { name: "asc" }]
   });
 
   const points: MatrixPoint[] = [];
@@ -49,7 +49,7 @@ export default async function MatrixPage() {
     points.push({ name: c.name, slug: c.slug, x, y, isSelf: c.isSelf });
   }
 
-  const hasEnoughData = points.length >= 2;
+  const hasEnoughData = points.some((p) => !p.isSelf);
 
   return (
     <RDSPageShell>
@@ -82,7 +82,7 @@ export default async function MatrixPage() {
               ? `${missingScores} competitor${missingScores === 1 ? "" : "s"} ${
                   missingScores === 1 ? "has" : "have"
                 } no brief scores yet. Re-generate briefs to populate the matrix.`
-              : "Add at least 2 competitors and generate their intelligence briefs to see the positioning matrix."
+              : "Generate intelligence briefs for at least 1 competitor to see the positioning matrix."
           }
         />
       ) : (
