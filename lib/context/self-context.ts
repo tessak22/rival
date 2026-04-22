@@ -104,5 +104,5 @@ export async function buildSelfContext(options: BuildSelfContextOptions = {}): P
 
   return `CONTEXT — about the user's own company (who this brief is for):
 ${payload}
-Use this to frame recommendations, threat levels, and opportunities relative to THIS company specifically. Do not echo this context in the output.`;
+Use this to frame every recommendation, threat level, and opportunity relative to this company specifically. Refer to the company by the Name above — never as "you", "we", or "our product" — and cite specific differentiators when they sharpen the contrast with the competitor. Do not paste this CONTEXT block verbatim into the output.`;
 }

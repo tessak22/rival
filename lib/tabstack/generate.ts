@@ -184,15 +184,15 @@ export const BRIEF_SCHEMA = {
   properties: {
     positioning_opportunity: {
       type: "string",
-      description: "What gap does their weakness create for you?"
+      description: "Name the competitor and the self company from CONTEXT. State the specific gap between what the competitor does and what the self company does, and the positioning move that follows. No generic 'our product' language."
     },
     content_opportunity: {
       type: "string",
-      description: "What topics should you own based on their blind spots?"
+      description: "Name the competitor and the self company from CONTEXT. Identify a topic the competitor neglects that the self company's differentiators let it own credibly, and say why that pairing works."
     },
     product_opportunity: {
       type: "string",
-      description: "What are developers complaining about that you could solve?"
+      description: "Name the competitor and the self company from CONTEXT. Call out a specific user or developer complaint about the competitor and tie it to a concrete product move the self company could make, grounded in its stated differentiators."
     },
     threat_level: {
       type: "string",
@@ -201,12 +201,12 @@ export const BRIEF_SCHEMA = {
     },
     threat_reasoning: {
       type: "string",
-      description: "One sentence explaining the threat level rating"
+      description: "One sentence naming both the competitor and the self company and the specific overlap (audience, use case, or revenue) that drives the rating."
     },
     watch_list: {
       type: "array",
       items: { type: "string" },
-      description: "Two to three signals to monitor next cycle"
+      description: "Two to three signals to monitor next cycle, each phrased as something that would materially affect the self company specifically (not generic competitor-watching)."
     }
   },
   required: [
@@ -250,14 +250,27 @@ export async function generateBrief(input: GenerateBriefInput): Promise<Generate
 
   const selfContext = await buildSelfContext({ isDemo: input.isDemo });
 
+  // Framing block is only appended when self-context is present. Without a
+  // self company, there is no "self" to contrast against and the LLM should
+  // fall back to generic competitor analysis rather than hallucinate a delta.
+  const comparativeFraming = selfContext
+    ? `Framing rules — apply to EVERY field you produce:
+- Refer to the self company by the Name given in the CONTEXT block above. Never use "you", "we", "our product", or "the user".
+- Refer to the competitor by name too. Never "this competitor" or "they" in isolation.
+- Every opportunity and the threat_reasoning must make the delta explicit: "<Competitor> does X; <Self company> does Y; therefore <implication for the self company>." Cite specific differentiators from the CONTEXT block when they sharpen the contrast.
+- Do not emit generic SaaS advice ("improve UX", "add integrations", "create better content") unless you tie it directly to one of the self company's stated differentiators or ICP details.
+
+`
+    : "";
+
   // selfContext is bounded by buildSelfContext's internal payload cap
   // (~800 chars). Combined with the contextData slice above, total
   // instructions length stays well under Tabstack's /generate limits.
-  const instructions = `${selfContext ? `${selfContext}\n\n` : ""}You are a competitive intelligence analyst. Based on this competitor data,
+  const instructions = `${selfContext ? `${selfContext}\n\n` : ""}${comparativeFraming}You are a competitive intelligence analyst. Based on this competitor data,
 produce a structured brief covering:
-1. Positioning opportunity — what gap does their weakness create?
-2. Content opportunity — what topics should you own based on their blind spots?
-3. Product opportunity — what are developers complaining about that you could solve?
+1. Positioning opportunity — what specific gap between the competitor and the self company creates a move the self company could make?
+2. Content opportunity — what topic does the competitor neglect that the self company's differentiators let it credibly own?
+3. Product opportunity — what developer complaint about the competitor could the self company address, given its stated differentiators?
 4. Threat level — rate as High, Medium, or Low using this rubric, with one sentence of reasoning:
    - High: A direct commercial competitor — a paid, managed, or hosted offering — with
      clear feature AND audience overlap AND active momentum in the last ~30 days
@@ -284,10 +297,11 @@ produce a structured brief covering:
      anchor on "Medium at most" just because the codebase is open-source.
    - A pure library / framework / SDK with no paid counterpart is Medium at
      most, regardless of stars, downloads, or corporate backing.
-   - Reserve High for offerings that directly compete for our REVENUE, not for
+   - Reserve High for offerings that directly compete for the self company's REVENUE, not for
      mindshare or developer adoption alone.
    - When evidence is mixed, sparse, or ambiguous, default to Medium rather than High.
-5. Watch list: 2-3 signals to monitor next cycle
+5. Threat reasoning — one sentence naming BOTH the competitor and the self company and the specific overlap (audience, use case, or revenue path) that drives the rating.
+6. Watch list — 2-3 signals to monitor next cycle. Each signal must be something whose movement would materially affect the self company specifically (not generic "watch their pricing").
 Be direct and specific. No generic advice.
 
 Additional competitor context:
