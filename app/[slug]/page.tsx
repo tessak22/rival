@@ -1,9 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { CSSProperties, ReactNode } from "react";
 
-import { SchemaHealthBadge } from "@/components/competitor/SchemaHealthBadge";
-import { SelfBriefView } from "@/components/brief/SelfBriefView";
-import { LogsTable } from "@/components/logs/LogsTable";
+import {
+  RDSFooter,
+  RDSHeader,
+  RDSKicker,
+  RDSLiveDot,
+  RDSMiniLine,
+  RDSPageShell,
+  RDSSectionHead,
+  rdsHealthColor,
+  rdsTierLabel
+} from "@/components/rds";
 import { prisma } from "@/lib/db/client";
 import type { BlogData } from "@/lib/schemas/blog";
 import type { HomepageData } from "@/lib/schemas/homepage";
@@ -16,942 +25,1648 @@ type PageProps = {
   params: Promise<{ slug: string }>;
 };
 
-const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-
-function normalizeOptionalText(value: string | null | undefined): string | null {
-  const trimmed = value?.trim();
-  return trimmed && trimmed.length > 0 ? trimmed : null;
-}
-
-function toSafeHttpUrl(rawUrl: string | null | undefined): string | null {
-  if (!rawUrl) return null;
-  try {
-    const parsed = new URL(rawUrl);
-    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
-      return parsed.toString();
-    }
-  } catch {
-    // Invalid or non-absolute URL; do not render as clickable.
-  }
-  return null;
-}
-
-function computeSchemaHealthByType(
-  logs: Array<{ pageType: string; resultQuality: string | null }>
-): Array<{ pageType: string; score: number }> {
-  const buckets = new Map<string, number[]>();
-  for (const log of logs) {
-    const score = log.resultQuality === "full" ? 1 : log.resultQuality === "partial" ? 0.5 : 0;
-    buckets.set(log.pageType, [...(buckets.get(log.pageType) ?? []), score]);
-  }
-
-  return [...buckets.entries()]
-    .map(([pageType, scores]) => ({
-      pageType,
-      score: scores.reduce((acc, value) => acc + value, 0) / scores.length
-    }))
-    .sort((a, b) => b.score - a.score);
-}
-
-function renderStars(rating: number): string {
-  const bounded = Number.isFinite(rating) ? Math.max(0, Math.min(5, rating)) : 0;
-  const full = Math.floor(bounded);
-  const half = bounded - full >= 0.5 ? 1 : 0;
-  const empty = 5 - full - half;
-  return "★".repeat(full) + (half ? "½" : "") + "☆".repeat(empty);
-}
-
-function toSafeExternalUrl(rawUrl: string | null | undefined, baseUrl?: string): string | null {
-  if (!rawUrl) return null;
-  try {
-    const parsed = baseUrl ? new URL(rawUrl, baseUrl) : new URL(rawUrl);
-    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
-      return parsed.toString();
-    }
-  } catch {
-    // ignore invalid/untrusted URL values from extracted payloads
-  }
-  return null;
-}
-
-function hasMeaningfulReviewsData(data: ReviewsData | null): boolean {
-  if (!data) return false;
-  if (typeof data.overall_rating === "number") return true;
-  if (typeof data.review_count === "number") return true;
-  if ((data.top_praise_themes?.length ?? 0) > 0) return true;
-  if ((data.top_complaint_themes?.length ?? 0) > 0) return true;
-  if ((data.recent_reviews?.length ?? 0) > 0) return true;
-  if (typeof data.recommended_percentage === "number") return true;
-  return false;
-}
-
 export default async function CompetitorDetailPage({ params }: PageProps) {
-  // TODO(auth): protect competitor detail routes before exposing a public deployment.
   const { slug } = await params;
-
   const competitor = await prisma.competitor.findUnique({
     where: { slug },
     include: { pages: true }
   });
+  if (!competitor) notFound();
 
-  if (!competitor) {
-    notFound();
-  }
-
-  const homepagePage = competitor.pages.find((page) => page.type === "homepage") ?? null;
-
-  const [scans, logs, homepageScans] = await Promise.all([
+  const [scans, logs] = await Promise.all([
     prisma.scan.findMany({
       where: { page: { competitorId: competitor.id } },
       include: { page: true },
       orderBy: { scannedAt: "desc" },
-      take: 100
+      take: 200
     }),
     prisma.apiLog.findMany({
       where: { competitorId: competitor.id },
       include: { page: true },
       orderBy: { calledAt: "desc" },
       take: 200
-    }),
-    homepagePage
-      ? prisma.scan.findMany({
-          where: { pageId: homepagePage.id },
-          orderBy: { scannedAt: "desc" },
-          take: 2
-        })
-      : Promise.resolve([])
+    })
   ]);
 
-  const seenPageIds = new Set<string>();
-  const latestScans: (typeof scans)[number][] = [];
-  for (const scan of scans) {
-    if (seenPageIds.has(scan.pageId)) continue;
-    seenPageIds.add(scan.pageId);
-    latestScans.push(scan);
-  }
+  const latestScans = dedupeByPage(scans);
+  const homepageScan = latestScans.find((s) => s.page.type === "homepage") ?? null;
+  const profileScan = latestScans.find((s) => s.page.type === "profile") ?? null;
+  const blogScan = latestScans.find((s) => s.page.type === "blog") ?? null;
+  const reviewsScans = latestScans.filter((s) => s.page.type === "reviews");
 
-  const homepageScan = homepageScans[0] ?? null;
-  const previousHomepageScan = homepageScans[1] ?? null;
+  const homepageData = asObject<HomepageData>(homepageScan?.rawResult);
+  const profileData = asObject<ProfileData>(profileScan?.rawResult);
+  const blogData = asObject<BlogData>(blogScan?.rawResult);
 
-  const homepageData = (homepageScan?.rawResult as HomepageData | null) ?? null;
-  const previousHomepageData = (previousHomepageScan?.rawResult as HomepageData | null) ?? null;
-  const safeHomepageCtaUrl = toSafeHttpUrl(homepageData?.primary_cta_url);
-
-  const currentPrimaryTagline = normalizeOptionalText(homepageData?.primary_tagline);
-  const previousPrimaryTagline = normalizeOptionalText(previousHomepageData?.primary_tagline);
-  const homepageTaglineChanged = previousHomepageData !== null && currentPrimaryTagline !== previousPrimaryTagline;
-
-  const currentSubTagline = normalizeOptionalText(homepageData?.sub_tagline);
-  const previousSubTagline = normalizeOptionalText(previousHomepageData?.sub_tagline);
-  const homepageSubTaglineChanged = previousHomepageData !== null && currentSubTagline !== previousSubTagline;
-
-  const homepageKeyDifferentiatorsChanged =
-    previousHomepageData !== null &&
-    JSON.stringify(homepageData?.key_differentiators ?? []) !==
-      JSON.stringify(previousHomepageData.key_differentiators ?? []);
-
-  const homepageHealthScore = (() => {
-    const homepageLogs = logs.filter((log) => log.page?.type === "homepage");
-    if (homepageLogs.length === 0) return null;
-    const total = homepageLogs.reduce((acc, log) => {
-      return acc + (log.resultQuality === "full" ? 1 : log.resultQuality === "partial" ? 0.5 : 0);
-    }, 0);
-    return total / homepageLogs.length;
-  })();
-
-  const schemaHealth = computeSchemaHealthByType(
-    logs
-      .filter((log) => Boolean(log.page?.type))
-      .map((log) => ({
-        pageType: log.page?.type ?? "unknown",
-        resultQuality: log.resultQuality
-      }))
-  );
-
-  const profileScan = latestScans.find((scan) => scan.page.type === "profile");
-  const profileData =
-    profileScan && profileScan.rawResult && typeof profileScan.rawResult === "object"
-      ? (profileScan.rawResult as ProfileData)
-      : null;
-
-  // Collect all reviews-type latest scans (one per review page/platform).
-  const reviewsScans = latestScans.filter((scan) => scan.page.type === "reviews");
-
-  // For each reviews page, determine if the most recent log shows content_blocked.
-  // Build a map: pageId -> contentBlocked (from the latest log for that page).
-  const reviewsPageIds = reviewsScans.map((s) => s.pageId);
-  const latestReviewsLogs = new Map<string, boolean>();
-  for (const pageId of reviewsPageIds) {
-    const latestLog = logs.find((log) => log.pageId === pageId);
-    if (latestLog) {
-      latestReviewsLogs.set(pageId, latestLog.contentBlocked);
+  const qualityScores: Array<[string, number]> = [];
+  const qualityByType = new Map<string, number[]>();
+  for (const log of logs) {
+    if (!log.resultQuality) continue;
+    const score = log.resultQuality === "full" ? 1 : log.resultQuality === "partial" ? 0.5 : 0;
+    qualityScores.push([log.page?.type ?? "unknown", score]);
+    const type = log.page?.type ?? null;
+    if (type) {
+      qualityByType.set(type, [...(qualityByType.get(type) ?? []), score]);
     }
   }
+  const overallHealth =
+    qualityScores.length === 0
+      ? 0
+      : Math.round((qualityScores.reduce((a, b) => a + b[1], 0) / qualityScores.length) * 100);
 
-  // For manual field staleness: if a reviews scan for g2 or capterra has succeeded
-  // within the last 7 days, suppress the "manual field is stale" warning.
-  // We detect platform from the extracted rawResult.platform field.
-  const now = Date.now();
-  const suppressStaleWarningPlatforms = new Set<string>();
-  for (const scan of reviewsScans) {
-    const data = scan.rawResult && typeof scan.rawResult === "object" ? (scan.rawResult as ReviewsData) : null;
-    const platform = data?.platform?.toLowerCase() ?? "";
-    const isRecentSuccess = now - scan.scannedAt.getTime() < SEVEN_DAYS_MS;
-    if (isRecentSuccess && (platform.includes("g2") || platform.includes("capterra"))) {
-      suppressStaleWarningPlatforms.add(platform);
-    }
-  }
+  const sectionHealth = [...qualityByType.entries()]
+    .map(([type, scores]) => ({
+      name: type,
+      pct: scores.length === 0 ? 0 : Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100)
+    }))
+    .sort((a, b) => b.pct - a.pct);
 
-  // Detect previous reviews scan per page for diff highlighting.
-  // For simplicity, we use the second occurrence of each pageId in the scans array.
-  const previousReviewsScanByPageId = new Map<string, (typeof scans)[number]>();
-  const seenReviewsPageIds = new Set<string>();
-  for (const scan of scans) {
-    if (scan.page.type !== "reviews") continue;
-    if (!seenReviewsPageIds.has(scan.pageId)) {
-      seenReviewsPageIds.add(scan.pageId);
-      // This is the latest — skip; we want the previous one.
-      continue;
-    }
-    if (!previousReviewsScanByPageId.has(scan.pageId)) {
-      previousReviewsScanByPageId.set(scan.pageId, scan);
-    }
-  }
+  const trend = buildHealthTrend(scans, logs);
 
-  // Blog scan data for the Blog tab.
-  const blogScan = latestScans.find((scan) => scan.page.type === "blog");
-  const blogData =
-    blogScan && blogScan.rawResult && typeof blogScan.rawResult === "object" ? (blogScan.rawResult as BlogData) : null;
+  const recentChanges = scans.filter((s) => {
+    const cutoff = Date.now() - 24 * 3600 * 1000;
+    return s.hasChanges && s.scannedAt.getTime() >= cutoff;
+  }).length;
 
-  // Detect previous scan for the same blog page to avoid cross-page comparisons.
-  const previousBlogScan = blogScan
-    ? scans.find((scan) => scan.page.type === "blog" && scan.pageId === blogScan.pageId && scan.id !== blogScan.id)
-    : null;
-  const previousBlogData =
-    previousBlogScan?.rawResult && typeof previousBlogScan.rawResult === "object"
-      ? (previousBlogScan.rawResult as BlogData)
-      : null;
-
-  // Blog diff signals
-  const blogAudienceFlipped =
-    previousBlogData !== null &&
-    blogData?.developer_focused !== undefined &&
-    previousBlogData.developer_focused !== undefined &&
-    blogData.developer_focused !== previousBlogData.developer_focused;
-
-  const CADENCE_RANK: Record<string, number> = {
-    daily: 7,
-    "2-3x per week": 5,
-    weekly: 4,
-    "2-3x per month": 3,
-    monthly: 2,
-    sporadic: 1,
-    unknown: 0
-  };
-
-  const blogFrequencyIncreased =
-    previousBlogData?.post_frequency !== undefined &&
-    blogData?.post_frequency !== undefined &&
-    blogData.post_frequency !== previousBlogData.post_frequency &&
-    (CADENCE_RANK[blogData.post_frequency] ?? 0) > (CADENCE_RANK[previousBlogData.post_frequency] ?? 0);
-
-  const prevTopicsSet = new Set(previousBlogData?.primary_topics ?? []);
-  const newBlogTopics = (blogData?.primary_topics ?? []).filter((topic) => !prevTopicsSet.has(topic));
-
-  // Blog schema health from logs
-  const blogPageLogs = blogScan ? logs.filter((log) => log.pageId === blogScan.pageId) : [];
-  const blogHealthScore =
-    blogPageLogs.length === 0
-      ? null
-      : blogPageLogs.reduce((acc, log) => {
-          const s = log.resultQuality === "full" ? 1 : log.resultQuality === "partial" ? 0.5 : 0;
-          return acc + s;
-        }, 0) / blogPageLogs.length;
+  const intelligenceBrief = asObject<Record<string, unknown>>(competitor.intelligenceBrief);
+  const category = pickString(competitor.manualData, ["category"]) ?? inferCategoryFromTier(competitor.threatLevel);
+  const hq =
+    pickString(competitor.manualData, ["hq", "headquarters"]) ?? profileData?.offices_or_locations?.[0] ?? null;
+  const founded = pickNumber(competitor.manualData, ["founded"]) ?? profileData?.founded_year ?? null;
+  const employees =
+    pickString(competitor.manualData, ["employees", "team_size"]) ?? profileData?.team_size_stated ?? null;
+  const fundingM = pickNumber(competitor.manualData, ["fundingM", "funding_m", "funding_millions"]);
+  const tagline = homepageData?.primary_tagline ?? profileData?.positioning ?? null;
 
   return (
-    <main className="competitor-page">
-      <header className="page-header">
-        <Link href="/" className="back-link">
-          ← Dashboard
-        </Link>
-        <div className="page-header-row">
-          <div className="page-header-titles">
-            <h1>{competitor.name}</h1>
-            <p>{competitor.baseUrl}</p>
+    <RDSPageShell>
+      <RDSHeader
+        wordmarkSize={32}
+        left={
+          <div style={{ paddingLeft: 12 }}>
+            <Link
+              href="/"
+              style={{
+                fontFamily: "var(--font-sans)",
+                fontSize: 13,
+                color: "var(--accent)",
+                textDecoration: "underline"
+              }}
+            >
+              ← Dashboard
+            </Link>
           </div>
-          <Link href={`/${competitor.slug}/history`} className="tag-chip tag-chip--secondary page-header-action">
-            View History →
-          </Link>
-        </div>
-      </header>
+        }
+        right={<RDSLiveDot />}
+      />
 
-      <section className="panel">
-        <header className="panel-header">
-          <h2>{competitor.isSelf ? "Your Profile" : "Intelligence Brief"}</h2>
-        </header>
-        {competitor.intelligenceBrief &&
-        typeof competitor.intelligenceBrief === "object" &&
-        !Array.isArray(competitor.intelligenceBrief) ? (
-          competitor.isSelf ? (
-            <SelfBriefView brief={competitor.intelligenceBrief as Record<string, unknown>} />
-          ) : (
-            (() => {
-              const brief = competitor.intelligenceBrief as Record<string, unknown>;
-              const threatLevel = typeof brief["threat_level"] === "string" ? brief["threat_level"] : null;
-              return (
-                <div className="brief-body">
-                  {threatLevel && (
-                    <div className="brief-threat-row">
-                      <span className={`brief-threat-badge brief-threat--${threatLevel.toLowerCase()}`}>
-                        {threatLevel} Threat
-                      </span>
-                      {typeof brief["threat_reasoning"] === "string" && (
-                        <p className="brief-threat-reasoning">{brief["threat_reasoning"]}</p>
-                      )}
-                    </div>
-                  )}
-                  {(["positioning_opportunity", "content_opportunity", "product_opportunity"] as const).map((key) =>
-                    typeof brief[key] === "string" ? (
-                      <div key={key} className="brief-section">
-                        <h3 className="brief-section-label">{key.replace(/_/g, " ")}</h3>
-                        <p>{brief[key] as string}</p>
-                      </div>
-                    ) : null
-                  )}
-                  {Array.isArray(brief["watch_list"]) && brief["watch_list"].length > 0 && (
-                    <div className="brief-section">
-                      <h3 className="brief-section-label">Watch List</h3>
-                      <ul className="brief-watch-list">
-                        {(brief["watch_list"] as unknown[]).map((item, i) =>
-                          typeof item === "string" ? <li key={i}>{item}</li> : null
-                        )}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              );
-            })()
-          )
-        ) : (
-          <p className="muted">{competitor.isSelf ? "Self-profile not yet generated." : "No brief generated yet."}</p>
-        )}
-      </section>
+      <Hero
+        name={competitor.name}
+        baseUrl={competitor.baseUrl}
+        category={category}
+        tagline={tagline}
+        hq={hq}
+        founded={founded}
+        employees={employees}
+        fundingM={fundingM}
+        health={overallHealth}
+        trend={trend}
+        changeCount={recentChanges}
+        surfaces={competitor.pages.length}
+        threatLevel={competitor.threatLevel}
+        historyHref={`/${competitor.slug}/history`}
+      />
 
-      <section className="panel">
-        <header className="panel-header">
-          <h2>Homepage</h2>
-          {homepageHealthScore !== null && <SchemaHealthBadge score={homepageHealthScore} label="homepage" />}
-        </header>
-        {homepageData ? (
-          <div className="homepage-tab">
-            {(homepageData.primary_cta_text || homepageData.primary_cta_url) && (
-              <div className="homepage-section">
-                <h3 className="homepage-label">Primary CTA</h3>
-                {safeHomepageCtaUrl ? (
-                  <a href={safeHomepageCtaUrl} className="homepage-cta-badge" target="_blank" rel="noopener noreferrer">
-                    {homepageData.primary_cta_text ?? safeHomepageCtaUrl}
-                  </a>
-                ) : (
-                  <span className="homepage-cta-badge">
-                    {homepageData.primary_cta_text ?? homepageData.primary_cta_url}
-                  </span>
-                )}
-              </div>
-            )}
+      {intelligenceBrief && <IntelligenceBriefSection brief={intelligenceBrief} />}
 
-            <div className="homepage-section">
-              <p className={`homepage-primary-tagline${homepageTaglineChanged ? " homepage-field--changed" : ""}`}>
-                {homepageData.primary_tagline ?? <span className="muted">Not captured</span>}
-              </p>
-              {homepageTaglineChanged && <span className="homepage-change-badge">Changed</span>}
-            </div>
+      <HomepageSection data={homepageData} scan={homepageScan} health={healthFor(qualityByType, "homepage")} />
 
-            {homepageData.sub_tagline && (
-              <div className="homepage-section">
-                <p className={`homepage-sub-tagline${homepageSubTaglineChanged ? " homepage-field--changed" : ""}`}>
-                  {homepageData.sub_tagline}
-                </p>
-                {homepageSubTaglineChanged && <span className="homepage-change-badge">Changed</span>}
-              </div>
-            )}
+      <ProfileSection data={profileData} />
 
-            {homepageData.positioning_statement && (
-              <div className="homepage-section">
-                <h3 className="homepage-label">Positioning Statement</h3>
-                <p>{homepageData.positioning_statement}</p>
-              </div>
-            )}
+      <ReviewsSection scans={reviewsScans} qualityByType={qualityByType} />
 
-            <div className="homepage-section">
-              <h3 className={`homepage-label${homepageKeyDifferentiatorsChanged ? " homepage-field--changed" : ""}`}>
-                Key Differentiators
-                {homepageKeyDifferentiatorsChanged && <span className="homepage-change-badge">Changed</span>}
-              </h3>
-              {homepageData.key_differentiators && homepageData.key_differentiators.length > 0 ? (
-                <ul className="homepage-differentiators">
-                  {homepageData.key_differentiators.map((item, i) => (
-                    <li key={i}>{item}</li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="muted">None captured.</p>
-              )}
-            </div>
+      <BlogSection
+        data={blogData}
+        scan={blogScan}
+        health={healthFor(qualityByType, "blog")}
+        baseUrl={competitor.baseUrl}
+      />
 
-            <div className="homepage-section">
-              <h3 className="homepage-label">Target Audience</h3>
-              <p>{homepageData.target_audience_stated ?? <span className="muted">Not stated</span>}</p>
-            </div>
+      <SectionHealth list={sectionHealth} />
 
-            {homepageData.social_proof_summary && (
-              <div className="homepage-section">
-                <h3 className="homepage-label">Social Proof</h3>
-                <p>{homepageData.social_proof_summary}</p>
-              </div>
-            )}
+      <LatestScansSection scans={latestScans} />
 
-            {homepageData.nav_primary_items && homepageData.nav_primary_items.length > 0 && (
-              <div className="homepage-section">
-                <h3 className="homepage-label">Primary Nav</h3>
-                <p>{homepageData.nav_primary_items.join(", ")}</p>
-              </div>
-            )}
+      <LogsSection logs={logs.slice(0, 14)} />
 
-            <div className="homepage-meta">
-              <p className="muted">
-                Last scanned:{" "}
-                {homepageScan?.scannedAt
-                  ? new Intl.DateTimeFormat("en-US", {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                      timeZone: "UTC"
-                    }).format(homepageScan.scannedAt) + " UTC"
-                  : "Never"}
-              </p>
-            </div>
-          </div>
-        ) : (
-          <p className="muted">{homepagePage ? "No homepage scan data yet." : "No homepage page configured."}</p>
-        )}
-      </section>
+      <DetailFooter />
 
-      <section className="panel">
-        <header className="panel-header">
-          <h2>Profile</h2>
-        </header>
-        {profileData ? (
-          <div className="profile-tab">
-            <dl className="profile-fields">
-              <dt>Mission Statement</dt>
-              <dd>{profileData.mission_statement ?? "—"}</dd>
-              <dt>Positioning</dt>
-              <dd>{profileData.positioning ?? "—"}</dd>
-              <dt>Key Leadership</dt>
-              <dd>
-                {profileData.key_leadership && profileData.key_leadership.length > 0 ? (
-                  <ul>
-                    {profileData.key_leadership.map((leader, i) => {
-                      if (!leader || typeof leader !== "object") {
-                        return (
-                          <li key={i} className="muted">
-                            Unknown leader
-                          </li>
-                        );
-                      }
+      <RDSFooter />
+    </RDSPageShell>
+  );
+}
 
-                      const name =
-                        typeof leader.name === "string" && leader.name.trim().length > 0 ? leader.name : null;
-                      const title =
-                        typeof leader.title === "string" && leader.title.trim().length > 0 ? leader.title : null;
+// ── helpers ──────────────────────────────────────────────────────
 
-                      if (!name && !title) {
-                        return (
-                          <li key={i} className="muted">
-                            Unknown leader
-                          </li>
-                        );
-                      }
+function dedupeByPage<T extends { pageId: string }>(scans: T[]): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const s of scans) {
+    if (seen.has(s.pageId)) continue;
+    seen.add(s.pageId);
+    out.push(s);
+  }
+  return out;
+}
 
-                      return (
-                        <li key={i}>
-                          {name ?? "Unknown"} {title ? `— ${title}` : ""}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                ) : (
-                  "—"
-                )}
-              </dd>
-              <dt>Recent Partnerships</dt>
-              <dd>
-                {profileData.recent_partnerships && profileData.recent_partnerships.length > 0
-                  ? profileData.recent_partnerships.join(", ")
-                  : "—"}
-              </dd>
-              <dt>Recent Awards or Recognition</dt>
-              <dd>
-                {profileData.recent_awards_or_recognition && profileData.recent_awards_or_recognition.length > 0
-                  ? profileData.recent_awards_or_recognition.join(", ")
-                  : "—"}
-              </dd>
-            </dl>
+function asObject<T>(value: unknown): T | null {
+  if (value && typeof value === "object" && !Array.isArray(value)) return value as T;
+  return null;
+}
 
-            <hr className="section-divider" />
+function pickString(blob: unknown, keys: string[]): string | null {
+  if (!blob || typeof blob !== "object" || Array.isArray(blob)) return null;
+  const rec = blob as Record<string, unknown>;
+  for (const key of keys) {
+    const v = rec[key];
+    if (typeof v === "string" && v.trim().length > 0) return v.trim();
+  }
+  return null;
+}
 
-            <h3>Target Audience</h3>
-            <dl className="profile-fields">
-              <dt>Target Company Size</dt>
-              <dd className={profileData.target_company_size ? "diff-highlight diff-highlight--amber" : ""}>
-                {profileData.target_company_size ?? "—"}
-              </dd>
-              <dt>Target Industries</dt>
-              <dd>
-                {profileData.target_industries && profileData.target_industries.length > 0 ? (
-                  <div className="tag-chips diff-highlight diff-highlight--amber">
-                    {profileData.target_industries.map((industry, i) => (
-                      <span key={i} className="tag-chip">
-                        {industry}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <span className="muted">Not stated</span>
-                )}
-              </dd>
-              <dt>Use Cases Stated</dt>
-              <dd>
-                {profileData.use_cases_stated && profileData.use_cases_stated.length > 0 ? (
-                  <ul className="diff-highlight diff-highlight--amber">
-                    {profileData.use_cases_stated.map((useCase, i) => (
-                      <li key={i}>{useCase}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <span className="muted">Not stated</span>
-                )}
-              </dd>
-            </dl>
+function pickNumber(blob: unknown, keys: string[]): number | null {
+  if (!blob || typeof blob !== "object" || Array.isArray(blob)) return null;
+  const rec = blob as Record<string, unknown>;
+  for (const key of keys) {
+    const v = rec[key];
+    if (typeof v === "number" && Number.isFinite(v)) return v;
+  }
+  return null;
+}
 
-            <h3>Company Info</h3>
-            <div className="company-info-row">
-              <span>
-                <strong>Founded:</strong> {profileData.founded_year != null ? String(profileData.founded_year) : "—"}
-              </span>
-              <span>
-                <strong>Team Size:</strong> {profileData.team_size_stated ?? "—"}
-              </span>
-              <span>
-                <strong>Offices:</strong>{" "}
-                {profileData.offices_or_locations && profileData.offices_or_locations.length > 0
-                  ? profileData.offices_or_locations.join(", ")
-                  : "—"}
-              </span>
-            </div>
+function inferCategoryFromTier(tier: string | null | undefined): string | null {
+  return tier ? `${tier.toUpperCase()} PRIORITY` : null;
+}
 
-            {profileData.customer_logos && profileData.customer_logos.length > 0 && (
-              <div className="customer-logos">
-                <strong className="diff-highlight diff-highlight--amber">Named customers on About page:</strong>{" "}
-                <span>{profileData.customer_logos.join(", ")}</span>
-              </div>
-            )}
-          </div>
-        ) : (
-          <p className="muted">No profile scan data available.</p>
-        )}
-      </section>
+function healthFor(qualityByType: Map<string, number[]>, type: string): number | null {
+  const scores = qualityByType.get(type);
+  if (!scores || scores.length === 0) return null;
+  return Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100);
+}
 
-      {/* ── Reviews Tab ─────────────────────────────────────────────────────── */}
-      <section className="panel">
-        <header className="panel-header">
-          <h2>Reviews</h2>
-          <p className="muted panel-header-note">
-            G2, Capterra, Trustpilot, ProductHunt — review sites actively block scraping. <code>content_blocked</code>{" "}
-            logs here are expected and high-value experience-logging signals.
-          </p>
-        </header>
+// Only allow http(s) URLs. Blocks javascript:, data:, vbscript:, file:, about:
+// etc. — any URL scheme that would otherwise execute when clicked.
+// Use this on anything read from competitor.baseUrl, scan rawResult, apiLog, or
+// other untrusted upstream data before rendering into an href.
+function toSafeHttpUrl(rawUrl: string | null | undefined, base?: string | null): string | null {
+  if (!rawUrl) return null;
+  try {
+    const parsed = base ? new URL(rawUrl, base) : new URL(rawUrl);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") return parsed.toString();
+  } catch {
+    // Not a valid absolute or relative URL — do not render as clickable.
+  }
+  return null;
+}
 
-        {reviewsScans.length === 0 ? (
-          <p className="muted">No reviews scan data available. Add a G2, Capterra, or Trustpilot page to start.</p>
-        ) : (
-          <div className="reviews-platform-tabs">
-            {reviewsScans.map((scan) => {
-              const latestData =
-                scan.rawResult && typeof scan.rawResult === "object" ? (scan.rawResult as ReviewsData) : null;
-              const isBlocked = latestReviewsLogs.get(scan.pageId) ?? false;
-              const prevScan = previousReviewsScanByPageId.get(scan.pageId);
-              const prevData =
-                prevScan?.rawResult && typeof prevScan.rawResult === "object"
-                  ? (prevScan.rawResult as ReviewsData)
-                  : null;
-              const usePreviousData =
-                isBlocked && !hasMeaningfulReviewsData(latestData) && hasMeaningfulReviewsData(prevData);
-              const data = usePreviousData ? prevData : latestData;
+function buildHealthTrend(
+  scans: Array<{ scannedAt: Date; hasChanges: boolean }>,
+  logs: Array<{ calledAt: Date; resultQuality: string | null }>
+): number[] {
+  if (logs.length === 0) return [50, 55, 60, 65, 70, 72, 75, 78, 80, 82, 85, 85];
+  const sorted = [...logs].sort((a, b) => a.calledAt.getTime() - b.calledAt.getTime());
+  const buckets = 12;
+  const chunks: number[][] = Array.from({ length: buckets }, () => []);
+  const first = sorted[0].calledAt.getTime();
+  const last = sorted[sorted.length - 1].calledAt.getTime();
+  const span = Math.max(1, last - first);
+  for (const log of sorted) {
+    if (!log.resultQuality) continue;
+    const idx = Math.min(buckets - 1, Math.floor(((log.calledAt.getTime() - first) / span) * buckets));
+    chunks[idx].push(log.resultQuality === "full" ? 1 : log.resultQuality === "partial" ? 0.5 : 0);
+  }
+  // Carry-forward empty buckets so the sparkline looks smooth.
+  let lastVal = 0.6;
+  return chunks.map((scores) => {
+    if (scores.length === 0) return Math.round(lastVal * 100);
+    const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+    lastVal = avg;
+    return Math.round(avg * 100);
+  });
+}
 
-              // Diff flags
-              const ratingChanged =
-                !usePreviousData &&
-                prevData?.overall_rating != null &&
-                data?.overall_rating != null &&
-                Math.abs(data.overall_rating - prevData.overall_rating) > 0.1;
+function formatScanDate(date: Date | null | undefined): string {
+  if (!date) return "Never";
+  return `${new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "UTC"
+  })
+    .format(date)
+    .replace(",", "")} UTC`;
+}
 
-              const prevComplaintSet = new Set(prevData?.top_complaint_themes ?? []);
-              const newComplaints = (data?.top_complaint_themes ?? []).filter((theme) => !prevComplaintSet.has(theme));
-              const complaintsChanged = !usePreviousData && newComplaints.length > 0;
+// ── hero ─────────────────────────────────────────────────────────
 
-              // Platform label — prefer extracted platform, fall back to page label.
-              const platformLabel = data?.platform ?? scan.page.label;
+type HeroProps = {
+  name: string;
+  baseUrl: string;
+  category: string | null;
+  tagline: string | null;
+  hq: string | null;
+  founded: number | null;
+  employees: string | null;
+  fundingM: number | null;
+  health: number;
+  trend: number[];
+  changeCount: number;
+  surfaces: number;
+  threatLevel: string | null;
+  historyHref: string;
+};
 
-              // Schema health from logs for this page.
-              const pageLogsForHealth = logs.filter((log) => log.pageId === scan.pageId);
-              const healthScore =
-                pageLogsForHealth.length === 0
-                  ? null
-                  : pageLogsForHealth.reduce((acc, log) => {
-                      const s = log.resultQuality === "full" ? 1 : log.resultQuality === "partial" ? 0.5 : 0;
-                      return acc + s;
-                    }, 0) / pageLogsForHealth.length;
-
-              return (
-                <article key={scan.pageId} className="reviews-platform-card panel-sub">
-                  <header className="reviews-platform-header">
-                    <h3>{platformLabel}</h3>
-                    {healthScore !== null && (
-                      <SchemaHealthBadge score={healthScore} label={`${platformLabel} schema`} />
-                    )}
-                    <span className="muted scan-timestamp">
-                      Last scanned: {scan.scannedAt.toISOString().slice(0, 10)}
-                    </span>
-                  </header>
-
-                  {/* Blocked scan banner */}
-                  {isBlocked && (
-                    <div className="blocked-banner" role="alert">
-                      Last scan was blocked by {platformLabel}.{" "}
-                      {usePreviousData ? "Showing the previous available scan data." : "Recent data may be incomplete."}
-                    </div>
-                  )}
-
-                  {data ? (
-                    <>
-                      {/* Rating row */}
-                      <div className="reviews-rating-row">
-                        <span
-                          className={`reviews-rating-score${ratingChanged ? " diff-highlight diff-highlight--amber" : ""}`}
-                        >
-                          {data.overall_rating != null ? data.overall_rating.toFixed(1) : "—"}
-                        </span>
-                        <span className="reviews-stars" aria-hidden="true">
-                          {data.overall_rating != null ? renderStars(data.overall_rating) : ""}
-                        </span>
-                        <span className="reviews-count muted">
-                          {data.review_count != null ? `${data.review_count.toLocaleString()} reviews` : ""}
-                        </span>
-                        {ratingChanged && prevData?.overall_rating != null && (
-                          <span className="diff-badge diff-badge--amber">was {prevData.overall_rating.toFixed(1)}</span>
-                        )}
-                      </div>
-
-                      {/* Sub-scores */}
-                      {(data.ease_of_use_score != null || data.customer_support_score != null) && (
-                        <div className="reviews-subscores-row">
-                          {data.ease_of_use_score != null && (
-                            <div className="reviews-subscore">
-                              <span className="reviews-subscore-label">Ease of Use</span>
-                              <span className="reviews-subscore-value">{data.ease_of_use_score.toFixed(1)}</span>
-                            </div>
-                          )}
-                          {data.customer_support_score != null && (
-                            <div className="reviews-subscore">
-                              <span className="reviews-subscore-label">Support</span>
-                              <span className="reviews-subscore-value">{data.customer_support_score.toFixed(1)}</span>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Recommended % */}
-                      {data.recommended_percentage != null && (
-                        <p className="reviews-recommended">
-                          <strong>{data.recommended_percentage}%</strong> of reviewers recommend this product
-                        </p>
-                      )}
-
-                      {/* Top Praise Themes */}
-                      {data.top_praise_themes && data.top_praise_themes.length > 0 && (
-                        <div className="reviews-themes">
-                          <h4>Top Praise</h4>
-                          <div className="tag-chips tag-chips--green">
-                            {data.top_praise_themes.map((theme, i) => (
-                              <span key={i} className="tag-chip tag-chip--green">
-                                {theme}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Top Complaint Themes — visually most important */}
-                      {data.top_complaint_themes && data.top_complaint_themes.length > 0 && (
-                        <div className="reviews-themes reviews-themes--complaints">
-                          <h4>
-                            Top Complaints
-                            <span className="muted signal-note"> — highest-signal field</span>
-                          </h4>
-                          <div className="tag-chips tag-chips--amber">
-                            {data.top_complaint_themes.map((theme, i) => {
-                              const isNew = complaintsChanged && newComplaints.includes(theme);
-                              return (
-                                <span
-                                  key={i}
-                                  className={`tag-chip tag-chip--amber${isNew ? " tag-chip--new diff-highlight diff-highlight--amber" : ""}`}
-                                  title={isNew ? "New complaint theme since last scan" : undefined}
-                                >
-                                  {theme}
-                                  {isNew && <span className="new-badge"> new</span>}
-                                </span>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Recent Reviews */}
-                      {data.recent_reviews && data.recent_reviews.length > 0 && (
-                        <div className="reviews-recent">
-                          <h4>Recent Reviews</h4>
-                          <ul className="reviews-recent-list">
-                            {data.recent_reviews.map((review, i) => (
-                              <li key={i} className="reviews-recent-item">
-                                <div className="reviews-recent-meta">
-                                  {review.rating != null && (
-                                    <span className="reviews-recent-rating">{review.rating.toFixed(1)} ★</span>
-                                  )}
-                                  {review.date && <time className="reviews-recent-date muted">{review.date}</time>}
-                                </div>
-                                <p className="reviews-recent-summary">{review.summary ?? "—"}</p>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <p className="muted">No data extracted yet — scan may have been blocked.</p>
-                  )}
-
-                  {/* Manual field staleness note */}
-                  {suppressStaleWarningPlatforms.size > 0 &&
-                    (() => {
-                      const platform = data?.platform?.toLowerCase() ?? "";
-                      if (
-                        (platform.includes("g2") || platform.includes("capterra")) &&
-                        suppressStaleWarningPlatforms.has(platform)
-                      ) {
-                        return (
-                          <p className="muted staleness-note">
-                            Manual field staleness warning suppressed — {platformLabel} scan succeeded within the last 7
-                            days.
-                          </p>
-                        );
-                      }
-                      return null;
-                    })()}
-
-                  <div className="scan-actions">
-                    <span className={`flag${scan.hasChanges ? " flag--changes" : ""}`}>
-                      {scan.hasChanges ? "Changes detected" : "No changes since last scan"}
-                    </span>
-                  </div>
-                </article>
-              );
-            })}
+function Hero({
+  name,
+  baseUrl,
+  category,
+  tagline,
+  hq,
+  founded,
+  employees,
+  fundingM,
+  health,
+  trend,
+  changeCount,
+  surfaces,
+  threatLevel,
+  historyHref
+}: HeroProps) {
+  const color = rdsHealthColor(health);
+  const facts = [hq, founded ? `Founded ${founded}` : null, employees, fundingM ? `$${fundingM}M raised` : null].filter(
+    (x): x is string => Boolean(x)
+  );
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1.3fr 1fr",
+        gap: 40,
+        paddingBottom: 24,
+        borderBottom: "1px solid var(--paper-rule-2)",
+        marginBottom: 28
+      }}
+    >
+      <div>
+        <RDSKicker hot>{category ? `DOSSIER · ${category.toUpperCase()}` : "DOSSIER"}</RDSKicker>
+        <h1
+          style={{
+            fontSize: 64,
+            lineHeight: 0.95,
+            margin: "8px 0 0",
+            fontWeight: 700,
+            letterSpacing: "-0.035em",
+            fontFamily: "var(--font-serif)"
+          }}
+        >
+          {name}
+        </h1>
+        <HeroUrl rawUrl={baseUrl} />
+        {tagline && (
+          <div
+            style={{
+              fontSize: 17,
+              color: "var(--ink-2)",
+              marginTop: 10,
+              fontStyle: "italic",
+              textWrap: "pretty",
+              maxWidth: 520
+            }}
+          >
+            {tagline}
           </div>
         )}
-      </section>
-      {/* ── /Reviews Tab ────────────────────────────────────────────────────── */}
-
-      {/* ── Blog Tab ────────────────────────────────────────────────────────── */}
-      <section className="panel">
-        <header className="panel-header">
-          <h2>Blog</h2>
-          <p className="muted panel-header-note">
-            Content strategy signals — topics, audience focus, and publishing cadence.
-          </p>
-        </header>
-
-        {blogScan == null ? (
-          <p className="muted">No blog scan data available. Add a blog index page to start.</p>
-        ) : (
-          <div className="blog-tab">
-            {/* Schema health + last scanned */}
-            <div className="blog-tab-header-row">
-              {blogHealthScore !== null && <SchemaHealthBadge score={blogHealthScore} label="blog schema" />}
-              <span className="muted scan-timestamp">
-                Last scanned: {blogScan.scannedAt.toISOString().slice(0, 10)}
-              </span>
-              <span className={`flag${blogScan.hasChanges ? " flag--changes" : ""}`}>
-                {blogScan.hasChanges ? "Changes detected" : "No changes since last scan"}
-              </span>
-            </div>
-
-            {/* Post Frequency — prominent badge at top */}
-            <div className="blog-frequency-row">
-              <span className="blog-frequency-label">Post Frequency</span>
+        {facts.length > 0 && (
+          <div
+            style={{
+              marginTop: 18,
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "6px 10px",
+              fontFamily: "var(--font-mono)",
+              fontSize: 11,
+              color: "var(--ink-mute)",
+              letterSpacing: "0.02em",
+              lineHeight: 1.6
+            }}
+          >
+            {facts.map((f) => (
               <span
-                className={`badge badge--frequency${blogFrequencyIncreased ? " diff-highlight diff-highlight--amber" : ""}`}
+                key={f}
+                style={{
+                  display: "inline-block",
+                  padding: "3px 10px",
+                  background: "var(--paper-tint)",
+                  whiteSpace: "nowrap"
+                }}
               >
-                {blogData?.post_frequency ?? "unknown"}
+                {f}
               </span>
-              {blogFrequencyIncreased && previousBlogData?.post_frequency && (
-                <span className="diff-badge diff-badge--amber">
-                  was {previousBlogData.post_frequency} — cadence increase is an investment signal
-                </span>
-              )}
-            </div>
-
-            {/* Developer Focused badge */}
-            <div className="blog-audience-row">
-              <span className="blog-audience-label">Audience Focus</span>
-              {blogData?.developer_focused !== undefined ? (
-                <span
-                  className={`badge${blogData.developer_focused ? " badge--developer" : " badge--buyer"}${blogAudienceFlipped ? " diff-highlight diff-highlight--amber" : ""}`}
-                >
-                  {blogData.developer_focused ? "Developer-focused" : "Buyer-focused"}
-                </span>
-              ) : (
-                <span className="badge badge--unknown">Unknown</span>
-              )}
-              {blogAudienceFlipped && (
-                <span className="diff-badge diff-badge--amber">audience focus shifted — strategic signal</span>
-              )}
-            </div>
-
-            {/* Primary Topics */}
-            {blogData?.primary_topics && blogData.primary_topics.length > 0 && (
-              <div className="blog-topics">
-                <h3>Primary Topics</h3>
-                <div className="tag-chips">
-                  {blogData.primary_topics.map((topic, i) => {
-                    const isNew = newBlogTopics.includes(topic);
-                    return (
-                      <span
-                        key={i}
-                        className={`tag-chip${isNew ? " tag-chip--new diff-highlight diff-highlight--amber" : ""}`}
-                        title={isNew ? "New topic since last scan" : undefined}
-                      >
-                        {topic}
-                        {isNew && <span className="new-badge"> new</span>}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Recent Posts */}
-            {blogData?.recent_post_titles && blogData.recent_post_titles.length > 0 && (
-              <div className="blog-recent-posts">
-                <h3>Recent Posts</h3>
-                <ol className="blog-post-list">
-                  {blogData.recent_post_titles.map((title, i) => {
-                    const url = blogData.recent_post_urls?.[i];
-                    const safeUrl = toSafeExternalUrl(url, competitor.baseUrl);
-                    const date = blogData.recent_post_dates?.[i];
-                    return (
-                      <li key={i} className="blog-post-item">
-                        <div className="blog-post-title">
-                          {safeUrl ? (
-                            <a href={safeUrl} target="_blank" rel="noopener noreferrer">
-                              {title}
-                            </a>
-                          ) : (
-                            title
-                          )}
-                        </div>
-                        {date && <time className="blog-post-date muted">{date}</time>}
-                      </li>
-                    );
-                  })}
-                </ol>
-              </div>
-            )}
-
-            {/* Categories / Tags */}
-            {blogData?.has_categories_or_tags &&
-              blogData.visible_categories &&
-              blogData.visible_categories.length > 0 && (
-                <div className="blog-categories">
-                  <h3>Categories / Tags</h3>
-                  <div className="tag-chips tag-chips--secondary">
-                    {blogData.visible_categories.map((cat, i) => (
-                      <span key={i} className="tag-chip tag-chip--secondary">
-                        {cat}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-            {blogData == null && <p className="muted">Scan ran but no data was extracted. Check logs for details.</p>}
+            ))}
           </div>
         )}
-      </section>
-      {/* ── /Blog Tab ───────────────────────────────────────────────────────── */}
+        <Link
+          href={historyHref}
+          style={{
+            marginTop: 14,
+            fontFamily: "var(--font-sans)",
+            fontSize: 13,
+            color: "var(--accent)",
+            textDecoration: "underline",
+            display: "inline-block"
+          }}
+        >
+          View history →
+        </Link>
+      </div>
 
-      <section className="panel">
-        <header className="panel-header">
-          <h2>Section Health</h2>
-        </header>
-        <div className="health-grid">
-          {schemaHealth.length === 0 ? (
-            <p className="muted">No schema health data yet.</p>
-          ) : (
-            schemaHealth.map((item) => (
-              <SchemaHealthBadge key={item.pageType} score={item.score} label={item.pageType} />
-            ))
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <div
+          style={{
+            background: "var(--ink-bg)",
+            color: "var(--ink-bg-text)",
+            padding: "18px 22px"
+          }}
+        >
+          <div
+            style={{
+              fontSize: 64,
+              fontWeight: 700,
+              lineHeight: 1,
+              letterSpacing: "-0.03em",
+              color
+            }}
+          >
+            {health}
+          </div>
+          <div
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 10,
+              letterSpacing: "0.14em",
+              color: "var(--ink-ghost)",
+              marginTop: 2,
+              marginBottom: 10
+            }}
+          >
+            HEALTH SCORE
+          </div>
+          <RDSMiniLine data={trend} color={color} />
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+          <HeroStat label="changes · 24h" value={changeCount} />
+          <HeroStat label="surfaces tracked" value={surfaces} />
+          <HeroStat label="threat tier" value={rdsTierLabel(threatLevel)} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HeroStat({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div style={{ borderTop: "1px solid var(--ink)", paddingTop: 8 }}>
+      <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em" }}>{value}</div>
+      <div
+        style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: 10,
+          letterSpacing: "0.08em",
+          color: "var(--ink-faint)",
+          marginTop: 2
+        }}
+      >
+        {label}
+      </div>
+    </div>
+  );
+}
+
+function prettyUrl(url: string): string {
+  return url.replace(/^https?:\/\//, "").replace(/\/$/, "");
+}
+
+function HeroUrl({ rawUrl }: { rawUrl: string }) {
+  const safe = toSafeHttpUrl(rawUrl);
+  const label = prettyUrl(rawUrl);
+  const baseStyle: CSSProperties = {
+    fontFamily: "var(--font-mono)",
+    fontSize: 13,
+    marginTop: 6,
+    display: "inline-block"
+  };
+  if (!safe) {
+    // Baseurl failed the http(s) sanity check — render as inert text, never
+    // as a clickable link. A compromised or malformed baseUrl must not become
+    // a click-to-execute vector.
+    return <span style={{ ...baseStyle, color: "var(--ink-faint)" }}>{label}</span>;
+  }
+  return (
+    <a
+      href={safe}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        ...baseStyle,
+        color: "var(--accent)",
+        textDecoration: "none",
+        borderBottom: "1px dotted var(--accent)"
+      }}
+    >
+      {label}
+    </a>
+  );
+}
+
+// ── Intelligence Brief ───────────────────────────────────────────
+
+function IntelligenceBriefSection({ brief }: { brief: Record<string, unknown> }) {
+  const threatLevel = typeof brief.threat_level === "string" ? brief.threat_level : null;
+  const summary = typeof brief.threat_reasoning === "string" ? brief.threat_reasoning : null;
+  const watchList = Array.isArray(brief.watch_list)
+    ? (brief.watch_list as unknown[]).filter((x): x is string => typeof x === "string")
+    : [];
+  const opportunities: Array<{ key: string; label: string; body: string | null }> = [
+    {
+      key: "positioning_opportunity",
+      label: "POSITIONING OPPORTUNITY",
+      body: typeof brief.positioning_opportunity === "string" ? brief.positioning_opportunity : null
+    },
+    {
+      key: "content_opportunity",
+      label: "CONTENT OPPORTUNITY",
+      body: typeof brief.content_opportunity === "string" ? brief.content_opportunity : null
+    },
+    {
+      key: "product_opportunity",
+      label: "PRODUCT OPPORTUNITY",
+      body: typeof brief.product_opportunity === "string" ? brief.product_opportunity : null
+    }
+  ];
+
+  return (
+    <div style={{ marginTop: 36 }}>
+      <RDSSectionHead title="Intelligence Brief" count={threatLevel ? `${threatLevel.toUpperCase()} THREAT` : null} />
+      {summary && (
+        <p
+          style={{
+            fontSize: 17,
+            lineHeight: 1.55,
+            color: "var(--ink)",
+            textWrap: "pretty",
+            margin: "0 0 18px",
+            paddingLeft: 16,
+            borderLeft: "3px solid var(--accent-hot)"
+          }}
+        >
+          {summary}
+        </p>
+      )}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
+        {opportunities.map((op) => (
+          <div
+            key={op.key}
+            style={{
+              background: "var(--paper-tint)",
+              padding: "16px 18px",
+              border: "1px solid var(--paper-rule)"
+            }}
+          >
+            <div
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: 10,
+                letterSpacing: "0.14em",
+                color: "var(--accent)",
+                fontWeight: 700,
+                marginBottom: 8
+              }}
+            >
+              {op.label}
+            </div>
+            <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.5, color: "var(--ink)", textWrap: "pretty" }}>
+              {op.body ?? "Not yet synthesized."}
+            </p>
+          </div>
+        ))}
+      </div>
+      {watchList.length > 0 && (
+        <div
+          style={{
+            marginTop: 20,
+            background: "var(--ink-bg)",
+            color: "var(--ink-bg-text)",
+            padding: "20px 24px"
+          }}
+        >
+          <div
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 11,
+              letterSpacing: "0.18em",
+              color: "var(--ink-ghost)",
+              marginBottom: 12
+            }}
+          >
+            WATCH LIST
+          </div>
+          <ol style={{ margin: 0, padding: 0, listStyle: "none" }}>
+            {watchList.map((item, i) => (
+              <li key={i} style={{ display: "flex", gap: 14, padding: "10px 0", borderTop: "1px solid var(--ink-2)" }}>
+                <span
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 12,
+                    color: "var(--ink-ghost)",
+                    width: 24,
+                    flexShrink: 0,
+                    paddingTop: 2
+                  }}
+                >
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span style={{ fontSize: 14.5, lineHeight: 1.5, textWrap: "pretty" }}>{item}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Homepage section ─────────────────────────────────────────────
+
+function HomepageSection({
+  data,
+  scan,
+  health
+}: {
+  data: HomepageData | null;
+  scan: { scannedAt: Date } | null;
+  health: number | null;
+}) {
+  if (!data) {
+    return (
+      <div style={{ marginTop: 36 }}>
+        <RDSSectionHead title="Homepage" count={health != null ? `${health}% SCHEMA` : null} />
+        <p style={{ color: "var(--ink-faint)", fontStyle: "italic", margin: 0 }}>No homepage scan data yet.</p>
+      </div>
+    );
+  }
+  return (
+    <div style={{ marginTop: 36 }}>
+      <RDSSectionHead title="Homepage" count={health != null ? `${health}% SCHEMA` : null} />
+      <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 32 }}>
+        <div>
+          {data.primary_cta_text && (
+            <>
+              <KVLabel>PRIMARY CTA</KVLabel>
+              <div
+                style={{
+                  fontSize: 24,
+                  fontWeight: 700,
+                  color: "var(--ink)",
+                  fontFamily: "var(--font-serif)"
+                }}
+              >
+                “{data.primary_cta_text}”
+              </div>
+            </>
+          )}
+          {data.primary_tagline && (
+            <>
+              <KVLabel style={{ marginTop: 18 }}>HEADLINE</KVLabel>
+              <h3
+                style={{
+                  fontSize: 22,
+                  fontWeight: 700,
+                  margin: "4px 0 0",
+                  letterSpacing: "-0.01em"
+                }}
+              >
+                {data.primary_tagline}
+              </h3>
+            </>
+          )}
+          {data.positioning_statement && (
+            <>
+              <KVLabel style={{ marginTop: 18 }}>POSITIONING STATEMENT</KVLabel>
+              <p style={{ margin: "4px 0 0", fontSize: 14.5, lineHeight: 1.55, color: "var(--ink)" }}>
+                {data.positioning_statement}
+              </p>
+            </>
+          )}
+          {data.social_proof_summary && (
+            <>
+              <KVLabel style={{ marginTop: 18 }}>SOCIAL PROOF</KVLabel>
+              <p style={{ margin: "4px 0 0", fontSize: 14.5, lineHeight: 1.55, color: "var(--ink)" }}>
+                {data.social_proof_summary}
+              </p>
+            </>
           )}
         </div>
-      </section>
-
-      <section className="panel">
-        <header className="panel-header">
-          <h2>Latest Scans</h2>
-        </header>
-        <div className="scan-grid">
-          {latestScans.map((scan) => (
-            <article key={scan.id} className="scan-card">
-              <h3>{scan.page.label}</h3>
-              <p className="muted">{scan.page.type}</p>
-              <p>{scan.diffSummary ?? "No diff summary recorded."}</p>
-              <p className={scan.hasChanges ? "flag flag--changes" : "flag"}>
-                {scan.hasChanges ? "Changes detected" : "No changes"}
-              </p>
-            </article>
-          ))}
+        <div style={{ borderLeft: "1px solid var(--paper-rule-2)", paddingLeft: 24 }}>
+          {data.key_differentiators && data.key_differentiators.length > 0 && (
+            <>
+              <KVLabel>KEY DIFFERENTIATORS</KVLabel>
+              <ul style={{ margin: 0, paddingLeft: 18 }}>
+                {data.key_differentiators.map((d, i) => (
+                  <li key={i} style={{ fontSize: 14, lineHeight: 1.55, marginBottom: 3 }}>
+                    {d}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          {data.target_audience_stated && (
+            <>
+              <KVLabel style={{ marginTop: 18 }}>TARGET AUDIENCE</KVLabel>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                <span
+                  style={{
+                    padding: "3px 9px",
+                    background: "var(--paper-tint)",
+                    fontFamily: "var(--font-sans)",
+                    fontSize: 12,
+                    fontWeight: 500
+                  }}
+                >
+                  {data.target_audience_stated}
+                </span>
+              </div>
+            </>
+          )}
+          {data.nav_primary_items && data.nav_primary_items.length > 0 && (
+            <>
+              <KVLabel style={{ marginTop: 18 }}>PRIMARY NAV</KVLabel>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {data.nav_primary_items.map((item) => (
+                  <span
+                    key={item}
+                    style={{
+                      padding: "3px 9px",
+                      border: "1px solid var(--paper-rule-2)",
+                      fontFamily: "var(--font-sans)",
+                      fontSize: 12
+                    }}
+                  >
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </>
+          )}
+          <div
+            style={{
+              marginTop: 18,
+              fontFamily: "var(--font-mono)",
+              fontSize: 10,
+              color: "var(--ink-faint)",
+              letterSpacing: "0.08em"
+            }}
+          >
+            Last scanned: {formatScanDate(scan?.scannedAt)}
+          </div>
         </div>
-      </section>
+      </div>
+    </div>
+  );
+}
 
-      <section className="panel">
-        <header className="panel-header">
-          <h2>Logs</h2>
-        </header>
-        <p className="muted">Showing latest 200 log entries.</p>
-        <LogsTable
-          logs={logs.map((log) => ({
-            id: log.id,
-            calledAt: log.calledAt,
-            endpoint: log.endpoint,
-            status: log.status,
-            resultQuality: log.resultQuality,
-            fallbackTriggered: log.fallbackTriggered,
-            fallbackReason: log.fallbackReason,
-            missingFields: log.missingFields,
-            isDemo: log.isDemo,
-            pageLabel: log.page?.label ?? "Demo / Unknown"
-          }))}
-        />
-      </section>
-    </main>
+function KVLabel({ children, style }: { children: ReactNode; style?: CSSProperties }) {
+  return (
+    <div
+      style={{
+        fontFamily: "var(--font-mono)",
+        fontSize: 10,
+        letterSpacing: "0.14em",
+        color: "var(--ink-faint)",
+        fontWeight: 600,
+        marginBottom: 6,
+        ...style
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+// ── Profile section ──────────────────────────────────────────────
+
+function ProfileSection({ data }: { data: ProfileData | null }) {
+  if (!data) {
+    return (
+      <div style={{ marginTop: 36 }}>
+        <RDSSectionHead title="Profile" />
+        <p style={{ color: "var(--ink-faint)", fontStyle: "italic", margin: 0 }}>No profile scan data available.</p>
+      </div>
+    );
+  }
+  const leadership = (data.key_leadership ?? []).filter((l) => l && (l.name || l.title));
+  const partnerships = data.recent_partnerships ?? [];
+  const awards = data.recent_awards_or_recognition ?? [];
+  const useCases = data.use_cases_stated ?? [];
+  const customers = data.customer_logos ?? [];
+  return (
+    <div style={{ marginTop: 36 }}>
+      <RDSSectionHead title="Profile" />
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1.4fr 1fr",
+          gap: 32,
+          paddingBottom: 20,
+          borderBottom: "1px dotted var(--paper-rule-2)"
+        }}
+      >
+        <div>
+          {data.mission_statement && (
+            <>
+              <KVLabel>MISSION</KVLabel>
+              <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.6, color: "var(--ink)", textWrap: "pretty" }}>
+                {data.mission_statement}
+              </p>
+            </>
+          )}
+          {data.positioning && (
+            <>
+              <KVLabel style={{ marginTop: 18 }}>POSITIONING</KVLabel>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 15.5,
+                  lineHeight: 1.55,
+                  fontStyle: "italic",
+                  color: "var(--ink)",
+                  textWrap: "pretty"
+                }}
+              >
+                “{data.positioning}”
+              </p>
+            </>
+          )}
+          <KVLabel style={{ marginTop: 18 }}>RECENT PARTNERSHIPS</KVLabel>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {partnerships.length > 0 ? (
+              partnerships.map((p) => (
+                <span
+                  key={p}
+                  style={{
+                    padding: "3px 9px",
+                    border: "1px solid var(--paper-rule-2)",
+                    fontFamily: "var(--font-sans)",
+                    fontSize: 12
+                  }}
+                >
+                  {p}
+                </span>
+              ))
+            ) : (
+              <EmptyInline>Not indexed</EmptyInline>
+            )}
+          </div>
+          <KVLabel style={{ marginTop: 18 }}>AWARDS / RECOGNITION</KVLabel>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            {awards.length > 0 ? (
+              awards.map((a, i) => (
+                <li key={i} style={{ fontSize: 14, lineHeight: 1.55, marginBottom: 3 }}>
+                  {a}
+                </li>
+              ))
+            ) : (
+              <li style={{ listStyle: "none", marginLeft: -18 }}>
+                <EmptyInline>Not indexed</EmptyInline>
+              </li>
+            )}
+          </ul>
+        </div>
+        <div>
+          <KVLabel>KEY LEADERSHIP</KVLabel>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            {leadership.length > 0 ? (
+              leadership.map((leader, i) => {
+                const name = typeof leader.name === "string" ? leader.name : "—";
+                const initials =
+                  name === "—"
+                    ? "—"
+                    : name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .filter(Boolean)
+                        .slice(0, 2)
+                        .join("");
+                return (
+                  <div
+                    key={i}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      padding: "8px 10px",
+                      background: "var(--paper-tint)"
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 30,
+                        height: 30,
+                        borderRadius: "50%",
+                        background: "var(--ink)",
+                        color: "var(--ink-bg-text)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontFamily: "var(--font-mono)",
+                        fontSize: 10,
+                        fontWeight: 700,
+                        flexShrink: 0
+                      }}
+                    >
+                      {initials}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.2 }}>{name}</div>
+                      {leader.title && (
+                        <div
+                          style={{
+                            fontFamily: "var(--font-mono)",
+                            fontSize: 10,
+                            color: "var(--ink-faint)",
+                            marginTop: 1
+                          }}
+                        >
+                          {leader.title}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <EmptyInline>Not indexed</EmptyInline>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32, marginTop: 20 }}>
+        <div>
+          <KVLabel>USE CASES STATED</KVLabel>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            {useCases.length > 0 ? (
+              useCases.map((u, i) => (
+                <li key={i} style={{ fontSize: 14, lineHeight: 1.55, marginBottom: 3 }}>
+                  {u}
+                </li>
+              ))
+            ) : (
+              <li style={{ listStyle: "none", marginLeft: -18 }}>
+                <EmptyInline>Not indexed</EmptyInline>
+              </li>
+            )}
+          </ul>
+          <KVLabel style={{ marginTop: 14 }}>TARGET INDUSTRIES</KVLabel>
+          <p style={{ margin: 0, fontSize: 14, lineHeight: 1.55, color: "var(--ink)", textWrap: "pretty" }}>
+            {data.target_industries && data.target_industries.length > 0
+              ? data.target_industries.join(", ")
+              : "Not stated"}
+          </p>
+        </div>
+        <div>
+          <KVLabel>COMPANY INFO</KVLabel>
+          <KV row="Founded" value={data.founded_year != null ? String(data.founded_year) : "—"} />
+          <KV row="Team size" value={data.team_size_stated ?? "—"} />
+          <KV
+            row="Offices"
+            value={
+              data.offices_or_locations && data.offices_or_locations.length > 0
+                ? data.offices_or_locations.join(", ")
+                : "—"
+            }
+          />
+          <KV row="Target co. size" value={data.target_company_size ?? "—"} />
+          <KVLabel style={{ marginTop: 14 }}>NAMED CUSTOMERS</KVLabel>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {customers.length > 0 ? (
+              customers.map((c) => (
+                <span
+                  key={c}
+                  style={{
+                    padding: "3px 9px",
+                    background: "var(--paper-tint)",
+                    fontFamily: "var(--font-sans)",
+                    fontSize: 12,
+                    fontWeight: 500
+                  }}
+                >
+                  {c}
+                </span>
+              ))
+            ) : (
+              <EmptyInline>None extracted</EmptyInline>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function KV({ row, value }: { row: string; value: string }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        padding: "5px 0",
+        borderBottom: "1px dotted var(--paper-rule-2)"
+      }}
+    >
+      <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-faint)" }}>{row}</span>
+      <span style={{ fontSize: 13, fontWeight: 600 }}>{value}</span>
+    </div>
+  );
+}
+
+function EmptyInline({ children }: { children: ReactNode }) {
+  return (
+    <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-ghost)", fontStyle: "italic" }}>
+      {children}
+    </span>
+  );
+}
+
+// ── Reviews section ──────────────────────────────────────────────
+
+function ReviewsSection({
+  scans,
+  qualityByType
+}: {
+  scans: Array<{
+    id: string;
+    pageId: string;
+    scannedAt: Date;
+    rawResult: unknown;
+    page: { label: string; type: string | null };
+  }>;
+  qualityByType: Map<string, number[]>;
+}) {
+  const primary = scans[0];
+  if (!primary) {
+    return (
+      <div style={{ marginTop: 36 }}>
+        <RDSSectionHead title="Reviews" />
+        <p style={{ color: "var(--ink-faint)", fontStyle: "italic", margin: 0 }}>
+          No reviews scan data available. Add a G2, Capterra, or Product Hunt page to start.
+        </p>
+      </div>
+    );
+  }
+  const data = asObject<ReviewsData>(primary.rawResult);
+  const health = healthFor(qualityByType, "reviews");
+  const platform = data?.platform ?? primary.page.label;
+  return (
+    <div style={{ marginTop: 36 }}>
+      <RDSSectionHead title="Reviews" count={`${platform.toUpperCase()}${health != null ? ` · ${health}%` : ""}`} />
+      <p
+        style={{
+          margin: "0 0 16px",
+          padding: "10px 14px",
+          background: "var(--paper-tint)",
+          fontSize: 13,
+          lineHeight: 1.5,
+          color: "var(--ink-2)",
+          fontStyle: "italic"
+        }}
+      >
+        G2, Capterra, Trustpilot, ProductHunt — review sites actively block scraping. <code>content_blocked</code> logs
+        here are expected and high-value experience-logging signals.
+      </p>
+      {data ? (
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "240px 1fr", gap: 28 }}>
+            <div style={{ background: "var(--ink-bg)", color: "var(--ink-bg-text)", padding: "18px 20px" }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+                <span style={{ fontSize: 48, fontWeight: 700, lineHeight: 1 }}>
+                  {data.overall_rating != null ? data.overall_rating.toFixed(1) : "—"}
+                </span>
+                <span style={{ color: "#e6a24a", fontSize: 18, letterSpacing: "2px" }}>
+                  {data.overall_rating != null
+                    ? "★".repeat(Math.round(data.overall_rating)) + "☆".repeat(5 - Math.round(data.overall_rating))
+                    : ""}
+                </span>
+              </div>
+              <div
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 11,
+                  color: "var(--ink-ghost)",
+                  marginTop: 2
+                }}
+              >
+                {data.review_count != null ? `${data.review_count.toLocaleString()} reviews` : "— reviews"}
+              </div>
+              {(data.ease_of_use_score != null || data.customer_support_score != null) && (
+                <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--ink-2)" }}>
+                  {data.ease_of_use_score != null && <SubScore k="Ease of Use" v={data.ease_of_use_score.toFixed(1)} />}
+                  {data.customer_support_score != null && (
+                    <SubScore k="Support" v={data.customer_support_score.toFixed(1)} />
+                  )}
+                </div>
+              )}
+              {data.recommended_percentage != null && (
+                <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--ink-2)" }}>
+                  <span style={{ fontSize: 28, fontWeight: 700, color: "#e66a5a", marginRight: 6 }}>
+                    {data.recommended_percentage}%
+                  </span>
+                  <span style={{ fontSize: 12, color: "var(--ink-ghost)" }}>of reviewers recommend</span>
+                </div>
+              )}
+              <div
+                style={{
+                  marginTop: 14,
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 10,
+                  color: "var(--ink-faint)",
+                  letterSpacing: "0.06em"
+                }}
+              >
+                Scanned: {primary.scannedAt.toISOString().slice(0, 10)}
+              </div>
+            </div>
+            <div>
+              <KVLabel>TOP PRAISE</KVLabel>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {data.top_praise_themes && data.top_praise_themes.length > 0 ? (
+                  data.top_praise_themes.map((t) => (
+                    <span
+                      key={t}
+                      style={{
+                        padding: "4px 10px",
+                        background: "#f0f4e8",
+                        border: "1px solid #c4d0a8",
+                        fontFamily: "var(--font-sans)",
+                        fontSize: 12,
+                        color: "#3a5a3a"
+                      }}
+                    >
+                      {t}
+                    </span>
+                  ))
+                ) : (
+                  <EmptyInline>None extracted</EmptyInline>
+                )}
+              </div>
+              <KVLabel style={{ marginTop: 14, color: "var(--accent-hot)" }}>
+                TOP COMPLAINTS · HIGHEST-SIGNAL FIELD
+              </KVLabel>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {data.top_complaint_themes && data.top_complaint_themes.length > 0 ? (
+                  data.top_complaint_themes.map((t) => (
+                    <span
+                      key={t}
+                      style={{
+                        padding: "4px 10px",
+                        background: "#fff0ec",
+                        border: "1px solid #e8c4b0",
+                        fontFamily: "var(--font-sans)",
+                        fontSize: 12,
+                        color: "#7a2a1a"
+                      }}
+                    >
+                      {t}
+                    </span>
+                  ))
+                ) : (
+                  <EmptyInline>None extracted</EmptyInline>
+                )}
+              </div>
+            </div>
+          </div>
+          {data.recent_reviews && data.recent_reviews.length > 0 && (
+            <div style={{ marginTop: 20 }}>
+              <KVLabel>RECENT REVIEWS</KVLabel>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {data.recent_reviews.map((r, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      padding: "12px 16px",
+                      background: "#fff",
+                      border: "1px solid var(--paper-rule)"
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 12,
+                        alignItems: "baseline",
+                        marginBottom: 4
+                      }}
+                    >
+                      {r.rating != null && (
+                        <span
+                          style={{
+                            fontFamily: "var(--font-mono)",
+                            fontSize: 12,
+                            fontWeight: 700,
+                            color: "#e6a24a"
+                          }}
+                        >
+                          {r.rating.toFixed(1)} ★
+                        </span>
+                      )}
+                      {r.date && (
+                        <span
+                          style={{
+                            fontFamily: "var(--font-mono)",
+                            fontSize: 11,
+                            color: "var(--ink-faint)"
+                          }}
+                        >
+                          {r.date}
+                        </span>
+                      )}
+                    </div>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: 14,
+                        lineHeight: 1.55,
+                        color: "var(--ink)",
+                        fontStyle: "italic",
+                        textWrap: "pretty"
+                      }}
+                    >
+                      {r.summary ?? "—"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        <p style={{ color: "var(--ink-faint)", fontStyle: "italic", margin: 0 }}>
+          No data extracted yet — last scan may have been blocked.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function SubScore({ k, v }: { k: string; v: string }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13 }}>
+      <span style={{ color: "var(--ink-ghost)" }}>{k}</span>
+      <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700 }}>{v}</span>
+    </div>
+  );
+}
+
+// ── Blog section ─────────────────────────────────────────────────
+
+function BlogSection({
+  data,
+  scan,
+  health,
+  baseUrl
+}: {
+  data: BlogData | null;
+  scan: { scannedAt: Date } | null;
+  health: number | null;
+  baseUrl: string;
+}) {
+  return (
+    <div style={{ marginTop: 36 }}>
+      <RDSSectionHead
+        title="Blog"
+        count={
+          health != null
+            ? `${health}% SCHEMA${scan ? ` · SCANNED ${scan.scannedAt.toISOString().slice(0, 10)}` : ""}`
+            : null
+        }
+      />
+      <p
+        style={{
+          margin: "0 0 16px",
+          padding: "10px 14px",
+          background: "var(--paper-tint)",
+          fontSize: 13,
+          lineHeight: 1.5,
+          color: "var(--ink-2)",
+          fontStyle: "italic"
+        }}
+      >
+        Content strategy signals — topics, audience focus, and publishing cadence.
+      </p>
+      {data == null ? (
+        <p style={{ color: "var(--ink-faint)", fontStyle: "italic", margin: 0 }}>No blog scan data available yet.</p>
+      ) : (
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 20 }}>
+            <BlogStat label="POST FREQUENCY" value={data.post_frequency ?? "unknown"} />
+            <BlogStat
+              label="AUDIENCE FOCUS"
+              value={
+                data.developer_focused === undefined
+                  ? "Unknown"
+                  : data.developer_focused
+                    ? "Developer-focused"
+                    : "Buyer-focused"
+              }
+            />
+            <BlogStat label="RECENT POSTS INDEXED" value={String(data.recent_post_titles?.length ?? 0)} />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 32 }}>
+            <div>
+              <KVLabel>PRIMARY TOPICS</KVLabel>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {data.primary_topics && data.primary_topics.length > 0 ? (
+                  data.primary_topics.map((t) => (
+                    <span
+                      key={t}
+                      style={{
+                        padding: "4px 10px",
+                        background: "var(--ink)",
+                        color: "var(--ink-bg-text)",
+                        fontFamily: "var(--font-sans)",
+                        fontSize: 12,
+                        fontWeight: 500
+                      }}
+                    >
+                      {t}
+                    </span>
+                  ))
+                ) : (
+                  <EmptyInline>None extracted</EmptyInline>
+                )}
+              </div>
+
+              <KVLabel style={{ marginTop: 18 }}>RECENT POSTS</KVLabel>
+              <ol style={{ margin: 0, padding: 0, listStyle: "none" }}>
+                {data.recent_post_titles && data.recent_post_titles.length > 0 ? (
+                  data.recent_post_titles.map((title, i) => {
+                    const safeUrl = toSafeHttpUrl(data.recent_post_urls?.[i], baseUrl);
+                    return (
+                      <li
+                        key={i}
+                        style={{
+                          display: "flex",
+                          gap: 14,
+                          padding: "8px 0",
+                          borderBottom: "1px dotted var(--paper-rule-2)"
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontFamily: "var(--font-mono)",
+                            fontSize: 11,
+                            color: "var(--ink-faint)",
+                            width: 80,
+                            flexShrink: 0,
+                            paddingTop: 2
+                          }}
+                        >
+                          {data.recent_post_dates?.[i] ?? "—"}
+                        </span>
+                        {safeUrl ? (
+                          <a
+                            href={safeUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              fontSize: 14,
+                              color: "var(--ink)",
+                              textDecoration: "none",
+                              borderBottom: "1px dotted var(--accent)",
+                              lineHeight: 1.4
+                            }}
+                          >
+                            {title}
+                          </a>
+                        ) : (
+                          <span style={{ fontSize: 14, color: "var(--ink)", lineHeight: 1.4 }}>{title}</span>
+                        )}
+                      </li>
+                    );
+                  })
+                ) : (
+                  <li style={{ listStyle: "none" }}>
+                    <EmptyInline>None indexed</EmptyInline>
+                  </li>
+                )}
+              </ol>
+            </div>
+            <div>
+              <KVLabel>CATEGORIES / TAGS</KVLabel>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 5, lineHeight: 1.6 }}>
+                {data.visible_categories && data.visible_categories.length > 0 ? (
+                  data.visible_categories.map((c) => (
+                    <span
+                      key={c}
+                      style={{
+                        padding: "2px 8px",
+                        border: "1px solid var(--paper-rule-2)",
+                        fontFamily: "var(--font-sans)",
+                        fontSize: 11,
+                        color: "var(--ink-2)"
+                      }}
+                    >
+                      {c}
+                    </span>
+                  ))
+                ) : (
+                  <EmptyInline>None extracted</EmptyInline>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function BlogStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ padding: "14px 16px", background: "var(--paper-tint)", borderLeft: "3px solid var(--accent)" }}>
+      <div style={{ fontSize: 18, fontWeight: 700 }}>{value}</div>
+      <div
+        style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: 10,
+          letterSpacing: "0.12em",
+          color: "var(--ink-faint)",
+          marginTop: 2
+        }}
+      >
+        {label}
+      </div>
+    </div>
+  );
+}
+
+// ── Section health grid ──────────────────────────────────────────
+
+function SectionHealth({ list }: { list: Array<{ name: string; pct: number }> }) {
+  if (list.length === 0) return null;
+  return (
+    <div style={{ marginTop: 36 }}>
+      <RDSSectionHead title="Section Health" count={`${list.length} SURFACES`} />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10 }}>
+        {list.map((s) => {
+          const color = s.pct >= 85 ? "var(--ok)" : s.pct >= 60 ? "var(--warn)" : "var(--accent-hot)";
+          return (
+            <div
+              key={s.name}
+              style={{ padding: "12px 14px", border: "1px solid var(--paper-rule)", background: "#fff" }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                <span style={{ fontSize: 13, fontWeight: 700, textTransform: "capitalize" }}>{s.name}</span>
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 700, color }}>{s.pct}%</span>
+              </div>
+              <div style={{ height: 4, background: "var(--paper-rule)", marginTop: 8 }}>
+                <div style={{ height: "100%", width: `${s.pct}%`, background: color }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Latest scans ─────────────────────────────────────────────────
+
+function LatestScansSection({
+  scans
+}: {
+  scans: Array<{
+    id: string;
+    scannedAt: Date;
+    hasChanges: boolean;
+    diffSummary: string | null;
+    page: { label: string; type: string | null };
+  }>;
+}) {
+  if (scans.length === 0) return null;
+  return (
+    <div style={{ marginTop: 36 }}>
+      <RDSSectionHead title="Latest Scans" count={`${scans.length} PAGES`} />
+      <div style={{ display: "flex", flexDirection: "column" }}>
+        {scans.map((s) => (
+          <div
+            key={s.id}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "160px 1fr 120px",
+              gap: 16,
+              padding: "12px 14px",
+              alignItems: "center",
+              borderBottom: "1px solid var(--paper-rule)"
+            }}
+          >
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 700 }}>{s.page.label}</div>
+              <div
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 10,
+                  letterSpacing: "0.08em",
+                  color: "var(--ink-faint)",
+                  marginTop: 1
+                }}
+              >
+                {s.page.type ?? "unknown"}
+              </div>
+            </div>
+            <div
+              style={{
+                fontSize: 13.5,
+                color: "var(--ink-2)",
+                fontStyle: "italic",
+                textWrap: "pretty"
+              }}
+            >
+              {s.diffSummary ?? "No diff summary recorded."}
+            </div>
+            <div
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: 10,
+                letterSpacing: "0.1em",
+                color: s.hasChanges ? "var(--accent-hot)" : "var(--ink-faint)",
+                padding: "4px 10px",
+                border: `1px solid ${s.hasChanges ? "var(--accent-hot)" : "var(--paper-rule-2)"}`,
+                textAlign: "center",
+                fontWeight: 600
+              }}
+            >
+              {s.hasChanges ? "CHANGED" : "NO CHANGES"}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Logs ─────────────────────────────────────────────────────────
+
+function LogsSection({
+  logs
+}: {
+  logs: Array<{
+    id: string;
+    calledAt: Date;
+    endpoint: string;
+    status: string;
+    resultQuality: string | null;
+    fallbackTriggered: boolean;
+    missingFields: string[];
+    isDemo: boolean;
+    page?: { label?: string | null } | null;
+  }>;
+}) {
+  if (logs.length === 0) return null;
+  const widths = "180px 130px 120px 70px 70px 70px 1fr 40px";
+  return (
+    <div style={{ marginTop: 36 }}>
+      <RDSSectionHead title="Logs" count={`LATEST ${logs.length}`} />
+      <div
+        style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: 11,
+          background: "#fff",
+          border: "1px solid var(--paper-rule)"
+        }}
+      >
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: widths,
+            gap: 8,
+            padding: "8px 12px",
+            background: "var(--paper-tint)",
+            borderBottom: "1px solid var(--paper-rule-2)",
+            color: "var(--ink-faint)",
+            letterSpacing: "0.08em",
+            fontSize: 10,
+            fontWeight: 700
+          }}
+        >
+          <span>WHEN</span>
+          <span>PAGE</span>
+          <span>ENDPOINT</span>
+          <span>STATUS</span>
+          <span>QUALITY</span>
+          <span>FALLBACK</span>
+          <span>MISSING FIELDS</span>
+          <span>DEMO</span>
+        </div>
+        {logs.map((l) => {
+          const q = l.resultQuality ?? "—";
+          const qColor = q === "full" ? "var(--ok)" : q === "partial" ? "var(--warn)" : "var(--accent-hot)";
+          const statusColor = l.status === "success" ? "var(--ok)" : "var(--accent-hot)";
+          const missing = l.missingFields.length === 0 ? "none" : l.missingFields.join(", ");
+          return (
+            <div
+              key={l.id}
+              style={{
+                display: "grid",
+                gridTemplateColumns: widths,
+                gap: 8,
+                padding: "8px 12px",
+                borderBottom: "1px dotted var(--paper-rule)",
+                color: "var(--ink)"
+              }}
+            >
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {formatLogTime(l.calledAt)}
+              </span>
+              <span style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {l.page?.label ?? "Demo / Unknown"}
+              </span>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{l.endpoint}</span>
+              <span style={{ color: statusColor, fontWeight: 600 }}>{l.status}</span>
+              <span style={{ color: qColor, fontWeight: 600 }}>{q}</span>
+              <span>{l.fallbackTriggered ? "yes" : "no"}</span>
+              <span
+                style={{
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  color: missing === "none" ? "var(--ink-faint)" : "var(--accent-hot)"
+                }}
+              >
+                {missing}
+              </span>
+              <span>{l.isDemo ? "yes" : "no"}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function formatLogTime(d: Date): string {
+  return (
+    new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      timeZone: "UTC"
+    })
+      .format(d)
+      .replace(",", "") + " UTC"
+  );
+}
+
+// ── Footer bar ───────────────────────────────────────────────────
+
+function DetailFooter() {
+  return (
+    <div
+      style={{
+        marginTop: 40,
+        paddingTop: 18,
+        borderTop: "1px solid var(--ink)",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        flexWrap: "wrap",
+        gap: 12
+      }}
+    >
+      <Link
+        href="/"
+        style={{
+          fontFamily: "var(--font-sans)",
+          fontSize: 13,
+          color: "var(--accent)",
+          textDecoration: "underline"
+        }}
+      >
+        ← Back to briefing
+      </Link>
+    </div>
   );
 }
