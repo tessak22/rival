@@ -6,6 +6,8 @@ export type MatrixPoint = {
   x: number; // 0–10
   y: number; // 0–10
   isSelf?: boolean;
+  xOverride?: boolean;
+  yOverride?: boolean;
 };
 
 type Props = {
@@ -158,6 +160,13 @@ export function PositioningMatrix({ points, config }: Props) {
           const labelYOffset = labelOffsets.get(pt.slug) ?? 0;
           const labelY = cy + labelYOffset + 4;
           const nearRight = cx > M + PLOT - 90;
+          const isOverridden = pt.xOverride || pt.yOverride;
+          const overrideTitle = [
+            pt.xOverride ? "X-axis manually set" : null,
+            pt.yOverride ? "Y-axis manually set" : null
+          ]
+            .filter(Boolean)
+            .join(", ");
           return (
             <g key={pt.slug}>
               {labelYOffset !== 0 && (
@@ -172,11 +181,27 @@ export function PositioningMatrix({ points, config }: Props) {
               )}
               {pt.isSelf ? (
                 <>
+                  <title>{pt.name} (you)</title>
                   <circle cx={cx} cy={cy} r={8} fill="var(--paper)" stroke="var(--ink)" strokeWidth={2} />
                   <circle cx={cx} cy={cy} r={4} fill="var(--ink)" />
                 </>
+              ) : isOverridden ? (
+                <>
+                  <title>{`${pt.name} — ${overrideTitle}`}</title>
+                  <rect
+                    x={cx - 7}
+                    y={cy - 7}
+                    width={14}
+                    height={14}
+                    transform={`rotate(45, ${cx}, ${cy})`}
+                    fill="var(--ink)"
+                  />
+                </>
               ) : (
-                <circle cx={cx} cy={cy} r={6} fill="var(--ink)" />
+                <>
+                  <title>{pt.name}</title>
+                  <circle cx={cx} cy={cy} r={6} fill="var(--ink)" />
+                </>
               )}
               <text
                 x={nearRight ? cx - 12 : cx + 12}
