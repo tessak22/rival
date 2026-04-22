@@ -71,7 +71,14 @@ export function InsightsFilters({ endpoints, competitors, initial }: InsightsFil
 
   return (
     <form onSubmit={applyFilters}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr auto auto", gap: 12, alignItems: "end" }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+          gap: 12,
+          alignItems: "end"
+        }}
+      >
         <label style={labelStyle}>
           Endpoint
           <select style={controlStyle} name="endpoint" value={endpoint} onChange={(e) => setEndpoint(e.target.value)}>

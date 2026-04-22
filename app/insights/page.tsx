@@ -112,8 +112,8 @@ export default async function InsightsPage({ searchParams }: InsightsPageProps) 
       {/* Top stats */}
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, auto) 1fr",
+          display: "flex",
+          flexWrap: "wrap",
           gap: 32,
           marginBottom: 32,
           paddingBottom: 28,
@@ -219,7 +219,14 @@ export default async function InsightsPage({ searchParams }: InsightsPageProps) 
       </div>
 
       {/* 3-col stat panels */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 24, marginBottom: 32 }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          gap: 24,
+          marginBottom: 32
+        }}
+      >
         {/* Effort Distribution */}
         <div style={{ border: "1px solid var(--paper-rule)", padding: 20 }}>
           <RDSSectionHead title="Effort" level={3} />
