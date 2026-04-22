@@ -367,6 +367,15 @@ describe("generateBrief", () => {
     );
     warnSpy.mockRestore();
   });
+
+  it("includes axis score instructions in the prompt", async () => {
+    const { generateBrief } = await import("@/lib/tabstack/generate");
+    generateJsonMock.mockResolvedValue({});
+    await generateBrief({ url: "https://example.com", contextData: "data", effort: "low", nocache: true });
+    const sdkCall = generateJsonMock.mock.calls[0][0] as { instructions: string };
+    expect(sdkCall.instructions).toContain("Positioning axis scores");
+    expect(sdkCall.instructions).toContain("openness_score");
+  });
 });
 
 describe("generateBrief with self-context injection", () => {

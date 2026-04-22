@@ -89,24 +89,22 @@ export function PositioningMatrix({ points, config }: Props) {
         {config.x_axis.label_high} →
       </text>
 
-      {/* Y-axis labels */}
+      {/* Y-axis labels — rotated to avoid clipping */}
       <text
-        x={M - 10}
-        y={M + PLOT}
-        textAnchor="end"
+        transform={`translate(${M - 14}, ${MID_Y + PLOT / 4}) rotate(-90)`}
+        textAnchor="middle"
         fill="var(--ink-mute)"
         style={{ fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.04em" }}
       >
-        {config.y_axis.label_low}
+        ↓ {config.y_axis.label_low}
       </text>
       <text
-        x={M - 10}
-        y={M + 4}
-        textAnchor="end"
+        transform={`translate(${M - 14}, ${MID_Y - PLOT / 4}) rotate(-90)`}
+        textAnchor="middle"
         fill="var(--ink-mute)"
         style={{ fontSize: 11, fontFamily: "var(--font-mono)", letterSpacing: "0.04em" }}
       >
-        {config.y_axis.label_high}
+        {config.y_axis.label_high} ↑
       </text>
 
       {/* Competitor dots + name labels */}
