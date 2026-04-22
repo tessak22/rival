@@ -426,6 +426,57 @@ describe("generateBrief with self-context injection", () => {
     expect(instructions).toContain("competitive intelligence analyst");
   });
 
+  it("does NOT demand self-company framing when no self-context is present", async () => {
+    // Regression guard: when buildSelfContext returns null (no self row, or
+    // isDemo path), the prompt must fall back to generic competitor analysis.
+    // If any "self company" framing leaks in here, the model is pushed to
+    // hallucinate a self company that doesn't exist.
+    buildSelfContextMock.mockResolvedValue(null);
+    generateJsonMock.mockResolvedValue({});
+    const { generateBrief } = await import("@/lib/tabstack/generate");
+
+    await generateBrief({
+      competitorId: "cmp_1",
+      url: "https://acme.com",
+      contextData: "[]",
+      effort: "low",
+      nocache: true
+    });
+
+    const sdkCall = generateJsonMock.mock.calls[0][0];
+    const instructions = sdkCall.instructions as string;
+    expect(instructions).not.toContain("Framing rules");
+    expect(instructions).not.toContain("self company");
+    expect(instructions).not.toContain("Name given in the CONTEXT");
+  });
+
+  it("demands self-company framing ONLY when self-context is present", async () => {
+    buildSelfContextMock.mockResolvedValue("CONTEXT — about the user's own company...\nName: Rival");
+    generateJsonMock.mockResolvedValue({});
+    const { generateBrief } = await import("@/lib/tabstack/generate");
+
+    await generateBrief({
+      competitorId: "cmp_1",
+      url: "https://acme.com",
+      contextData: "[]",
+      effort: "low",
+      nocache: true
+    });
+
+    const sdkCall = generateJsonMock.mock.calls[0][0];
+    const instructions = sdkCall.instructions as string;
+    expect(instructions).toContain("Framing rules");
+    expect(instructions).toContain("self company");
+    // Framing block must sit between CONTEXT and the analyst persona so it
+    // applies to every downstream instruction.
+    const ctxIdx = instructions.indexOf("CONTEXT — about the user's own company");
+    const framingIdx = instructions.indexOf("Framing rules");
+    const personaIdx = instructions.indexOf("competitive intelligence analyst");
+    expect(ctxIdx).toBeGreaterThanOrEqual(0);
+    expect(framingIdx).toBeGreaterThan(ctxIdx);
+    expect(personaIdx).toBeGreaterThan(framingIdx);
+  });
+
   it("does not inject self-context when isDemo is true", async () => {
     buildSelfContextMock.mockImplementation(async (opts: { isDemo?: boolean } = {}) =>
       opts.isDemo ? null : "CONTEXT — about the user's own company...\nName: Rival"
