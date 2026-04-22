@@ -23,8 +23,12 @@ export default async function MatrixPage() {
   try {
     const config = loadRivalConfig();
     matrixConfig = config.matrix ?? DEFAULT_MATRIX_CONFIG;
-  } catch {
-    matrixConfig = DEFAULT_MATRIX_CONFIG;
+  } catch (err) {
+    if (err instanceof Error && (err as NodeJS.ErrnoException).code === "ENOENT") {
+      matrixConfig = DEFAULT_MATRIX_CONFIG;
+    } else {
+      throw err;
+    }
   }
 
   const competitors = await prisma.competitor.findMany({

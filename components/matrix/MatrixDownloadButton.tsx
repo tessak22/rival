@@ -14,7 +14,7 @@ export function MatrixDownloadButton() {
     a.href = url;
     a.download = "rival-matrix.svg";
     a.click();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 
   return (
