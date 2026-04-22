@@ -250,10 +250,23 @@ export async function generateBrief(input: GenerateBriefInput): Promise<Generate
 
   const selfContext = await buildSelfContext({ isDemo: input.isDemo });
 
+  // Framing block is only appended when self-context is present. Without a
+  // self company, there is no "self" to contrast against and the LLM should
+  // fall back to generic competitor analysis rather than hallucinate a delta.
+  const comparativeFraming = selfContext
+    ? `Framing rules — apply to EVERY field you produce:
+- Refer to the self company by the Name given in the CONTEXT block above. Never use "you", "we", "our product", or "the user".
+- Refer to the competitor by name too. Never "this competitor" or "they" in isolation.
+- Every opportunity and the threat_reasoning must make the delta explicit: "<Competitor> does X; <Self company> does Y; therefore <implication for the self company>." Cite specific differentiators from the CONTEXT block when they sharpen the contrast.
+- Do not emit generic SaaS advice ("improve UX", "add integrations", "create better content") unless you tie it directly to one of the self company's stated differentiators or ICP details.
+
+`
+    : "";
+
   // selfContext is bounded by buildSelfContext's internal payload cap
   // (~800 chars). Combined with the contextData slice above, total
   // instructions length stays well under Tabstack's /generate limits.
-  const instructions = `${selfContext ? `${selfContext}\n\n` : ""}You are a competitive intelligence analyst. Based on this competitor data,
+  const instructions = `${selfContext ? `${selfContext}\n\n` : ""}${comparativeFraming}You are a competitive intelligence analyst. Based on this competitor data,
 produce a structured brief covering:
 1. Positioning opportunity — what gap does their weakness create?
 2. Content opportunity — what topics should you own based on their blind spots?
