@@ -117,24 +117,7 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
             </Link>
           </div>
         }
-        right={
-          <>
-            <Link
-              href={`/${competitor.slug}/deep-dive`}
-              style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: "var(--fs-11)",
-                color: "var(--ink-faint)",
-                letterSpacing: "0.08em",
-                textDecoration: "none",
-                textTransform: "uppercase"
-              }}
-            >
-              Deep Dive →
-            </Link>
-            <RDSLiveDot />
-          </>
-        }
+        right={<RDSLiveDot />}
       />
 
       <Hero
@@ -155,6 +138,8 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
       />
 
       {intelligenceBrief && <IntelligenceBriefSection brief={intelligenceBrief} />}
+
+      <DeepDivePromo name={competitor.name} slug={competitor.slug} />
 
       <HomepageSection data={homepageData} scan={homepageScan} health={healthFor(qualityByType, "homepage")} />
 
@@ -1654,6 +1639,91 @@ function formatLogTime(d: Date): string {
     })
       .format(d)
       .replace(",", "") + " UTC"
+  );
+}
+
+// ── Deep Dive promo ──────────────────────────────────────────────
+
+function DeepDivePromo({ name, slug }: { name: string; slug: string }) {
+  return (
+    <div
+      style={{
+        margin: "0 0 32px",
+        padding: "20px 24px",
+        background: "var(--ink)",
+        color: "var(--ink-bg-text)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 24,
+        flexWrap: "wrap"
+      }}
+    >
+      <div>
+        <div
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: "var(--fs-10)",
+            letterSpacing: "var(--tr-kicker)",
+            textTransform: "uppercase",
+            color: "var(--ink-bg-mute)",
+            marginBottom: 6
+          }}
+        >
+          Tabstack /research
+        </div>
+        <div
+          style={{
+            fontFamily: "var(--font-serif)",
+            fontSize: "var(--fs-20)",
+            fontWeight: 700,
+            letterSpacing: "var(--tr-snug)",
+            marginBottom: 10
+          }}
+        >
+          Deep Dive — {name}
+        </div>
+        <div
+          style={{
+            display: "flex",
+            gap: 20,
+            flexWrap: "wrap",
+            fontFamily: "var(--font-mono)",
+            fontSize: "var(--fs-11)",
+            color: "var(--ink-bg-mute)"
+          }}
+        >
+          {[
+            "Developer sentiment across GitHub, Reddit & forums",
+            "Strategic moves in the last 6 months",
+            "Actual DX vs. marketing claims"
+          ].map((cap) => (
+            <span key={cap} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ color: "var(--ok)" }}>✓</span> {cap}
+            </span>
+          ))}
+        </div>
+      </div>
+      <Link
+        href={`/${slug}/deep-dive`}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "10px 18px",
+          background: "var(--paper)",
+          color: "var(--ink)",
+          fontFamily: "var(--font-sans)",
+          fontSize: "var(--fs-13)",
+          fontWeight: 700,
+          textDecoration: "none",
+          whiteSpace: "nowrap",
+          flexShrink: 0
+        }}
+      >
+        Research {name} →
+      </Link>
+    </div>
   );
 }
 
