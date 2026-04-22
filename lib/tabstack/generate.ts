@@ -338,6 +338,11 @@ produce a structured brief covering:
      mindshare or developer adoption alone.
    - When evidence is mixed, sparse, or ambiguous, default to Medium rather than High.
 5. Watch list: 2-3 signals to monitor next cycle
+6. Positioning axis scores — using only the competitor data provided, rate each
+   of the five dimensions on a 0–10 scale as defined in the output schema:
+   openness_score, brand_trust_score, pricing_score, market_maturity_score,
+   feature_breadth_score. Base each score on explicit signals in the data;
+   do not use general market knowledge as a substitute for absent data.
 Be direct and specific. No generic advice.
 
 Additional competitor context:
