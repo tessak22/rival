@@ -67,22 +67,16 @@ export async function POST(request: NextRequest) {
       const startTime = Date.now();
       let status: "success" | "error" = "success";
       let rawError: string | undefined;
+      let completeEventData: unknown = undefined;
+      const query =
+        (promptTemplate ? buildPromptForTemplate(promptTemplate, competitor.name) : null) ??
+        buildResearchQuery(competitor.name);
 
       try {
         controller.enqueue(sse("research:started", { competitorId: competitor.id, mode, promptTemplate }));
 
-        // /research has a strict query length limit — skip selfContext injection here.
-        // Self-context framing is most valuable for /generate (comparative briefs);
-        // deep dive research is raw open-web intelligence gathering where it adds
-        // length overhead without meaningfully improving results.
-        const query =
-          (promptTemplate ? buildPromptForTemplate(promptTemplate, competitor.name) : null) ??
-          buildResearchQuery(competitor.name);
-
         // Stream directly from SDK — each event is forwarded immediately, avoiding timeout
         const researchStream = await client.agent.research({ query, mode: mode as "fast" | "balanced", nocache: true });
-
-        let completeEventData: unknown = undefined;
 
         // Manual iteration so we can catch per-call SyntaxErrors from the SDK.
         // The Tabstack server sends keepalives as `data: :keepalive` — a data field
@@ -130,9 +124,30 @@ export async function POST(request: NextRequest) {
           controller.enqueue(sse("research:complete", { result, citations }));
         }
       } catch (error) {
-        status = "error";
-        rawError = error instanceof Error ? error.message : "Deep dive failed";
-        controller.enqueue(sse("research:error", { error: rawError }));
+        // Keepalive SyntaxError as belt-and-suspenders — deliver whatever we have
+        if (error instanceof SyntaxError) {
+          const result = extractResult(completeEventData);
+          const citations = extractCitations(completeEventData);
+          try {
+            await prisma.deepDive.create({
+              data: {
+                competitorId: competitor.id,
+                mode: mode as string,
+                query,
+                result: toJsonValue(result),
+                citations: toJsonValue(citations),
+                promptTemplate: promptTemplate ?? null
+              }
+            });
+          } catch {
+            // non-fatal
+          }
+          controller.enqueue(sse("research:complete", { result, citations }));
+        } else {
+          status = "error";
+          rawError = error instanceof Error ? error.message : "Deep dive failed";
+          controller.enqueue(sse("research:error", { error: rawError }));
+        }
       } finally {
         // Fail-open: log write must never prevent stream close
         try {
