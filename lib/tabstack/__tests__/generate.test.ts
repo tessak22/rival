@@ -500,6 +500,39 @@ describe("generateBrief with self-context injection", () => {
   });
 });
 
+describe("BRIEF_SCHEMA axis scores", () => {
+  it("includes all five axis score fields as number type", async () => {
+    const { BRIEF_SCHEMA } = await import("@/lib/tabstack/generate");
+    const props = BRIEF_SCHEMA.properties as Record<string, { type: string; minimum?: number; maximum?: number }>;
+    const axisFields = [
+      "openness_score",
+      "brand_trust_score",
+      "pricing_score",
+      "market_maturity_score",
+      "feature_breadth_score"
+    ];
+    for (const field of axisFields) {
+      expect(props[field], `${field} missing from BRIEF_SCHEMA`).toBeDefined();
+      expect(props[field].type).toBe("number");
+      expect(props[field].minimum).toBe(0);
+      expect(props[field].maximum).toBe(10);
+    }
+  });
+
+  it("includes all five axis score fields in BRIEF_EXPECTED_FIELDS", async () => {
+    const { BRIEF_EXPECTED_FIELDS } = await import("@/lib/tabstack/generate");
+    for (const field of [
+      "openness_score",
+      "brand_trust_score",
+      "pricing_score",
+      "market_maturity_score",
+      "feature_breadth_score"
+    ]) {
+      expect(BRIEF_EXPECTED_FIELDS).toContain(field);
+    }
+  });
+});
+
 describe("schema exports", () => {
   beforeEach(() => {
     vi.resetModules();

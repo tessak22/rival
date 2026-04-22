@@ -207,6 +207,38 @@ export const BRIEF_SCHEMA = {
       type: "array",
       items: { type: "string" },
       description: "Two to three signals to monitor next cycle"
+    },
+    openness_score: {
+      type: "number",
+      minimum: 0,
+      maximum: 10,
+      description:
+        "0 = fully open source, transparent, no lock-in; 10 = fully proprietary, closed, high lock-in"
+    },
+    brand_trust_score: {
+      type: "number",
+      minimum: 0,
+      maximum: 10,
+      description: "0 = low brand recognition and trust; 10 = high brand recognition and trust"
+    },
+    pricing_score: {
+      type: "number",
+      minimum: 0,
+      maximum: 10,
+      description: "0 = entirely free or open source; 10 = premium or enterprise pricing only"
+    },
+    market_maturity_score: {
+      type: "number",
+      minimum: 0,
+      maximum: 10,
+      description: "0 = early-stage or emerging; 10 = established and mature market presence"
+    },
+    feature_breadth_score: {
+      type: "number",
+      minimum: 0,
+      maximum: 10,
+      description:
+        "0 = narrow specialist with a single focused use case; 10 = broad generalist covering many use cases"
     }
   },
   required: [
@@ -215,7 +247,12 @@ export const BRIEF_SCHEMA = {
     "product_opportunity",
     "threat_level",
     "threat_reasoning",
-    "watch_list"
+    "watch_list",
+    "openness_score",
+    "brand_trust_score",
+    "pricing_score",
+    "market_maturity_score",
+    "feature_breadth_score"
   ]
 } as const;
 
