@@ -39,7 +39,7 @@ const monoSm = {
   textTransform: "uppercase" as const
 };
 
-const CLUSTER_RADIUS = 28; // px — dots closer than this share a label column
+const CLUSTER_RADIUS = 100; // px — dots closer than this share a label column
 const LABEL_STEP = 16; // px — vertical gap between staggered labels
 
 function computeLabelOffsets(points: MatrixPoint[]): Map<string, number> {
@@ -162,17 +162,9 @@ export function PositioningMatrix({ points, config }: Props) {
           const dotCy = cy + dotOffset;
           const labelY = dotCy + 4;
           const nearRight = cx > M + PLOT - 90;
-          const isOverridden = pt.xOverride || pt.yOverride;
-          const overrideTitle = [
-            pt.xOverride ? "X-axis manually set" : null,
-            pt.yOverride ? "Y-axis manually set" : null
-          ]
-            .filter(Boolean)
-            .join(", ");
           return (
             <g key={pt.slug}>
-              {/* Leader line: connects true data coordinate (cy) to displaced dot (dotCy)
-                  so readers can trace an offset item back to its exact axis value. */}
+              {/* Leader line: connects true data coordinate to displaced dot */}
               {dotOffset !== 0 && (
                 <line
                   x1={cx}
@@ -183,31 +175,14 @@ export function PositioningMatrix({ points, config }: Props) {
                   strokeWidth={0.5}
                 />
               )}
-              {/* isSelf takes visual priority over override indicators.
-                  <title> is the first child of <g> so the tooltip fires on the whole group. */}
+              <title>{pt.isSelf ? `${pt.name} (you)` : pt.name}</title>
               {pt.isSelf ? (
                 <>
-                  <title>{pt.name} (you)</title>
                   <circle cx={cx} cy={dotCy} r={8} fill="var(--paper)" stroke="var(--ink)" strokeWidth={2} />
                   <circle cx={cx} cy={dotCy} r={4} fill="var(--ink)" />
                 </>
-              ) : isOverridden ? (
-                <>
-                  <title>{`${pt.name} — ${overrideTitle}`}</title>
-                  <rect
-                    x={cx - 7}
-                    y={dotCy - 7}
-                    width={14}
-                    height={14}
-                    transform={`rotate(45, ${cx}, ${dotCy})`}
-                    fill="var(--ink)"
-                  />
-                </>
               ) : (
-                <>
-                  <title>{pt.name}</title>
-                  <circle cx={cx} cy={dotCy} r={6} fill="var(--ink)" />
-                </>
+                <circle cx={cx} cy={dotCy} r={6} fill="var(--ink)" />
               )}
               <text
                 x={nearRight ? cx - 12 : cx + 12}
