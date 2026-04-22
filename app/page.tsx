@@ -1,58 +1,46 @@
-import { IntelFeed } from "@/components/dashboard/IntelFeed";
-import { SelfProfileCard } from "@/components/dashboard/SelfProfileCard";
-import { ThreatMatrix } from "@/components/dashboard/ThreatMatrix";
+import Link from "next/link";
+
+import {
+  RDSChip,
+  RDSDiffPills,
+  RDSFooter,
+  RDSHeader,
+  RDSKicker,
+  RDSLiveDot,
+  RDSPageShell,
+  RDSSectionHead,
+  rdsHealthColor,
+  rdsTierLabel
+} from "@/components/rds";
 import { prisma } from "@/lib/db/client";
 import { getSelfCompetitor } from "@/lib/db/competitors";
-import type { ReviewsData } from "@/lib/schemas/reviews";
 
 export const dynamic = "force-dynamic";
 
-// How far back the Intel Feed looks for changed scans. Changes older than
-// this are "history," not "intel." Keep in sync with the window the UI
-// labels use if you surface it there.
 const INTEL_FEED_WINDOW_DAYS = 7;
+const TOP_MOVERS_WINDOW_DAYS = 1;
+const SCHEMA_FIELD_ORDER = [
+  "homepage",
+  "profile",
+  "pricing",
+  "blog",
+  "docs",
+  "github",
+  "social",
+  "changelog",
+  "careers",
+  "reviews",
+  "stack"
+];
 
-function computeReviewsEvents(
-  current: ReviewsData,
-  previous: ReviewsData | null
-): Array<
-  | { type: "rating_changed"; platform: string; fromRating: number; toRating: number }
-  | { type: "complaint_theme_added"; platform: string; theme: string }
-> {
-  if (!previous) return [];
-
-  const platform = current.platform ?? previous.platform ?? "review platform";
-  const events: ReturnType<typeof computeReviewsEvents> = [];
-
-  if (
-    current.overall_rating != null &&
-    previous.overall_rating != null &&
-    Math.abs(current.overall_rating - previous.overall_rating) > 0.1
-  ) {
-    events.push({
-      type: "rating_changed",
-      platform,
-      fromRating: previous.overall_rating,
-      toRating: current.overall_rating
-    });
-  }
-
-  const prevComplaintSet = new Set(previous.top_complaint_themes ?? []);
-  for (const theme of current.top_complaint_themes ?? []) {
-    if (!prevComplaintSet.has(theme)) {
-      events.push({ type: "complaint_theme_added", platform, theme });
-    }
-  }
-
-  return events;
-}
+type DashboardData = Awaited<ReturnType<typeof loadDashboardData>>;
 
 async function loadDashboardData() {
   const competitors = await prisma.competitor.findMany({
     where: { isSelf: false },
     orderBy: { name: "asc" }
   });
-  const competitorIds = competitors.map((competitor) => competitor.id);
+  const competitorIds = competitors.map((c) => c.id);
 
   const [recentScans, recentLogs, self] = await Promise.all([
     prisma.scan.findMany({
@@ -60,151 +48,798 @@ async function loadDashboardData() {
       select: {
         hasChanges: true,
         scannedAt: true,
-        page: { select: { competitorId: true } }
+        page: { select: { competitorId: true, type: true } }
       },
       orderBy: { scannedAt: "desc" },
       take: 5000
     }),
     prisma.apiLog.findMany({
-      where: {
-        competitorId: { in: competitorIds },
-        resultQuality: { not: null }
-      },
-      select: {
-        competitorId: true,
-        resultQuality: true
-      },
+      where: { competitorId: { in: competitorIds }, resultQuality: { not: null } },
+      select: { competitorId: true, resultQuality: true, page: { select: { type: true } } },
       orderBy: { calledAt: "desc" },
       take: 5000
     }),
     getSelfCompetitor()
   ]);
 
-  const latestScanByCompetitor = new Map<string, Date>();
-  const changedScansByCompetitor = new Map<string, number>();
+  const latestScan = new Map<string, Date>();
+  const changeCountByCompetitor = new Map<string, number>();
+  const moversCutoff = Date.now() - TOP_MOVERS_WINDOW_DAYS * 86_400_000;
   for (const scan of recentScans) {
-    const competitorId = scan.page.competitorId;
-    if (!latestScanByCompetitor.has(competitorId)) {
-      latestScanByCompetitor.set(competitorId, scan.scannedAt);
-    }
-    if (scan.hasChanges) {
-      changedScansByCompetitor.set(competitorId, (changedScansByCompetitor.get(competitorId) ?? 0) + 1);
+    const cid = scan.page.competitorId;
+    if (!latestScan.has(cid)) latestScan.set(cid, scan.scannedAt);
+    if (scan.hasChanges && scan.scannedAt.getTime() >= moversCutoff) {
+      changeCountByCompetitor.set(cid, (changeCountByCompetitor.get(cid) ?? 0) + 1);
     }
   }
 
-  const schemaScores = new Map<string, number[]>();
+  const schemaScoresByCompetitor = new Map<string, number[]>();
+  const schemaScoresByType = new Map<string, number[]>();
   for (const log of recentLogs) {
-    if (!log.competitorId || !log.resultQuality) continue;
+    if (!log.resultQuality) continue;
     const score = log.resultQuality === "full" ? 1 : log.resultQuality === "partial" ? 0.5 : 0;
-    schemaScores.set(log.competitorId, [...(schemaScores.get(log.competitorId) ?? []), score]);
+    if (log.competitorId) {
+      schemaScoresByCompetitor.set(log.competitorId, [
+        ...(schemaScoresByCompetitor.get(log.competitorId) ?? []),
+        score
+      ]);
+    }
+    const type = log.page?.type ?? null;
+    if (type) {
+      schemaScoresByType.set(type, [...(schemaScoresByType.get(type) ?? []), score]);
+    }
   }
 
-  const matrix = competitors.map((competitor) => {
-    const scores = schemaScores.get(competitor.id) ?? [];
-    const schemaHealth = scores.length === 0 ? 0 : scores.reduce((acc, value) => acc + value, 0) / scores.length;
+  const competitorRows = competitors.map((competitor) => {
+    const scores = schemaScoresByCompetitor.get(competitor.id) ?? [];
+    const health = scores.length === 0 ? 0 : Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100);
+    const category = pickStringField(competitor.manualData, ["category"]);
+    const hq = pickStringField(competitor.manualData, ["hq", "headquarters"]);
+    const employees = pickStringField(competitor.manualData, ["employees", "team_size"]);
+    const fundingM = pickNumberField(competitor.manualData, ["fundingM", "funding_m", "funding_millions"]);
     return {
       id: competitor.id,
       slug: competitor.slug,
       name: competitor.name,
-      threatLevel: competitor.threatLevel,
-      schemaHealth,
-      hasRecentChanges: (changedScansByCompetitor.get(competitor.id) ?? 0) > 0,
-      lastScanAt: latestScanByCompetitor.get(competitor.id) ?? null
+      category,
+      hq,
+      employees,
+      fundingM,
+      health,
+      threatLevel: (competitor.threatLevel ?? "low").toLowerCase(),
+      changeCount: changeCountByCompetitor.get(competitor.id) ?? 0,
+      lastScanAt: latestScan.get(competitor.id) ?? null,
+      briefSummary: pickStringField(competitor.intelligenceBrief, ["threat_reasoning"])
     };
   });
 
-  // Fetch changed scans for the Intel Feed, including rawResult for reviews diff events.
-  // Bounded to INTEL_FEED_WINDOW_DAYS so stale changes don't linger on the dashboard —
-  // a "change" from three weeks ago is not useful competitive intel, and the window
-  // also prevents legacy false-positive rows (pre-scanner-fix) from clogging the feed
-  // until they age out naturally.
-  const feedCutoff = new Date(Date.now() - INTEL_FEED_WINDOW_DAYS * 24 * 60 * 60 * 1000);
-  const feed = await prisma.scan.findMany({
+  const feedCutoff = new Date(Date.now() - INTEL_FEED_WINDOW_DAYS * 86_400_000);
+  const feedItems = await prisma.scan.findMany({
     where: {
       hasChanges: true,
       scannedAt: { gte: feedCutoff },
       page: { competitorId: { in: competitorIds } }
     },
-    include: {
-      page: true
-    },
+    include: { page: true },
     orderBy: { scannedAt: "desc" },
-    take: 25
+    take: 60
   });
-  const competitorNames = new Map(competitors.map((competitor) => [competitor.id, competitor.name]));
 
-  const homepageFeedItems = feed.filter((item) => item.page.type === "homepage");
-  const previousHomepageScans = await Promise.all(
-    homepageFeedItems.map((item) =>
-      prisma.scan.findFirst({
-        where: {
-          pageId: item.pageId,
-          scannedAt: { lt: item.scannedAt }
-        },
-        orderBy: { scannedAt: "desc" },
-        select: { id: true, rawResult: true }
-      })
-    )
-  );
-  const previousHomepageScanByCurrentId = new Map(
-    homepageFeedItems.map((item, i) => [item.id, previousHomepageScans[i]])
-  );
+  const nameById = new Map(competitors.map((c) => [c.id, c.name] as const));
+  const slugById = new Map(competitors.map((c) => [c.id, c.slug] as const));
 
-  // For reviews pages in the feed, fetch the previous scan to compute diff events.
-  const reviewsFeedScans = feed.filter((item) => item.page.type === "reviews");
-  const previousReviewsScans = new Map<string, ReviewsData | null>();
+  const feed = feedItems.map((item) => ({
+    id: item.id,
+    competitorId: item.page.competitorId,
+    competitorName: nameById.get(item.page.competitorId) ?? "Unknown",
+    competitorSlug: slugById.get(item.page.competitorId) ?? null,
+    pageLabel: item.page.label,
+    pageType: item.page.type ?? null,
+    scannedAt: item.scannedAt,
+    summary: item.diffSummary
+  }));
 
-  for (const scan of reviewsFeedScans) {
-    const prev = await prisma.scan.findFirst({
-      where: { pageId: scan.pageId, scannedAt: { lt: scan.scannedAt } },
-      orderBy: { scannedAt: "desc" },
-      select: { rawResult: true }
+  const schemaFields = [...schemaScoresByType.entries()]
+    .map(([type, scores]) => ({
+      name: type,
+      coverage:
+        scores.length === 0 ? 0 : Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100)
+    }))
+    .sort((a, b) => {
+      const ai = SCHEMA_FIELD_ORDER.indexOf(a.name);
+      const bi = SCHEMA_FIELD_ORDER.indexOf(b.name);
+      if (ai >= 0 && bi >= 0) return ai - bi;
+      if (ai >= 0) return -1;
+      if (bi >= 0) return 1;
+      return a.name.localeCompare(b.name);
     });
-    const prevData = prev?.rawResult && typeof prev.rawResult === "object" ? (prev.rawResult as ReviewsData) : null;
-    previousReviewsScans.set(scan.id, prevData);
+
+  const schemaOverall =
+    schemaFields.length === 0
+      ? 0
+      : Math.round(schemaFields.reduce((acc, f) => acc + f.coverage, 0) / schemaFields.length);
+
+  return { self, competitors: competitorRows, feed, schema: { overall: schemaOverall, fields: schemaFields } };
+}
+
+function pickStringField(blob: unknown, keys: string[]): string | null {
+  if (!blob || typeof blob !== "object" || Array.isArray(blob)) return null;
+  const rec = blob as Record<string, unknown>;
+  for (const key of keys) {
+    const v = rec[key];
+    if (typeof v === "string" && v.trim().length > 0) return v.trim();
   }
+  return null;
+}
 
-  return {
-    self,
-    matrix,
-    feed: feed.map((item) => {
-      const isReviews = item.page.type === "reviews";
-      const currentData =
-        isReviews && item.rawResult && typeof item.rawResult === "object" ? (item.rawResult as ReviewsData) : null;
-      const prevData = isReviews ? (previousReviewsScans.get(item.id) ?? null) : null;
-      const reviewsEvents = currentData ? computeReviewsEvents(currentData, prevData) : [];
+function pickNumberField(blob: unknown, keys: string[]): number | null {
+  if (!blob || typeof blob !== "object" || Array.isArray(blob)) return null;
+  const rec = blob as Record<string, unknown>;
+  for (const key of keys) {
+    const v = rec[key];
+    if (typeof v === "number" && Number.isFinite(v)) return v;
+  }
+  return null;
+}
 
-      return {
-        id: item.id,
-        competitorName: competitorNames.get(item.page.competitorId) ?? "Unknown competitor",
-        pageLabel: item.page.label,
-        pageType: item.page.type,
-        scannedAt: item.scannedAt,
-        diffSummary: item.diffSummary,
-        rawResult: item.page.type === "homepage" ? item.rawResult : undefined,
-        previousRawResult:
-          item.page.type === "homepage"
-            ? (previousHomepageScanByCurrentId.get(item.id)?.rawResult ?? undefined)
-            : undefined,
-        reviewsEvents: reviewsEvents.length > 0 ? reviewsEvents : undefined
-      };
-    })
-  };
+function formatTimeAgo(from: Date): string {
+  const diffMs = Date.now() - from.getTime();
+  const min = Math.max(1, Math.floor(diffMs / 60_000));
+  if (min < 60) return `${min}m`;
+  const hr = Math.floor(min / 60);
+  if (hr < 48) return `${hr}h`;
+  return `${Math.floor(hr / 24)}d`;
 }
 
 export default async function HomePage() {
   const data = await loadDashboardData();
+  const generatedAt = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "UTC"
+  })
+    .format(new Date())
+    .replace(",", " ·");
 
   return (
-    <main className="dashboard-page">
-      <header className="page-header">
-        <h1>Rival</h1>
-        <p>Threat posture, schema quality, and fresh competitor movement.</p>
-      </header>
+    <RDSPageShell>
+      <HeaderRow self={data.self} generatedAt={`${generatedAt} UTC`} />
+      <HeadlineStrip generatedAt={generatedAt} rows={data.competitors} />
+      <LeadStory feed={data.feed} />
+      <ThreatsSection rows={data.competitors} />
+      <ActiveSignals feed={data.feed} />
+      <WatchAndSchema rows={data.competitors} schema={data.schema} />
+      <RDSFooter />
+    </RDSPageShell>
+  );
+}
 
-      <ThreatMatrix competitors={data.matrix} />
-      {data.self && <SelfProfileCard self={data.self} />}
-      <IntelFeed items={data.feed} />
-    </main>
+// ── subviews ─────────────────────────────────────────────────────
+
+function HeaderRow({
+  self,
+  generatedAt
+}: {
+  self: DashboardData["self"];
+  generatedAt: string;
+}) {
+  return (
+    <RDSHeader
+      right={
+        <>
+          <span style={{ letterSpacing: "0.04em" }}>{generatedAt}</span>
+          <RDSLiveDot />
+          {self && <SelfChip name={self.name} slug={self.slug} />}
+        </>
+      }
+    />
+  );
+}
+
+function SelfChip({ name, slug }: { name: string; slug: string }) {
+  return (
+    <Link
+      href={`/${slug}`}
+      title="Your profile"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
+        marginLeft: 12,
+        padding: "4px 12px 4px 4px",
+        border: "1px solid var(--ink)",
+        background: "var(--paper)",
+        color: "var(--ink)",
+        borderRadius: 999,
+        fontFamily: "var(--font-sans)",
+        fontSize: 12,
+        fontWeight: 600,
+        textDecoration: "none"
+      }}
+    >
+      <span
+        style={{
+          width: 22,
+          height: 22,
+          borderRadius: "50%",
+          background: "var(--ink)",
+          color: "var(--ink-bg-text)",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 11,
+          fontWeight: 700
+        }}
+      >
+        {name.charAt(0)}
+      </span>
+      <span>{name}</span>
+    </Link>
+  );
+}
+
+function HeadlineStrip({
+  generatedAt,
+  rows
+}: {
+  generatedAt: string;
+  rows: DashboardData["competitors"];
+}) {
+  const topMovers = rows
+    .filter((r) => r.changeCount > 0)
+    .sort((a, b) => b.changeCount - a.changeCount || b.health - a.health)
+    .slice(0, 5);
+
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1.6fr 1fr",
+        gap: 32,
+        padding: "20px 0 24px",
+        borderBottom: "1px solid var(--paper-rule-2)"
+      }}
+    >
+      <div>
+        <RDSKicker>Daily briefing · {generatedAt}</RDSKicker>
+        <p
+          style={{
+            margin: "6px 0 0",
+            fontSize: "var(--fs-16)",
+            lineHeight: "var(--lh-body)",
+            color: "var(--ink-2)",
+            textWrap: "pretty",
+            fontStyle: "italic"
+          }}
+        >
+          {buildLede(rows, topMovers)}
+        </p>
+      </div>
+      <div style={{ borderLeft: "1px solid var(--paper-rule-2)", paddingLeft: 24 }}>
+        <div
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: 10,
+            letterSpacing: "0.14em",
+            color: "var(--ink-faint)",
+            marginBottom: 8,
+            textTransform: "uppercase"
+          }}
+        >
+          Top movers · 24h
+        </div>
+        {topMovers.length === 0 ? (
+          <p
+            style={{
+              fontSize: 13,
+              color: "var(--ink-faint)",
+              fontStyle: "italic",
+              margin: 0
+            }}
+          >
+            No competitor changes in the last 24 hours.
+          </p>
+        ) : (
+          topMovers.map((m) => (
+            <Link
+              key={m.slug}
+              href={`/${m.slug}`}
+              style={{
+                display: "flex",
+                alignItems: "baseline",
+                gap: 10,
+                padding: "5px 0",
+                borderBottom: "1px dotted var(--paper-rule-2)",
+                color: "var(--ink)",
+                textDecoration: "none"
+              }}
+            >
+              <span style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>{m.name}</span>
+              <span
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 12,
+                  color: "var(--accent-hot)",
+                  fontWeight: 700
+                }}
+              >
+                +{m.changeCount}
+              </span>
+              <span
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 12,
+                  color: "var(--ink)",
+                  width: 28,
+                  textAlign: "right"
+                }}
+              >
+                {m.health}
+              </span>
+            </Link>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function buildLede(
+  rows: DashboardData["competitors"],
+  topMovers: DashboardData["competitors"]
+): string {
+  if (topMovers.length === 0) {
+    return `All ${rows.length} tracked competitors are quiet in the last 24 hours — schema coverage and positioning stable across the board.`;
+  }
+  const names = topMovers
+    .slice(0, 3)
+    .map((m) => m.name)
+    .join(", ");
+  return `${topMovers.length} competitor${topMovers.length === 1 ? "" : "s"} moved overnight — ${names} saw the largest shift${topMovers.length > 1 ? "s" : ""}. Review the Threats list and Active Signals below.`;
+}
+
+function LeadStory({ feed }: { feed: DashboardData["feed"] }) {
+  const lead = feed[0];
+  if (!lead) return null;
+  const headline = buildLeadHeadline(lead);
+  const body = lead.summary ?? "Change detected — review the full page for impact.";
+  return (
+    <div
+      style={{
+        padding: "22px 0 22px",
+        borderTop: "1px solid var(--ink)",
+        borderBottom: "1px solid var(--paper-rule-2)",
+        marginBottom: 32
+      }}
+    >
+      <RDSKicker hot>LEAD · {formatTimeAgo(lead.scannedAt).toUpperCase()} AGO</RDSKicker>
+      <h2
+        style={{
+          fontSize: 34,
+          lineHeight: 1.08,
+          margin: "8px 0 0",
+          fontWeight: 700,
+          letterSpacing: "-0.015em",
+          textWrap: "balance",
+          color: "var(--ink)",
+          fontFamily: "var(--font-serif)"
+        }}
+      >
+        {headline}
+      </h2>
+      <div
+        style={{
+          marginTop: 8,
+          fontSize: 12,
+          color: "var(--ink-faint)",
+          fontFamily: "var(--font-mono)",
+          letterSpacing: "0.04em"
+        }}
+      >
+        {formatScannedAt(lead.scannedAt)} · {lead.pageLabel} diff · confidence high
+      </div>
+      <p
+        style={{
+          marginTop: 14,
+          marginBottom: 0,
+          fontSize: 15.5,
+          lineHeight: 1.65,
+          color: "var(--ink)",
+          textWrap: "pretty",
+          maxWidth: body.length >= 240 ? "none" : 620,
+          columnCount: body.length >= 240 ? 2 : 1,
+          columnGap: 32
+        }}
+      >
+        {body}
+      </p>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginTop: 16,
+          gap: 16,
+          flexWrap: "wrap"
+        }}
+      >
+        {lead.competitorSlug && (
+          <Link
+            href={`/${lead.competitorSlug}`}
+            style={{
+              fontSize: 13,
+              fontWeight: 600,
+              color: "var(--accent)",
+              fontFamily: "var(--font-sans)",
+              textDecoration: "none",
+              borderBottom: "1px dotted var(--accent)"
+            }}
+          >
+            Read full {lead.competitorName} page →
+          </Link>
+        )}
+        <span style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {lead.pageType && <RDSChip tone="default">{lead.pageType}</RDSChip>}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function buildLeadHeadline(lead: DashboardData["feed"][number]): string {
+  const surface = (lead.pageType ?? lead.pageLabel).toLowerCase();
+  const verb = pickHeadlineVerb(lead.summary);
+  return `${lead.competitorName}: ${verb} ${surface}`;
+}
+
+function pickHeadlineVerb(summary: string | null | undefined): string {
+  if (!summary) return "Updated";
+  const s = summary.toLowerCase();
+  if (/\bpric(e|ing)|\bremov|\bconsolidat|\breplac/i.test(s)) return "Changed";
+  if (/\bnew\b|\bship|\blaunch|\brelease|\badd/i.test(s)) return "Shipped";
+  if (/\brenam|\breposition|\bpivot|\brewrit/i.test(s)) return "Repositioned";
+  return "Updated";
+}
+
+function formatScannedAt(d: Date): string {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "UTC"
+  }).format(d);
+}
+
+function ThreatsSection({ rows }: { rows: DashboardData["competitors"] }) {
+  const sorted = [...rows].sort((a, b) => b.health - a.health || b.changeCount - a.changeCount);
+  return (
+    <div style={{ marginTop: 28 }}>
+      <RDSSectionHead title="Threats" count={`${sorted.length} tracked`} />
+      <div>
+        {sorted.map((row, i) => (
+          <ThreatRow key={row.slug} row={row} index={i} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ThreatRow({
+  row,
+  index
+}: {
+  row: DashboardData["competitors"][number];
+  index: number;
+}) {
+  const color = rdsHealthColor(row.health);
+  const meta = [row.category, row.hq, row.employees, row.fundingM ? `$${row.fundingM}M raised` : null]
+    .filter(Boolean)
+    .join(" · ");
+  return (
+    <Link
+      href={`/${row.slug}`}
+      style={{
+        display: "flex",
+        gap: 20,
+        padding: "16px 0",
+        borderBottom: "1px solid var(--paper-rule)",
+        alignItems: "flex-start",
+        textDecoration: "none",
+        color: "var(--ink)"
+      }}
+    >
+      <div
+        style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: 13,
+          color: "var(--accent)",
+          width: 30,
+          paddingTop: 6
+        }}
+      >
+        {String(index + 1).padStart(2, "0")}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 21, fontWeight: 700, letterSpacing: "-0.01em" }}>{row.name}</div>
+        {meta && (
+          <div
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 11,
+              color: "var(--ink-faint)",
+              marginTop: 2,
+              letterSpacing: "0.02em"
+            }}
+          >
+            {meta}
+          </div>
+        )}
+        {row.briefSummary && (
+          <div
+            style={{
+              fontSize: 15,
+              marginTop: 6,
+              color: "var(--ink-2)",
+              fontStyle: "italic",
+              textWrap: "pretty"
+            }}
+          >
+            {row.briefSummary}
+          </div>
+        )}
+      </div>
+      <div style={{ textAlign: "right", minWidth: 120 }}>
+        <div style={{ fontSize: 32, fontWeight: 700, lineHeight: 1, letterSpacing: "-0.02em", color }}>
+          {row.health}
+        </div>
+        <div
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: 10,
+            color: "var(--ink-faint)",
+            letterSpacing: "0.12em",
+            marginTop: 2
+          }}
+        >
+          HEALTH
+        </div>
+        <div
+          style={{
+            marginTop: 6,
+            color: row.changeCount ? "var(--accent-hot)" : "var(--ink-faint)",
+            fontSize: 10,
+            letterSpacing: "0.1em",
+            fontFamily: "var(--font-mono)"
+          }}
+        >
+          {row.changeCount ? `${row.changeCount} CHANGES · 24H` : "NO CHANGE · 24H"}
+        </div>
+        <div
+          style={{
+            marginTop: 4,
+            fontFamily: "var(--font-mono)",
+            fontSize: 10,
+            letterSpacing: "0.1em",
+            color: "var(--ink-faint)"
+          }}
+        >
+          {rdsTierLabel(row.threatLevel)} TIER
+        </div>
+      </div>
+      <div
+        style={{
+          color: "var(--accent)",
+          fontSize: 18,
+          paddingTop: 6,
+          width: 20,
+          fontFamily: "var(--font-sans)"
+        }}
+      >
+        →
+      </div>
+    </Link>
+  );
+}
+
+function ActiveSignals({ feed }: { feed: DashboardData["feed"] }) {
+  if (feed.length === 0) return null;
+  const grouped = new Map<string, DashboardData["feed"]>();
+  for (const item of feed) {
+    grouped.set(item.competitorName, [...(grouped.get(item.competitorName) ?? []), item]);
+  }
+  const top = [...grouped.entries()]
+    .sort((a, b) => b[1].length - a[1].length)
+    .slice(0, 3);
+
+  return (
+    <div style={{ marginTop: 28 }}>
+      <RDSSectionHead title="Active signals" count={`${feed.length} · past 7d`} />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+        {top.map(([name, items]) => {
+          const slug = items[0]?.competitorSlug ?? null;
+          return (
+            <div key={name} style={{ paddingTop: 4 }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "baseline",
+                  marginBottom: 8
+                }}
+              >
+                {slug ? (
+                  <Link
+                    href={`/${slug}`}
+                    style={{
+                      fontSize: 15,
+                      fontWeight: 700,
+                      color: "var(--ink)",
+                      textDecoration: "none",
+                      borderBottom: "1px dotted var(--accent)"
+                    }}
+                  >
+                    {name}
+                  </Link>
+                ) : (
+                  <span style={{ fontSize: 15, fontWeight: 700 }}>{name}</span>
+                )}
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--accent)" }}>
+                  {items.length}
+                </span>
+              </div>
+              {items.slice(0, 4).map((item) => (
+                <div
+                  key={item.id}
+                  style={{
+                    padding: "10px 0",
+                    borderBottom: "1px dotted var(--paper-rule-2)"
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 10,
+                      color: "var(--ink-faint)",
+                      letterSpacing: "0.06em",
+                      marginBottom: 4
+                    }}
+                  >
+                    <span style={{ color: "var(--ink)", fontWeight: 600 }}>{item.pageLabel}</span>
+                    <span>{formatTimeAgo(item.scannedAt)} ago</span>
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 13,
+                      lineHeight: 1.45,
+                      color: "var(--ink)",
+                      textWrap: "pretty"
+                    }}
+                  >
+                    {item.summary ?? "Change detected · diff summary pending."}
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function WatchAndSchema({
+  rows,
+  schema
+}: {
+  rows: DashboardData["competitors"];
+  schema: DashboardData["schema"];
+}) {
+  const quiet = rows.filter((r) => r.changeCount === 0);
+  return (
+    <div style={{ marginTop: 28 }}>
+      <RDSSectionHead title="Watch list & data quality" />
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32 }}>
+        <div>
+          <div
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 10,
+              letterSpacing: "0.14em",
+              color: "var(--ink-faint)",
+              marginBottom: 8,
+              borderBottom: "1px solid var(--ink)",
+              paddingBottom: 6,
+              textTransform: "uppercase"
+            }}
+          >
+            Quiet but watched
+          </div>
+          {quiet.length === 0 ? (
+            <p
+              style={{
+                fontSize: 13,
+                color: "var(--ink-faint)",
+                fontStyle: "italic",
+                margin: 0
+              }}
+            >
+              Every tracked competitor moved in the last 24h.
+            </p>
+          ) : (
+            quiet.map((r) => (
+              <Link
+                key={r.slug}
+                href={`/${r.slug}`}
+                style={{
+                  display: "flex",
+                  alignItems: "baseline",
+                  gap: 6,
+                  padding: "5px 0",
+                  fontSize: 14,
+                  color: "var(--ink)",
+                  textDecoration: "none"
+                }}
+              >
+                <span style={{ fontWeight: 700 }}>{r.name}</span>
+                <span style={{ color: "var(--accent)" }}>—</span>
+                <span style={{ color: "var(--ink-2)", fontStyle: "italic" }}>
+                  {r.briefSummary ?? "Stable · no material changes."}
+                </span>
+              </Link>
+            ))
+          )}
+        </div>
+        <div>
+          <div
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 10,
+              letterSpacing: "0.14em",
+              color: "var(--ink-faint)",
+              marginBottom: 8,
+              borderBottom: "1px solid var(--ink)",
+              paddingBottom: 6,
+              textTransform: "uppercase"
+            }}
+          >
+            Schema coverage · {schema.overall}%
+          </div>
+          {schema.fields.map((f) => (
+            <div
+              key={f.name}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "100px 1fr 30px",
+                gap: 10,
+                alignItems: "center",
+                padding: "4px 0"
+              }}
+            >
+              <span style={{ fontSize: 13, textTransform: "capitalize" }}>{f.name}</span>
+              <div style={{ height: 6, background: "var(--paper-rule)" }}>
+                <div style={{ height: "100%", background: "var(--ink)", width: `${f.coverage}%` }} />
+              </div>
+              <span
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 11,
+                  textAlign: "right"
+                }}
+              >
+                {f.coverage}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
