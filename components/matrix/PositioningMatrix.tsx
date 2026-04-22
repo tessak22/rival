@@ -171,6 +171,7 @@ export function PositioningMatrix({ points, config }: Props) {
             .join(", ");
           return (
             <g key={pt.slug}>
+              {/* isSelf takes visual priority over override indicators */}
               {pt.isSelf ? (
                 <>
                   <title>{pt.name} (you)</title>
