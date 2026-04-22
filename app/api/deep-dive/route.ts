@@ -5,9 +5,9 @@ import { Prisma } from "@prisma/client";
 export const maxDuration = 120;
 
 import { prisma } from "@/lib/db/client";
-import { getTabstackClient } from "@/lib/tabstack/client";
 import { extractResult, extractCitations } from "@/lib/tabstack/research";
 import { buildPromptForTemplate } from "@/lib/deep-dive-templates";
+import { parseSseChunk } from "@/lib/utils/sse";
 
 type DeepDiveRequest = {
   competitorId?: string;
@@ -60,8 +60,6 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  const client = getTabstackClient();
-
   const stream = new ReadableStream({
     start: async (controller) => {
       const startTime = Date.now();
@@ -75,32 +73,54 @@ export async function POST(request: NextRequest) {
       try {
         controller.enqueue(sse("research:started", { competitorId: competitor.id, mode, promptTemplate }));
 
-        // Stream directly from SDK — each event is forwarded immediately, avoiding timeout
-        const researchStream = await client.agent.research({ query, mode: mode as "fast" | "balanced", nocache: true });
+        // Bypass the SDK's SSE parser for research — the Tabstack server sends keepalives
+        // as `data: :keepalive` which causes the SDK to call JSON.parse(":keepalive") and
+        // throw a SyntaxError. We make a direct HTTP request and handle SSE parsing
+        // ourselves using parseSseChunk, which already skips colon-prefixed data values.
+        const apiKey = process.env.TABSTACK_API_KEY!;
+        const baseURL = process.env.TABSTACK_BASE_URL ?? "https://api.tabstack.ai/v1";
+        const rawResponse = await fetch(`${baseURL}/agent/research`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+            Accept: "text/event-stream"
+          },
+          body: JSON.stringify({ query, mode, nocache: true }),
+          signal: AbortSignal.timeout(115_000)
+        });
 
-        // Manual iteration so we can catch per-call SyntaxErrors from the SDK.
-        // The Tabstack server sends keepalives as `data: :keepalive` — a data field
-        // with a colon-prefixed value. The SDK calls JSON.parse(":keepalive"), throws
-        // a SyntaxError, and terminates for-await. With manual next() we can break
-        // gracefully and proceed with whatever data we already received.
-        const iter = researchStream[Symbol.asyncIterator]();
+        if (!rawResponse.ok || !rawResponse.body) {
+          throw new Error(`Tabstack research request failed: ${rawResponse.status}`);
+        }
+
+        const reader = rawResponse.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = "";
+
         while (true) {
-          let next: IteratorResult<Awaited<ReturnType<typeof iter.next>>["value"]>;
-          try {
-            next = await iter.next();
-          } catch (err) {
-            // Keepalive SyntaxError — break and deliver whatever we have
-            if (err instanceof SyntaxError) break;
-            throw err;
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          const chunks = buf.split("\n\n");
+          buf = chunks.pop() ?? "";
+          for (const parsed of parseSseChunk(chunks.join("\n\n"))) {
+            controller.enqueue(sse("research:progress", { event: parsed.event, data: parsed.data }));
+            if (parsed.event === "complete") completeEventData = parsed.data;
+            if (parsed.event === "error") {
+              status = "error";
+              rawError =
+                typeof (parsed.data as Record<string, unknown>)?.error === "string"
+                  ? String((parsed.data as Record<string, unknown>).error)
+                  : "Research failed";
+              break;
+            }
           }
-          if (next.done) break;
-          const event = next.value;
-          controller.enqueue(sse("research:progress", { event: event.event ?? "unknown", data: event.data }));
-          if (event.event === "complete") completeEventData = event.data;
-          if (event.event === "error") {
-            status = "error";
-            rawError = typeof event.data === "string" ? event.data : JSON.stringify(event.data);
-            break;
+          if (status === "error") break;
+        }
+        if (buf.trim()) {
+          for (const parsed of parseSseChunk(buf)) {
+            if (parsed.event === "complete") completeEventData = parsed.data;
           }
         }
 
