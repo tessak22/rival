@@ -79,7 +79,7 @@ export type ResearchInput = {
   fallback?: LoggerCallMetadata["fallback"];
 };
 
-function extractCitations(data: unknown): ResearchCitation[] {
+export function extractCitations(data: unknown): ResearchCitation[] {
   if (!isPlainObject(data)) {
     return [];
   }
@@ -119,7 +119,7 @@ function extractCitations(data: unknown): ResearchCitation[] {
   });
 }
 
-function extractResult(data: unknown): unknown {
+export function extractResult(data: unknown): unknown {
   if (!isPlainObject(data)) {
     return data ?? null;
   }
