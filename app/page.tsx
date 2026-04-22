@@ -649,9 +649,12 @@ function ThreatRow({
 
 function ActiveSignals({ feed }: { feed: DashboardData["feed"] }) {
   if (feed.length === 0) return null;
+  // Group by competitor ID, not name, so two competitors that happen to share
+  // a display name cannot collapse into one column (the surviving slug would
+  // then link to the wrong competitor).
   const grouped = new Map<string, DashboardData["feed"]>();
   for (const item of feed) {
-    grouped.set(item.competitorName, [...(grouped.get(item.competitorName) ?? []), item]);
+    grouped.set(item.competitorId, [...(grouped.get(item.competitorId) ?? []), item]);
   }
   const top = [...grouped.entries()]
     .sort((a, b) => b[1].length - a[1].length)
@@ -661,10 +664,11 @@ function ActiveSignals({ feed }: { feed: DashboardData["feed"] }) {
     <div style={{ marginTop: 28 }}>
       <RDSSectionHead title="Active signals" count={`${feed.length} · past 7d`} />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
-        {top.map(([name, items]) => {
+        {top.map(([competitorId, items]) => {
+          const name = items[0]?.competitorName ?? "Unknown";
           const slug = items[0]?.competitorSlug ?? null;
           return (
-            <div key={name} style={{ paddingTop: 4 }}>
+            <div key={competitorId} style={{ paddingTop: 4 }}>
               <div
                 style={{
                   display: "flex",

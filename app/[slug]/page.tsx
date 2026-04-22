@@ -148,7 +148,12 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
         qualityByType={qualityByType}
       />
 
-      <BlogSection data={blogData} scan={blogScan} health={healthFor(qualityByType, "blog")} />
+      <BlogSection
+        data={blogData}
+        scan={blogScan}
+        health={healthFor(qualityByType, "blog")}
+        baseUrl={competitor.baseUrl}
+      />
 
       <SectionHealth list={sectionHealth} />
 
@@ -209,6 +214,21 @@ function healthFor(qualityByType: Map<string, number[]>, type: string): number |
   const scores = qualityByType.get(type);
   if (!scores || scores.length === 0) return null;
   return Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100);
+}
+
+// Only allow http(s) URLs. Blocks javascript:, data:, vbscript:, file:, about:
+// etc. — any URL scheme that would otherwise execute when clicked.
+// Use this on anything read from competitor.baseUrl, scan rawResult, apiLog, or
+// other untrusted upstream data before rendering into an href.
+function toSafeHttpUrl(rawUrl: string | null | undefined, base?: string | null): string | null {
+  if (!rawUrl) return null;
+  try {
+    const parsed = base ? new URL(rawUrl, base) : new URL(rawUrl);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") return parsed.toString();
+  } catch {
+    // Not a valid absolute or relative URL — do not render as clickable.
+  }
+  return null;
 }
 
 function buildHealthTrend(
@@ -319,22 +339,7 @@ function Hero({
         >
           {name}
         </h1>
-        <a
-          href={baseUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: 13,
-            color: "var(--accent)",
-            textDecoration: "none",
-            marginTop: 6,
-            display: "inline-block",
-            borderBottom: "1px dotted var(--accent)"
-          }}
-        >
-          {prettyUrl(baseUrl)}
-        </a>
+        <HeroUrl rawUrl={baseUrl} />
         {tagline && (
           <div
             style={{
@@ -457,6 +462,40 @@ function HeroStat({ label, value }: { label: string; value: ReactNode }) {
 
 function prettyUrl(url: string): string {
   return url.replace(/^https?:\/\//, "").replace(/\/$/, "");
+}
+
+function HeroUrl({ rawUrl }: { rawUrl: string }) {
+  const safe = toSafeHttpUrl(rawUrl);
+  const label = prettyUrl(rawUrl);
+  const baseStyle: CSSProperties = {
+    fontFamily: "var(--font-mono)",
+    fontSize: 13,
+    marginTop: 6,
+    display: "inline-block"
+  };
+  if (!safe) {
+    // Baseurl failed the http(s) sanity check — render as inert text, never
+    // as a clickable link. A compromised or malformed baseUrl must not become
+    // a click-to-execute vector.
+    return (
+      <span style={{ ...baseStyle, color: "var(--ink-faint)" }}>{label}</span>
+    );
+  }
+  return (
+    <a
+      href={safe}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        ...baseStyle,
+        color: "var(--accent)",
+        textDecoration: "none",
+        borderBottom: "1px dotted var(--accent)"
+      }}
+    >
+      {label}
+    </a>
+  );
 }
 
 // ── Intelligence Brief ───────────────────────────────────────────
@@ -1226,11 +1265,13 @@ function SubScore({ k, v }: { k: string; v: string }) {
 function BlogSection({
   data,
   scan,
-  health
+  health,
+  baseUrl
 }: {
   data: BlogData | null;
   scan: { scannedAt: Date } | null;
   health: number | null;
+  baseUrl: string;
 }) {
   return (
     <div style={{ marginTop: 36 }}>
@@ -1306,48 +1347,51 @@ function BlogSection({
               <KVLabel style={{ marginTop: 18 }}>RECENT POSTS</KVLabel>
               <ol style={{ margin: 0, padding: 0, listStyle: "none" }}>
                 {data.recent_post_titles && data.recent_post_titles.length > 0 ? (
-                  data.recent_post_titles.map((title, i) => (
-                    <li
-                      key={i}
-                      style={{
-                        display: "flex",
-                        gap: 14,
-                        padding: "8px 0",
-                        borderBottom: "1px dotted var(--paper-rule-2)"
-                      }}
-                    >
-                      <span
+                  data.recent_post_titles.map((title, i) => {
+                    const safeUrl = toSafeHttpUrl(data.recent_post_urls?.[i], baseUrl);
+                    return (
+                      <li
+                        key={i}
                         style={{
-                          fontFamily: "var(--font-mono)",
-                          fontSize: 11,
-                          color: "var(--ink-faint)",
-                          width: 80,
-                          flexShrink: 0,
-                          paddingTop: 2
+                          display: "flex",
+                          gap: 14,
+                          padding: "8px 0",
+                          borderBottom: "1px dotted var(--paper-rule-2)"
                         }}
                       >
-                        {data.recent_post_dates?.[i] ?? "—"}
-                      </span>
-                      {data.recent_post_urls?.[i] ? (
-                        <a
-                          href={data.recent_post_urls[i]}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <span
                           style={{
-                            fontSize: 14,
-                            color: "var(--ink)",
-                            textDecoration: "none",
-                            borderBottom: "1px dotted var(--accent)",
-                            lineHeight: 1.4
+                            fontFamily: "var(--font-mono)",
+                            fontSize: 11,
+                            color: "var(--ink-faint)",
+                            width: 80,
+                            flexShrink: 0,
+                            paddingTop: 2
                           }}
                         >
-                          {title}
-                        </a>
-                      ) : (
-                        <span style={{ fontSize: 14, color: "var(--ink)", lineHeight: 1.4 }}>{title}</span>
-                      )}
-                    </li>
-                  ))
+                          {data.recent_post_dates?.[i] ?? "—"}
+                        </span>
+                        {safeUrl ? (
+                          <a
+                            href={safeUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              fontSize: 14,
+                              color: "var(--ink)",
+                              textDecoration: "none",
+                              borderBottom: "1px dotted var(--accent)",
+                              lineHeight: 1.4
+                            }}
+                          >
+                            {title}
+                          </a>
+                        ) : (
+                          <span style={{ fontSize: 14, color: "var(--ink)", lineHeight: 1.4 }}>{title}</span>
+                        )}
+                      </li>
+                    );
+                  })
                 ) : (
                   <li style={{ listStyle: "none" }}>
                     <EmptyInline>None indexed</EmptyInline>

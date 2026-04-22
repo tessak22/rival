@@ -52,18 +52,26 @@ export default async function HistoryPage({ params, searchParams }: Props) {
       where: { competitorId: competitor.id, calledAt: { gte: windowStart } },
       select: {
         pageId: true,
+        calledAt: true,
         resultQuality: true,
         fallbackTriggered: true,
         fallbackEndpoint: true,
         missingFields: true
-      }
+      },
+      orderBy: { calledAt: "desc" }
     })
   ]);
 
-  const logByPageId = new Map<string, (typeof logs)[number]>();
+  // Index logs by pageId for O(1) lookup, preserving calledAt-desc order so
+  // pairLogToScan can walk the per-page list and pick the nearest-in-time log.
+  // Without this, the same log was reused for every scan on a page — Partial
+  // and "via markdown" chips would leak from one scan row onto unrelated ones.
+  const logsByPageId = new Map<string, LogRecord[]>();
   for (const l of logs) {
     if (!l.pageId) continue;
-    if (!logByPageId.has(l.pageId)) logByPageId.set(l.pageId, l);
+    const list = logsByPageId.get(l.pageId);
+    if (list) list.push(l);
+    else logsByPageId.set(l.pageId, [l]);
   }
 
   const windowScans = allScans.filter((s) => s.scannedAt >= windowStart);
@@ -263,7 +271,7 @@ export default async function HistoryPage({ params, searchParams }: Props) {
                 </div>
                 <div>
                   {events.map((scan) => (
-                    <ScanRow key={scan.id} scan={scan} log={logByPageId.get(scan.pageId) ?? null} />
+                    <ScanRow key={scan.id} scan={scan} log={pairLogToScan(scan, logsByPageId.get(scan.pageId))} />
                   ))}
                 </div>
               </div>
@@ -340,11 +348,34 @@ type ScanRecord = {
 
 type LogRecord = {
   pageId: string | null;
+  calledAt: Date;
   resultQuality: string | null;
   fallbackTriggered: boolean;
   fallbackEndpoint: string | null;
   missingFields: string[];
 };
+
+// Pair each scan row with the log whose calledAt sits closest in time to the
+// scan's scannedAt, within MAX_LOG_PAIR_MS. Logs are assumed to be presorted
+// calledAt-desc (set by the findMany orderBy). We intentionally do not reuse
+// a single log across all scans for a page — that made Partial / via-markdown
+// chips leak onto unrelated rows.
+const MAX_LOG_PAIR_MS = 10 * 60_000;
+
+function pairLogToScan(scan: { scannedAt: Date }, candidates: LogRecord[] | undefined): LogRecord | null {
+  if (!candidates || candidates.length === 0) return null;
+  const target = scan.scannedAt.getTime();
+  let best: LogRecord | null = null;
+  let bestDelta = Number.POSITIVE_INFINITY;
+  for (const log of candidates) {
+    const delta = Math.abs(log.calledAt.getTime() - target);
+    if (delta < bestDelta) {
+      best = log;
+      bestDelta = delta;
+    }
+  }
+  return bestDelta <= MAX_LOG_PAIR_MS ? best : null;
+}
 
 function ScanRow({ scan, log }: { scan: ScanRecord; log: LogRecord | null }) {
   const hasChange = scan.hasChanges;
