@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { RDSButton } from "@/components/rds";
 
 type InsightsFiltersProps = {
   endpoints: string[];
@@ -12,6 +13,28 @@ type InsightsFiltersProps = {
     dateFrom?: string;
     dateTo?: string;
   };
+};
+
+const controlStyle: React.CSSProperties = {
+  fontFamily: "var(--font-mono)",
+  fontSize: "var(--fs-12)",
+  color: "var(--ink)",
+  background: "var(--paper)",
+  border: "1px solid var(--ink)",
+  padding: "6px 10px",
+  outline: "none",
+  width: "100%"
+};
+
+const labelStyle: React.CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 4,
+  fontFamily: "var(--font-mono)",
+  fontSize: "var(--fs-10)",
+  letterSpacing: "var(--tr-kicker)",
+  textTransform: "uppercase",
+  color: "var(--ink-faint)"
 };
 
 export function InsightsFilters({ endpoints, competitors, initial }: InsightsFiltersProps) {
@@ -36,39 +59,87 @@ export function InsightsFilters({ endpoints, competitors, initial }: InsightsFil
     router.push(query ? `${pathname}?${query}` : pathname);
   }
 
+  function clearFilters() {
+    setEndpoint("");
+    setCompetitorId("");
+    setDateFrom("");
+    setDateTo("");
+    router.push(pathname);
+  }
+
+  const hasFilters = endpoint || competitorId || dateFrom || dateTo;
+
   return (
-    <form className="filters" onSubmit={applyFilters}>
-      <label>
-        Endpoint
-        <select name="endpoint" value={endpoint} onChange={(event) => setEndpoint(event.target.value)}>
-          <option value="">All</option>
-          {endpointOptions.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Competitor
-        <select name="competitorId" value={competitorId} onChange={(event) => setCompetitorId(event.target.value)}>
-          <option value="">All</option>
-          {competitors.map((competitor) => (
-            <option key={competitor.id} value={competitor.id}>
-              {competitor.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Date from
-        <input type="date" name="dateFrom" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} />
-      </label>
-      <label>
-        Date to
-        <input type="date" name="dateTo" value={dateTo} onChange={(event) => setDateTo(event.target.value)} />
-      </label>
-      <button type="submit">Apply filters</button>
+    <form onSubmit={applyFilters}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+          gap: 12,
+          alignItems: "end"
+        }}
+      >
+        <label style={labelStyle}>
+          Endpoint
+          <select style={controlStyle} name="endpoint" value={endpoint} onChange={(e) => setEndpoint(e.target.value)}>
+            <option value="">All</option>
+            {endpointOptions.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label style={labelStyle}>
+          Competitor
+          <select
+            style={controlStyle}
+            name="competitorId"
+            value={competitorId}
+            onChange={(e) => setCompetitorId(e.target.value)}
+          >
+            <option value="">All</option>
+            {competitors.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label style={labelStyle}>
+          Date from
+          <input
+            style={controlStyle}
+            type="date"
+            name="dateFrom"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+          />
+        </label>
+
+        <label style={labelStyle}>
+          Date to
+          <input
+            style={controlStyle}
+            type="date"
+            name="dateTo"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+          />
+        </label>
+
+        <RDSButton type="submit" variant="solid" size="sm">
+          Apply
+        </RDSButton>
+
+        {hasFilters && (
+          <RDSButton variant="ghost" size="sm" onClick={clearFilters}>
+            Clear
+          </RDSButton>
+        )}
+      </div>
     </form>
   );
 }

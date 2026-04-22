@@ -1,6 +1,18 @@
 import { prisma } from "@/lib/db/client";
 import { getApiInsights } from "@/lib/db/api-logs";
 import { InsightsFilters } from "@/components/insights/InsightsFilters";
+import {
+  RDSPageShell,
+  RDSHeader,
+  RDSFooter,
+  RDSSectionHead,
+  RDSStat,
+  RDSKicker,
+  RDSEmpty,
+  RDSChip
+} from "@/components/rds";
+
+export const dynamic = "force-dynamic";
 
 type InsightsPageProps = {
   searchParams: Promise<{
@@ -22,6 +34,33 @@ function safeText(value: unknown): string {
   const text = typeof value === "string" ? value : String(value ?? "");
   return text.replace(/[<>&]/g, (char) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[char] ?? char);
 }
+
+const th: React.CSSProperties = {
+  textAlign: "left",
+  padding: "7px 12px",
+  borderBottom: "1px solid var(--ink)",
+  fontSize: "var(--fs-10)",
+  letterSpacing: "var(--tr-kicker)",
+  textTransform: "uppercase",
+  color: "var(--ink-faint)",
+  fontFamily: "var(--font-mono)",
+  whiteSpace: "nowrap"
+};
+
+const td: React.CSSProperties = {
+  padding: "8px 12px",
+  borderBottom: "1px solid var(--paper-rule)",
+  fontSize: "var(--fs-12)",
+  fontFamily: "var(--font-mono)",
+  verticalAlign: "top",
+  color: "var(--ink)"
+};
+
+const table: React.CSSProperties = {
+  width: "100%",
+  borderCollapse: "collapse",
+  border: "1px solid var(--paper-rule)"
+};
 
 export default async function InsightsPage({ searchParams }: InsightsPageProps) {
   const params = await searchParams;
@@ -46,18 +85,53 @@ export default async function InsightsPage({ searchParams }: InsightsPageProps) 
   };
 
   const insights = await getApiInsights(filters);
+  const successPct = Math.round(insights.successRate.successRate * 100);
 
   return (
-    <main className="dashboard-page">
-      <header className="page-header">
-        <h1>API Insights</h1>
-        <p>Schema health and extraction quality telemetry from api_logs.</p>
-      </header>
+    <RDSPageShell>
+      <RDSHeader />
 
-      <section className="panel">
-        <header className="panel-header">
-          <h2>Filters</h2>
-        </header>
+      <div style={{ marginBottom: 28 }}>
+        <RDSKicker>Tabstack API</RDSKicker>
+        <h1
+          style={{
+            margin: "6px 0 4px",
+            fontSize: "var(--fs-28)",
+            fontWeight: 700,
+            fontFamily: "var(--font-serif)",
+            letterSpacing: "var(--tr-snug)"
+          }}
+        >
+          API Insights
+        </h1>
+        <p style={{ margin: 0, color: "var(--ink-mute)", fontSize: "var(--fs-14)" }}>
+          Schema health and extraction quality telemetry from api_logs.
+        </p>
+      </div>
+
+      {/* Top stats */}
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 32,
+          marginBottom: 32,
+          paddingBottom: 28,
+          borderBottom: "1px solid var(--paper-rule)"
+        }}
+      >
+        <RDSStat
+          label="Success Rate"
+          value={`${successPct}%`}
+          color={successPct >= 90 ? "var(--ok)" : successPct >= 75 ? "var(--warn)" : "var(--accent-hot)"}
+        />
+        <RDSStat label="Total Calls" value={insights.successRate.totalCalls.toLocaleString()} />
+        <RDSStat label="Successful" value={insights.successRate.successCalls.toLocaleString()} />
+      </div>
+
+      {/* Filters */}
+      <div style={{ marginBottom: 32 }}>
+        <RDSSectionHead title="Filters" />
         <InsightsFilters
           endpoints={endpointRows.map((row) => row.endpoint)}
           competitors={competitors}
@@ -68,149 +142,229 @@ export default async function InsightsPage({ searchParams }: InsightsPageProps) 
             dateTo: params.dateTo
           }}
         />
-      </section>
+      </div>
 
-      <section className="panel">
-        <header className="panel-header">
-          <h2>Success Rate</h2>
-        </header>
-        {insights.successRate.totalCalls === 0 ? (
-          <p className="muted">No data yet.</p>
+      {/* Missing Fields */}
+      <div style={{ marginBottom: 32 }}>
+        <RDSSectionHead title="Most Common Missing Fields" count={insights.missingFields.length} />
+        {insights.missingFields.length === 0 ? (
+          <RDSEmpty title="No missing fields" body="All schema fields are returning data." />
         ) : (
-          <p>
-            {Math.round(insights.successRate.successRate * 100)}% ({insights.successRate.successCalls}/
-            {insights.successRate.totalCalls})
-          </p>
+          <table style={table}>
+            <thead>
+              <tr>
+                <th style={th}>Page type</th>
+                <th style={th}>Field</th>
+                <th style={{ ...th, textAlign: "right" }}>Missing</th>
+              </tr>
+            </thead>
+            <tbody>
+              {insights.missingFields.slice(0, 25).map((row, i) => (
+                <tr key={`${row.pageType}-${row.field}-${i}`}>
+                  <td style={td}>
+                    <RDSChip>{safeText(row.pageType)}</RDSChip>
+                  </td>
+                  <td style={{ ...td, color: "var(--accent)" }}>{safeText(row.field)}</td>
+                  <td style={{ ...td, textAlign: "right", fontWeight: 600 }}>{row.missingCount}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
-      </section>
+      </div>
 
-      <section className="panel">
-        <header className="panel-header">
-          <h2>Most Common Missing Fields</h2>
-        </header>
-        <div className="logs-table-wrap">
-          <table className="logs-table">
+      {/* Fallback Frequency */}
+      <div style={{ marginBottom: 32 }}>
+        <RDSSectionHead title="Fallback Frequency" count={insights.fallbackFrequency.length} />
+        {insights.fallbackFrequency.length === 0 ? (
+          <RDSEmpty title="No fallbacks" body="No fallback events recorded." />
+        ) : (
+          <table style={table}>
             <thead>
               <tr>
-                <th>Page type</th>
-                <th>Field</th>
-                <th>Missing count</th>
+                <th style={th}>Page</th>
+                <th style={th}>Type</th>
+                <th style={{ ...th, textAlign: "right" }}>Fallbacks</th>
+                <th style={{ ...th, textAlign: "right" }}>Total calls</th>
+                <th style={{ ...th, textAlign: "right" }}>Rate</th>
               </tr>
             </thead>
             <tbody>
-              {insights.missingFields.slice(0, 25).map((row, index) => (
-                <tr key={`${row.pageType}-${row.field}-${index}`}>
-                  <td>{safeText(row.pageType)}</td>
-                  <td>{safeText(row.field)}</td>
-                  <td>{row.missingCount}</td>
-                </tr>
-              ))}
+              {insights.fallbackFrequency.slice(0, 25).map((row) => {
+                const rate = Math.round(row.fallbackRate * 100);
+                return (
+                  <tr key={row.pageId}>
+                    <td style={td}>{safeText(row.pageLabel)}</td>
+                    <td style={td}>
+                      <RDSChip>{safeText(row.pageType)}</RDSChip>
+                    </td>
+                    <td style={{ ...td, textAlign: "right" }}>{row.fallbackCount}</td>
+                    <td style={{ ...td, textAlign: "right" }}>{row.totalCalls}</td>
+                    <td style={{ ...td, textAlign: "right" }}>
+                      <span
+                        style={{
+                          color: rate > 20 ? "var(--accent-hot)" : rate > 0 ? "var(--warn)" : "var(--ok)",
+                          fontWeight: 600
+                        }}
+                      >
+                        {rate}%
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
-        </div>
-      </section>
+        )}
+      </div>
 
-      <section className="panel">
-        <header className="panel-header">
-          <h2>Fallback Frequency</h2>
-        </header>
-        <div className="logs-table-wrap">
-          <table className="logs-table">
-            <thead>
-              <tr>
-                <th>Page</th>
-                <th>Type</th>
-                <th>Fallback count</th>
-                <th>Total calls</th>
-                <th>Fallback rate</th>
-              </tr>
-            </thead>
-            <tbody>
-              {insights.fallbackFrequency.slice(0, 25).map((row) => (
-                <tr key={row.pageId}>
-                  <td>{safeText(row.pageLabel)}</td>
-                  <td>{safeText(row.pageType)}</td>
-                  <td>{row.fallbackCount}</td>
-                  <td>{row.totalCalls}</td>
-                  <td>{Math.round(row.fallbackRate * 100)}%</td>
-                </tr>
+      {/* 3-col stat panels */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          gap: 24,
+          marginBottom: 32
+        }}
+      >
+        {/* Effort Distribution */}
+        <div style={{ border: "1px solid var(--paper-rule)", padding: 20 }}>
+          <RDSSectionHead title="Effort" level={3} />
+          {insights.effortDistribution.length === 0 ? (
+            <p
+              style={{ margin: 0, color: "var(--ink-faint)", fontSize: "var(--fs-12)", fontFamily: "var(--font-mono)" }}
+            >
+              No data.
+            </p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {insights.effortDistribution.map((item) => (
+                <div
+                  key={item.effort}
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}
+                >
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: "var(--fs-12)", color: "var(--ink-mute)" }}>
+                    {item.effort ?? "unknown"}
+                  </span>
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: "var(--fs-14)", fontWeight: 700 }}>
+                    {item.count.toLocaleString()}
+                  </span>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          )}
         </div>
-      </section>
 
-      <section className="insights-grid">
-        <article className="panel">
-          <header className="panel-header">
-            <h2>Effort Distribution</h2>
-          </header>
-          <ul className="stat-list">
-            {insights.effortDistribution.map((item) => (
-              <li key={item.effort}>
-                <span>{item.effort}</span>
-                <strong>{item.count}</strong>
-              </li>
-            ))}
-          </ul>
-        </article>
+        {/* Geo-target Outcomes */}
+        <div style={{ border: "1px solid var(--paper-rule)", padding: 20 }}>
+          <RDSSectionHead title="Geo-target" level={3} />
+          {insights.geoTargetComparisons.length === 0 ? (
+            <p
+              style={{ margin: 0, color: "var(--ink-faint)", fontSize: "var(--fs-12)", fontFamily: "var(--font-mono)" }}
+            >
+              No data.
+            </p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {insights.geoTargetComparisons.map((item) => (
+                <div
+                  key={item.segment}
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}
+                >
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: "var(--fs-12)", color: "var(--ink-mute)" }}>
+                    {item.segment}
+                  </span>
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: "var(--fs-12)", fontWeight: 600 }}>
+                    {Math.round(item.successRate * 100)}%{" "}
+                    <span style={{ color: "var(--ink-faint)", fontWeight: 400 }}>
+                      ({item.successCalls}/{item.totalCalls})
+                    </span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
-        <article className="panel">
-          <header className="panel-header">
-            <h2>Geo-target Outcomes</h2>
-          </header>
-          <ul className="stat-list">
-            {insights.geoTargetComparisons.map((item) => (
-              <li key={item.segment}>
-                <span>{item.segment}</span>
-                <strong>
-                  {Math.round(item.successRate * 100)}% ({item.successCalls}/{item.totalCalls})
-                </strong>
-              </li>
-            ))}
-          </ul>
-        </article>
+        {/* Blocked by Domain */}
+        <div style={{ border: "1px solid var(--paper-rule)", padding: 20 }}>
+          <RDSSectionHead title="Blocked" level={3} />
+          {insights.blockedByDomain.length === 0 ? (
+            <p
+              style={{ margin: 0, color: "var(--ink-faint)", fontSize: "var(--fs-12)", fontFamily: "var(--font-mono)" }}
+            >
+              None.
+            </p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {insights.blockedByDomain.slice(0, 8).map((item) => (
+                <div
+                  key={item.domain}
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}
+                >
+                  <span
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "var(--fs-12)",
+                      color: "var(--ink-mute)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      maxWidth: 140
+                    }}
+                  >
+                    {safeText(item.domain)}
+                  </span>
+                  <span
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "var(--fs-14)",
+                      fontWeight: 700,
+                      color: "var(--accent-hot)",
+                      flexShrink: 0
+                    }}
+                  >
+                    {item.blockedCount}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
-        <article className="panel">
-          <header className="panel-header">
-            <h2>Blocked Content by Domain</h2>
-          </header>
-          <ul className="stat-list">
-            {insights.blockedByDomain.slice(0, 20).map((item) => (
-              <li key={item.domain}>
-                <span>{safeText(item.domain)}</span>
-                <strong>{item.blockedCount}</strong>
-              </li>
-            ))}
-          </ul>
-        </article>
-      </section>
-
-      <section className="panel">
-        <header className="panel-header">
-          <h2>Top Errors Over Time</h2>
-        </header>
-        <div className="logs-table-wrap">
-          <table className="logs-table">
+      {/* Top Errors */}
+      <div style={{ marginBottom: 32 }}>
+        <RDSSectionHead title="Top Errors Over Time" count={insights.topErrors.length} />
+        {insights.topErrors.length === 0 ? (
+          <RDSEmpty title="No errors" body="No errors recorded in this period." />
+        ) : (
+          <table style={table}>
             <thead>
               <tr>
-                <th>Error</th>
-                <th>Count</th>
-                <th>Timeline</th>
+                <th style={th}>Error</th>
+                <th style={{ ...th, textAlign: "right" }}>Count</th>
+                <th style={th}>Timeline</th>
               </tr>
             </thead>
             <tbody>
               {insights.topErrors.map((item) => (
                 <tr key={item.error}>
-                  <td>{safeText(item.error)}</td>
-                  <td>{item.count}</td>
-                  <td>{item.timeline.map((point) => `${point.day}: ${point.count}`).join(" | ")}</td>
+                  <td style={{ ...td, color: "var(--accent-hot)", maxWidth: 380, wordBreak: "break-word" }}>
+                    {safeText(item.error)}
+                  </td>
+                  <td style={{ ...td, textAlign: "right", fontWeight: 600 }}>{item.count}</td>
+                  <td style={{ ...td, color: "var(--ink-faint)" }}>
+                    {item.timeline.map((point) => `${point.day}: ${point.count}`).join(" · ")}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
-      </section>
-    </main>
+        )}
+      </div>
+
+      <RDSFooter />
+    </RDSPageShell>
   );
 }

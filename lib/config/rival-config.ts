@@ -31,7 +31,7 @@ export type MatrixConfig = {
 
 export const DEFAULT_MATRIX_CONFIG: MatrixConfig = {
   x_axis: { key: "managed_service_score", label_low: "Self-hosted", label_high: "Managed API" },
-  y_axis: { key: "llm_included_score", label_low: "Bring Your Own LLM", label_high: "LLM Built-in" },
+  y_axis: { key: "llm_included_score", label_low: "Bring Your Own LLM", label_high: "AI in the API" },
   quadrant_labels: {
     top_left: "DIY + AI-Ready",
     top_right: "Managed + AI-Ready",
