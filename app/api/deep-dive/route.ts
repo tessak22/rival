@@ -69,12 +69,30 @@ export async function POST(request: NextRequest) {
       try {
         controller.enqueue(sse("research:started", { competitorId: competitor.id, mode, promptTemplate }));
 
-        // Build query — inject self context for comparative framing, same as runResearch
+        // Build query — inject self context for comparative framing, same as runResearch.
+        // Cap combined query at 4000 chars to stay under Tabstack's /research limit.
+        const MAX_QUERY_LENGTH = 4000;
         const selfContext = await buildSelfContext({ isDemo: false });
         const baseQuery =
           (promptTemplate ? buildPromptForTemplate(promptTemplate, competitor.name) : null) ??
           buildResearchQuery(competitor.name);
-        const query = selfContext ? `${selfContext}\n\nRESEARCH QUESTION:\n${baseQuery}` : baseQuery;
+        let query: string;
+        if (selfContext) {
+          const combined = `${selfContext}\n\nRESEARCH QUESTION:\n${baseQuery}`;
+          if (combined.length <= MAX_QUERY_LENGTH) {
+            query = combined;
+          } else {
+            // Truncate selfContext to fit — baseQuery always takes priority
+            const overhead = `\n\nRESEARCH QUESTION:\n${baseQuery}`.length;
+            const contextBudget = MAX_QUERY_LENGTH - overhead;
+            query =
+              contextBudget > 0
+                ? `${selfContext.slice(0, contextBudget)}\n\nRESEARCH QUESTION:\n${baseQuery}`
+                : baseQuery;
+          }
+        } else {
+          query = baseQuery;
+        }
 
         // Stream directly from SDK — each event is forwarded immediately, avoiding timeout
         const researchStream = await client.agent.research({ query, mode: mode as "fast" | "balanced", nocache: true });
