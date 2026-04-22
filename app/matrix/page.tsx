@@ -1,22 +1,11 @@
 import { prisma } from "@/lib/db/client";
-import {
-  loadRivalConfig,
-  DEFAULT_MATRIX_CONFIG,
-  type MatrixConfig,
-  type MatrixAxisKey
-} from "@/lib/config/rival-config";
+import { loadRivalConfig, DEFAULT_MATRIX_CONFIG, type MatrixConfig } from "@/lib/config/rival-config";
+import { getAxisScore } from "@/lib/matrix/overrides";
 import { PositioningMatrix, type MatrixPoint } from "@/components/matrix/PositioningMatrix";
 import { MatrixDownloadButton } from "@/components/matrix/MatrixDownloadButton";
 import { RDSPageShell, RDSHeader, RDSFooter, RDSEmpty, RDSKicker } from "@/components/rds";
 
 export const dynamic = "force-dynamic";
-
-function getAxisScore(brief: unknown, key: MatrixAxisKey): number | null {
-  if (!brief || typeof brief !== "object" || Array.isArray(brief)) return null;
-  const val = (brief as Record<string, unknown>)[key];
-  if (typeof val !== "number" || !Number.isFinite(val)) return null;
-  return Math.max(0, Math.min(10, val));
-}
 
 export default async function MatrixPage() {
   let matrixConfig: MatrixConfig;
@@ -32,7 +21,7 @@ export default async function MatrixPage() {
   }
 
   const competitors = await prisma.competitor.findMany({
-    select: { id: true, name: true, slug: true, intelligenceBrief: true, isSelf: true },
+    select: { id: true, name: true, slug: true, intelligenceBrief: true, manualData: true, isSelf: true },
     orderBy: [{ isSelf: "asc" }, { name: "asc" }]
   });
 
@@ -40,13 +29,21 @@ export default async function MatrixPage() {
   let missingScores = 0;
 
   for (const c of competitors) {
-    const x = getAxisScore(c.intelligenceBrief, matrixConfig.x_axis.key);
-    const y = getAxisScore(c.intelligenceBrief, matrixConfig.y_axis.key);
-    if (x === null || y === null) {
+    const xResult = getAxisScore(c.manualData, c.intelligenceBrief, matrixConfig.x_axis.key);
+    const yResult = getAxisScore(c.manualData, c.intelligenceBrief, matrixConfig.y_axis.key);
+    if (xResult === null || yResult === null) {
       missingScores++;
       continue;
     }
-    points.push({ name: c.name, slug: c.slug, x, y, isSelf: c.isSelf });
+    points.push({
+      name: c.name,
+      slug: c.slug,
+      x: xResult.score,
+      y: yResult.score,
+      isSelf: c.isSelf,
+      xOverride: xResult.isOverride,
+      yOverride: yResult.isOverride
+    });
   }
 
   const hasEnoughData = points.some((p) => !p.isSelf);
