@@ -137,9 +137,9 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
         historyHref={`/${competitor.slug}/history`}
       />
 
-      {intelligenceBrief && <IntelligenceBriefSection brief={intelligenceBrief} />}
-
       <DeepDivePromo name={competitor.name} slug={competitor.slug} />
+
+      {intelligenceBrief && <IntelligenceBriefSection brief={intelligenceBrief} />}
 
       <HomepageSection data={homepageData} scan={homepageScan} health={healthFor(qualityByType, "homepage")} />
 
