@@ -90,9 +90,9 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
 
   const intelligenceBrief = asObject<Record<string, unknown>>(competitor.intelligenceBrief);
   const category = pickString(competitor.manualData, ["category"]) ?? inferCategoryFromTier(competitor.threatLevel);
-  const hq = pickString(competitor.manualData, ["hq", "headquarters"]) ?? profileData?.offices_or_locations?.[0] ?? null;
-  const founded =
-    pickNumber(competitor.manualData, ["founded"]) ?? profileData?.founded_year ?? null;
+  const hq =
+    pickString(competitor.manualData, ["hq", "headquarters"]) ?? profileData?.offices_or_locations?.[0] ?? null;
+  const founded = pickNumber(competitor.manualData, ["founded"]) ?? profileData?.founded_year ?? null;
   const employees =
     pickString(competitor.manualData, ["employees", "team_size"]) ?? profileData?.team_size_stated ?? null;
   const fundingM = pickNumber(competitor.manualData, ["fundingM", "funding_m", "funding_millions"]);
@@ -143,10 +143,7 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
 
       <ProfileSection data={profileData} />
 
-      <ReviewsSection
-        scans={reviewsScans}
-        qualityByType={qualityByType}
-      />
+      <ReviewsSection scans={reviewsScans} qualityByType={qualityByType} />
 
       <BlogSection
         data={blogData}
@@ -308,12 +305,9 @@ function Hero({
   historyHref
 }: HeroProps) {
   const color = rdsHealthColor(health);
-  const facts = [
-    hq,
-    founded ? `Founded ${founded}` : null,
-    employees,
-    fundingM ? `$${fundingM}M raised` : null
-  ].filter((x): x is string => Boolean(x));
+  const facts = [hq, founded ? `Founded ${founded}` : null, employees, fundingM ? `$${fundingM}M raised` : null].filter(
+    (x): x is string => Boolean(x)
+  );
   return (
     <div
       style={{
@@ -477,9 +471,7 @@ function HeroUrl({ rawUrl }: { rawUrl: string }) {
     // Baseurl failed the http(s) sanity check — render as inert text, never
     // as a clickable link. A compromised or malformed baseUrl must not become
     // a click-to-execute vector.
-    return (
-      <span style={{ ...baseStyle, color: "var(--ink-faint)" }}>{label}</span>
-    );
+    return <span style={{ ...baseStyle, color: "var(--ink-faint)" }}>{label}</span>;
   }
   return (
     <a
@@ -526,10 +518,7 @@ function IntelligenceBriefSection({ brief }: { brief: Record<string, unknown> })
 
   return (
     <div style={{ marginTop: 36 }}>
-      <RDSSectionHead
-        title="Intelligence Brief"
-        count={threatLevel ? `${threatLevel.toUpperCase()} THREAT` : null}
-      />
+      <RDSSectionHead title="Intelligence Brief" count={threatLevel ? `${threatLevel.toUpperCase()} THREAT` : null} />
       {summary && (
         <p
           style={{
@@ -595,10 +584,7 @@ function IntelligenceBriefSection({ brief }: { brief: Record<string, unknown> })
           </div>
           <ol style={{ margin: 0, padding: 0, listStyle: "none" }}>
             {watchList.map((item, i) => (
-              <li
-                key={i}
-                style={{ display: "flex", gap: 14, padding: "10px 0", borderTop: "1px solid var(--ink-2)" }}
-              >
+              <li key={i} style={{ display: "flex", gap: 14, padding: "10px 0", borderTop: "1px solid var(--ink-2)" }}>
                 <span
                   style={{
                     fontFamily: "var(--font-mono)",
@@ -636,9 +622,7 @@ function HomepageSection({
     return (
       <div style={{ marginTop: 36 }}>
         <RDSSectionHead title="Homepage" count={health != null ? `${health}% SCHEMA` : null} />
-        <p style={{ color: "var(--ink-faint)", fontStyle: "italic", margin: 0 }}>
-          No homepage scan data yet.
-        </p>
+        <p style={{ color: "var(--ink-faint)", fontStyle: "italic", margin: 0 }}>No homepage scan data yet.</p>
       </div>
     );
   }
@@ -787,9 +771,7 @@ function ProfileSection({ data }: { data: ProfileData | null }) {
     return (
       <div style={{ marginTop: 36 }}>
         <RDSSectionHead title="Profile" />
-        <p style={{ color: "var(--ink-faint)", fontStyle: "italic", margin: 0 }}>
-          No profile scan data available.
-        </p>
+        <p style={{ color: "var(--ink-faint)", fontStyle: "italic", margin: 0 }}>No profile scan data available.</p>
       </div>
     );
   }
@@ -1058,10 +1040,7 @@ function ReviewsSection({
   const platform = data?.platform ?? primary.page.label;
   return (
     <div style={{ marginTop: 36 }}>
-      <RDSSectionHead
-        title="Reviews"
-        count={`${platform.toUpperCase()}${health != null ? ` · ${health}%` : ""}`}
-      />
+      <RDSSectionHead title="Reviews" count={`${platform.toUpperCase()}${health != null ? ` · ${health}%` : ""}`} />
       <p
         style={{
           margin: "0 0 16px",
@@ -1073,8 +1052,8 @@ function ReviewsSection({
           fontStyle: "italic"
         }}
       >
-        G2, Capterra, Trustpilot, ProductHunt — review sites actively block scraping. <code>content_blocked</code>{" "}
-        logs here are expected and high-value experience-logging signals.
+        G2, Capterra, Trustpilot, ProductHunt — review sites actively block scraping. <code>content_blocked</code> logs
+        here are expected and high-value experience-logging signals.
       </p>
       {data ? (
         <>
@@ -1102,9 +1081,7 @@ function ReviewsSection({
               </div>
               {(data.ease_of_use_score != null || data.customer_support_score != null) && (
                 <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--ink-2)" }}>
-                  {data.ease_of_use_score != null && (
-                    <SubScore k="Ease of Use" v={data.ease_of_use_score.toFixed(1)} />
-                  )}
+                  {data.ease_of_use_score != null && <SubScore k="Ease of Use" v={data.ease_of_use_score.toFixed(1)} />}
                   {data.customer_support_score != null && (
                     <SubScore k="Support" v={data.customer_support_score.toFixed(1)} />
                   )}
@@ -1297,9 +1274,7 @@ function BlogSection({
         Content strategy signals — topics, audience focus, and publishing cadence.
       </p>
       {data == null ? (
-        <p style={{ color: "var(--ink-faint)", fontStyle: "italic", margin: 0 }}>
-          No blog scan data available yet.
-        </p>
+        <p style={{ color: "var(--ink-faint)", fontStyle: "italic", margin: 0 }}>No blog scan data available yet.</p>
       ) : (
         <>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 20 }}>
@@ -1314,10 +1289,7 @@ function BlogSection({
                     : "Buyer-focused"
               }
             />
-            <BlogStat
-              label="RECENT POSTS INDEXED"
-              value={String(data.recent_post_titles?.length ?? 0)}
-            />
+            <BlogStat label="RECENT POSTS INDEXED" value={String(data.recent_post_titles?.length ?? 0)} />
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 32 }}>
             <div>
@@ -1459,12 +1431,13 @@ function SectionHealth({ list }: { list: Array<{ name: string; pct: number }> })
         {list.map((s) => {
           const color = s.pct >= 85 ? "var(--ok)" : s.pct >= 60 ? "var(--warn)" : "var(--accent-hot)";
           return (
-            <div key={s.name} style={{ padding: "12px 14px", border: "1px solid var(--paper-rule)", background: "#fff" }}>
+            <div
+              key={s.name}
+              style={{ padding: "12px 14px", border: "1px solid var(--paper-rule)", background: "#fff" }}
+            >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                 <span style={{ fontSize: 13, fontWeight: 700, textTransform: "capitalize" }}>{s.name}</span>
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 700, color }}>
-                  {s.pct}%
-                </span>
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 700, color }}>{s.pct}%</span>
               </div>
               <div style={{ height: 4, background: "var(--paper-rule)", marginTop: 8 }}>
                 <div style={{ height: "100%", width: `${s.pct}%`, background: color }} />
@@ -1697,4 +1670,3 @@ function DetailFooter() {
     </div>
   );
 }
-

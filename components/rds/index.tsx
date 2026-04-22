@@ -454,12 +454,7 @@ export function RDSFooter() {
         >
           github.com/tessak22/rival
         </a>
-        <a
-          href="https://tabstack.ai"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ color: "var(--ink-faint)" }}
-        >
+        <a href="https://tabstack.ai" target="_blank" rel="noopener noreferrer" style={{ color: "var(--ink-faint)" }}>
           Powered by Tabstack
         </a>
       </div>
@@ -498,15 +493,7 @@ export function RDSPageShell({ children }: { children: ReactNode }) {
 
 // ── Stat block ───────────────────────────────────────────────────
 
-export function RDSStat({
-  label,
-  value,
-  color
-}: {
-  label: string;
-  value: ReactNode;
-  color?: string;
-}) {
+export function RDSStat({ label, value, color }: { label: string; value: ReactNode; color?: string }) {
   return (
     <div>
       <div

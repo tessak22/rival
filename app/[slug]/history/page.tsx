@@ -186,9 +186,7 @@ export default async function HistoryPage({ params, searchParams }: Props) {
         <RDSSectionHead
           title="Filter"
           eyebrow="BY SURFACE"
-          count={
-            activeType ? `showing ${filteredScans.length} of ${totalScans}` : `${totalScans} scans`
-          }
+          count={activeType ? `showing ${filteredScans.length} of ${totalScans}` : `${totalScans} scans`}
         />
         <div style={{ display: "flex", flexWrap: "wrap", gap: 4, padding: "8px 0" }}>
           <TabLink href={`/${competitor.slug}/history`} active={!activeType}>
@@ -287,15 +285,7 @@ export default async function HistoryPage({ params, searchParams }: Props) {
 
 // ── subviews ─────────────────────────────────────────────────────
 
-function TabLink({
-  href,
-  active,
-  children
-}: {
-  href: string;
-  active: boolean;
-  children: ReactNode;
-}) {
+function TabLink({ href, active, children }: { href: string; active: boolean; children: ReactNode }) {
   return (
     <Link
       href={href}

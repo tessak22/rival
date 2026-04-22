@@ -2,7 +2,6 @@ import Link from "next/link";
 
 import {
   RDSChip,
-  RDSDiffPills,
   RDSFooter,
   RDSHeader,
   RDSKicker,
@@ -142,8 +141,7 @@ async function loadDashboardData() {
   const schemaFields = [...schemaScoresByType.entries()]
     .map(([type, scores]) => ({
       name: type,
-      coverage:
-        scores.length === 0 ? 0 : Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100)
+      coverage: scores.length === 0 ? 0 : Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100)
     }))
     .sort((a, b) => {
       const ai = SCHEMA_FIELD_ORDER.indexOf(a.name);
@@ -220,13 +218,7 @@ export default async function HomePage() {
 
 // ── subviews ─────────────────────────────────────────────────────
 
-function HeaderRow({
-  self,
-  generatedAt
-}: {
-  self: DashboardData["self"];
-  generatedAt: string;
-}) {
+function HeaderRow({ self, generatedAt }: { self: DashboardData["self"]; generatedAt: string }) {
   return (
     <RDSHeader
       right={
@@ -282,13 +274,7 @@ function SelfChip({ name, slug }: { name: string; slug: string }) {
   );
 }
 
-function HeadlineStrip({
-  generatedAt,
-  rows
-}: {
-  generatedAt: string;
-  rows: DashboardData["competitors"];
-}) {
+function HeadlineStrip({ generatedAt, rows }: { generatedAt: string; rows: DashboardData["competitors"] }) {
   const topMovers = rows
     .filter((r) => r.changeCount > 0)
     .sort((a, b) => b.changeCount - a.changeCount || b.health - a.health)
@@ -388,10 +374,7 @@ function HeadlineStrip({
   );
 }
 
-function buildLede(
-  rows: DashboardData["competitors"],
-  topMovers: DashboardData["competitors"]
-): string {
+function buildLede(rows: DashboardData["competitors"], topMovers: DashboardData["competitors"]): string {
   if (topMovers.length === 0) {
     return `All ${rows.length} tracked competitors are quiet in the last 24 hours — schema coverage and positioning stable across the board.`;
   }
@@ -530,13 +513,7 @@ function ThreatsSection({ rows }: { rows: DashboardData["competitors"] }) {
   );
 }
 
-function ThreatRow({
-  row,
-  index
-}: {
-  row: DashboardData["competitors"][number];
-  index: number;
-}) {
+function ThreatRow({ row, index }: { row: DashboardData["competitors"][number]; index: number }) {
   const color = rdsHealthColor(row.health);
   const meta = [row.category, row.hq, row.employees, row.fundingM ? `$${row.fundingM}M raised` : null]
     .filter(Boolean)
@@ -656,9 +633,7 @@ function ActiveSignals({ feed }: { feed: DashboardData["feed"] }) {
   for (const item of feed) {
     grouped.set(item.competitorId, [...(grouped.get(item.competitorId) ?? []), item]);
   }
-  const top = [...grouped.entries()]
-    .sort((a, b) => b[1].length - a[1].length)
-    .slice(0, 3);
+  const top = [...grouped.entries()].sort((a, b) => b[1].length - a[1].length).slice(0, 3);
 
   return (
     <div style={{ marginTop: 28 }}>
@@ -739,13 +714,7 @@ function ActiveSignals({ feed }: { feed: DashboardData["feed"] }) {
   );
 }
 
-function WatchAndSchema({
-  rows,
-  schema
-}: {
-  rows: DashboardData["competitors"];
-  schema: DashboardData["schema"];
-}) {
+function WatchAndSchema({ rows, schema }: { rows: DashboardData["competitors"]; schema: DashboardData["schema"] }) {
   const quiet = rows.filter((r) => r.changeCount === 0);
   return (
     <div style={{ marginTop: 28 }}>
