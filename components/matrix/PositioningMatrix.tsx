@@ -63,10 +63,18 @@ export function PositioningMatrix({ points, config }: Props) {
       {/* Quadrant labels */}
       {ql && (
         <>
-          <text x={M + 8} y={M + 16} fill="var(--ink-faint)" style={monoSm}>{ql.top_left}</text>
-          <text x={MID_X + 8} y={M + 16} fill="var(--ink-faint)" style={monoSm}>{ql.top_right}</text>
-          <text x={M + 8} y={MID_Y + 16} fill="var(--ink-faint)" style={monoSm}>{ql.bottom_left}</text>
-          <text x={MID_X + 8} y={MID_Y + 16} fill="var(--ink-faint)" style={monoSm}>{ql.bottom_right}</text>
+          <text x={M + 8} y={M + 16} fill="var(--ink-faint)" style={monoSm}>
+            {ql.top_left}
+          </text>
+          <text x={MID_X + 8} y={M + 16} fill="var(--ink-faint)" style={monoSm}>
+            {ql.top_right}
+          </text>
+          <text x={M + 8} y={MID_Y + 16} fill="var(--ink-faint)" style={monoSm}>
+            {ql.bottom_left}
+          </text>
+          <text x={MID_X + 8} y={MID_Y + 16} fill="var(--ink-faint)" style={monoSm}>
+            {ql.bottom_right}
+          </text>
         </>
       )}
 

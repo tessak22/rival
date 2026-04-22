@@ -70,8 +70,8 @@ export default async function MatrixPage() {
           Positioning Matrix
         </h1>
         <p style={{ margin: 0, color: "var(--ink-mute)", fontSize: "var(--fs-14)" }}>
-          {matrixConfig.x_axis.label_low} ↔ {matrixConfig.x_axis.label_high} vs{" "}
-          {matrixConfig.y_axis.label_low} ↔ {matrixConfig.y_axis.label_high}
+          {matrixConfig.x_axis.label_low} ↔ {matrixConfig.x_axis.label_high} vs {matrixConfig.y_axis.label_low} ↔{" "}
+          {matrixConfig.y_axis.label_high}
         </p>
       </div>
 

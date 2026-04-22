@@ -212,8 +212,7 @@ export const BRIEF_SCHEMA = {
       type: "number",
       minimum: 0,
       maximum: 10,
-      description:
-        "0 = fully open source, transparent, no lock-in; 10 = fully proprietary, closed, high lock-in"
+      description: "0 = fully open source, transparent, no lock-in; 10 = fully proprietary, closed, high lock-in"
     },
     brand_trust_score: {
       type: "number",
@@ -237,8 +236,7 @@ export const BRIEF_SCHEMA = {
       type: "number",
       minimum: 0,
       maximum: 10,
-      description:
-        "0 = narrow specialist with a single focused use case; 10 = broad generalist covering many use cases"
+      description: "0 = narrow specialist with a single focused use case; 10 = broad generalist covering many use cases"
     }
   },
   required: [
