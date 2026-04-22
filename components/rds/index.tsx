@@ -430,9 +430,45 @@ export function RDSHeader({
 // ── Footer ───────────────────────────────────────────────────────
 
 export function RDSFooter() {
+  const navLink: CSSProperties = {
+    fontFamily: "var(--font-mono)",
+    fontSize: "var(--fs-11)",
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+    color: "var(--ink-mute)",
+    textDecoration: "none"
+  };
   return (
     <div style={{ marginTop: 40 }}>
-      <div style={{ height: 1, background: "var(--ink)", marginBottom: 12 }} />
+      <div style={{ height: 1, background: "var(--ink)", marginBottom: 14 }} />
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 16,
+          marginBottom: 14,
+          flexWrap: "wrap"
+        }}
+      >
+        <div style={{ display: "flex", gap: 24 }}>
+          <Link href="/matrix" style={navLink}>
+            Matrix
+          </Link>
+          <Link href="/insights" style={navLink}>
+            API Insights
+          </Link>
+        </div>
+        <a
+          href="https://tabstack.ai"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ ...navLink, color: "var(--ink-faint)" }}
+        >
+          Powered by Tabstack
+        </a>
+      </div>
+      <div style={{ height: 1, background: "var(--paper-rule)", marginBottom: 12 }} />
       <div
         style={{
           display: "flex",
@@ -453,9 +489,6 @@ export function RDSFooter() {
           style={{ color: "var(--ink-faint)" }}
         >
           github.com/tessak22/rival
-        </a>
-        <a href="https://tabstack.ai" target="_blank" rel="noopener noreferrer" style={{ color: "var(--ink-faint)" }}>
-          Powered by Tabstack
         </a>
       </div>
     </div>
