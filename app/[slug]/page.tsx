@@ -117,7 +117,24 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
             </Link>
           </div>
         }
-        right={<RDSLiveDot />}
+        right={
+          <>
+            <Link
+              href={`/${competitor.slug}/deep-dive`}
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: "var(--fs-11)",
+                color: "var(--ink-faint)",
+                letterSpacing: "0.08em",
+                textDecoration: "none",
+                textTransform: "uppercase"
+              }}
+            >
+              Deep Dive →
+            </Link>
+            <RDSLiveDot />
+          </>
+        }
       />
 
       <Hero
