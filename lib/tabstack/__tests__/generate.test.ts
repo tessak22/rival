@@ -510,7 +510,7 @@ describe("generateBrief with self-context injection", () => {
 });
 
 describe("BRIEF_SCHEMA axis scores", () => {
-  it("includes all five axis score fields as number type", async () => {
+  it("includes all seven axis score fields as number type", async () => {
     const { BRIEF_SCHEMA } = await import("@/lib/tabstack/generate");
     const props = BRIEF_SCHEMA.properties as Record<string, { type: string; minimum?: number; maximum?: number }>;
     const axisFields = [
@@ -518,7 +518,9 @@ describe("BRIEF_SCHEMA axis scores", () => {
       "brand_trust_score",
       "pricing_score",
       "market_maturity_score",
-      "feature_breadth_score"
+      "feature_breadth_score",
+      "managed_service_score",
+      "llm_included_score"
     ];
     for (const field of axisFields) {
       expect(props[field], `${field} missing from BRIEF_SCHEMA`).toBeDefined();
@@ -528,14 +530,16 @@ describe("BRIEF_SCHEMA axis scores", () => {
     }
   });
 
-  it("includes all five axis score fields in BRIEF_EXPECTED_FIELDS", async () => {
+  it("includes all seven axis score fields in BRIEF_EXPECTED_FIELDS", async () => {
     const { BRIEF_EXPECTED_FIELDS } = await import("@/lib/tabstack/generate");
     for (const field of [
       "openness_score",
       "brand_trust_score",
       "pricing_score",
       "market_maturity_score",
-      "feature_breadth_score"
+      "feature_breadth_score",
+      "managed_service_score",
+      "llm_included_score"
     ]) {
       expect(BRIEF_EXPECTED_FIELDS).toContain(field);
     }
