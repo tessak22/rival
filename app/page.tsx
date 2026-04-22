@@ -223,6 +223,32 @@ function HeaderRow({ self, generatedAt }: { self: DashboardData["self"]; generat
     <RDSHeader
       right={
         <>
+          <Link
+            href="/matrix"
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: "var(--fs-11)",
+              color: "var(--ink-faint)",
+              letterSpacing: "0.08em",
+              textDecoration: "none",
+              textTransform: "uppercase"
+            }}
+          >
+            Matrix
+          </Link>
+          <Link
+            href="/insights"
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: "var(--fs-11)",
+              color: "var(--ink-faint)",
+              letterSpacing: "0.08em",
+              textDecoration: "none",
+              textTransform: "uppercase"
+            }}
+          >
+            Insights
+          </Link>
           <span style={{ letterSpacing: "0.04em" }}>{generatedAt}</span>
           <RDSLiveDot />
           {self && <SelfChip name={self.name} slug={self.slug} />}

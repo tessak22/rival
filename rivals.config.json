@@ -146,6 +146,24 @@
   ],
   "schedule": "0 9 * * 1-5",
   "manual_stale_days": 30,
+  "matrix": {
+    "x_axis": {
+      "key": "openness_score",
+      "label_low": "Open Source",
+      "label_high": "Proprietary"
+    },
+    "y_axis": {
+      "key": "brand_trust_score",
+      "label_low": "Low Trust",
+      "label_high": "High Trust"
+    },
+    "quadrant_labels": {
+      "top_left": "Trusted OSS",
+      "top_right": "Established Leaders",
+      "bottom_left": "Emerging Players",
+      "bottom_right": "Niche Specialists"
+    }
+  },
   "notifications": {
     "email": [],
     "slack_webhook": ""
