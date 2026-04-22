@@ -36,6 +36,38 @@ const monoSm = {
   textTransform: "uppercase" as const
 };
 
+const CLUSTER_RADIUS = 28; // px — dots closer than this share a label column
+const LABEL_STEP = 16; // px — vertical gap between staggered labels
+
+function computeLabelOffsets(points: MatrixPoint[]): Map<string, number> {
+  const offsets = new Map<string, number>();
+  const assigned = new Set<string>();
+
+  for (let i = 0; i < points.length; i++) {
+    if (assigned.has(points[i].slug)) continue;
+    const cx = toSvgX(points[i].x);
+    const cy = toSvgY(points[i].y);
+    const cluster: number[] = [i];
+
+    for (let j = i + 1; j < points.length; j++) {
+      if (assigned.has(points[j].slug)) continue;
+      const dx = cx - toSvgX(points[j].x);
+      const dy = cy - toSvgY(points[j].y);
+      if (Math.sqrt(dx * dx + dy * dy) < CLUSTER_RADIUS) {
+        cluster.push(j);
+      }
+    }
+
+    const start = -((cluster.length - 1) / 2) * LABEL_STEP;
+    cluster.forEach((idx, pos) => {
+      offsets.set(points[idx].slug, start + pos * LABEL_STEP);
+      assigned.add(points[idx].slug);
+    });
+  }
+
+  return offsets;
+}
+
 export function PositioningMatrix({ points, config }: Props) {
   const ql = config.quadrant_labels;
 
@@ -117,33 +149,48 @@ export function PositioningMatrix({ points, config }: Props) {
       </text>
 
       {/* Competitor dots + name labels */}
-      {points.map((pt) => {
-        const cx = toSvgX(pt.x);
-        const cy = toSvgY(pt.y);
-        const nearRight = cx > M + PLOT - 90;
-        return (
-          <g key={pt.slug}>
-            {pt.isSelf ? (
-              <>
-                <circle cx={cx} cy={cy} r={8} fill="var(--paper)" stroke="var(--ink)" strokeWidth={2} />
-                <circle cx={cx} cy={cy} r={4} fill="var(--ink)" />
-              </>
-            ) : (
-              <circle cx={cx} cy={cy} r={6} fill="var(--ink)" />
-            )}
-            <text
-              x={nearRight ? cx - 12 : cx + 12}
-              y={cy + 4}
-              textAnchor={nearRight ? "end" : "start"}
-              fill="var(--ink)"
-              style={{ fontSize: 12, fontFamily: "var(--font-sans)", fontWeight: 600, letterSpacing: "-0.01em" }}
-            >
-              {pt.name}
-              {pt.isSelf && " ★"}
-            </text>
-          </g>
-        );
-      })}
+      {(() => {
+        const labelOffsets = computeLabelOffsets(points);
+        return points.map((pt) => {
+          const cx = toSvgX(pt.x);
+          const cy = toSvgY(pt.y);
+          const labelYOffset = labelOffsets.get(pt.slug) ?? 0;
+          const labelY = cy + labelYOffset + 4;
+          const nearRight = cx > M + PLOT - 90;
+          return (
+            <g key={pt.slug}>
+              {labelYOffset !== 0 && (
+                <line
+                  x1={cx}
+                  y1={cy}
+                  x2={nearRight ? cx - 10 : cx + 10}
+                  y2={labelY}
+                  stroke="var(--ink-faint)"
+                  strokeWidth={0.5}
+                />
+              )}
+              {pt.isSelf ? (
+                <>
+                  <circle cx={cx} cy={cy} r={8} fill="var(--paper)" stroke="var(--ink)" strokeWidth={2} />
+                  <circle cx={cx} cy={cy} r={4} fill="var(--ink)" />
+                </>
+              ) : (
+                <circle cx={cx} cy={cy} r={6} fill="var(--ink)" />
+              )}
+              <text
+                x={nearRight ? cx - 12 : cx + 12}
+                y={labelY}
+                textAnchor={nearRight ? "end" : "start"}
+                fill="var(--ink)"
+                style={{ fontSize: 12, fontFamily: "var(--font-sans)", fontWeight: 600, letterSpacing: "-0.01em" }}
+              >
+                {pt.name}
+                {pt.isSelf && " ★"}
+              </text>
+            </g>
+          );
+        });
+      })()}
     </svg>
   );
 }
