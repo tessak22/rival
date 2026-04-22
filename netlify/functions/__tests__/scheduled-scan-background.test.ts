@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import handler, { config } from "../scheduled-scan";
+import handler, { config } from "../scheduled-scan-background";
 
 vi.mock("../../../lib/run-scans", () => ({
   runScans: vi.fn().mockResolvedValue({ competitors: 7, staleLocksDeleted: 0, summary: [] })
@@ -7,7 +7,7 @@ vi.mock("../../../lib/run-scans", () => ({
 
 import { runScans } from "../../../lib/run-scans";
 
-describe("scheduled-scan", () => {
+describe("scheduled-scan-background", () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
