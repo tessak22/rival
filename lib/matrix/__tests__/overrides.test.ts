@@ -48,4 +48,14 @@ describe("getAxisScore", () => {
     const brief = { managed_service_score: 4 };
     expect(getAxisScore(manual, brief, "managed_service_score")).toEqual({ score: 4, isOverride: false });
   });
+
+  it("returns null when override is NaN", () => {
+    const manual = { matrix_overrides: { managed_service_score: NaN } };
+    expect(getAxisScore(manual, null, "managed_service_score")).toBeNull();
+  });
+
+  it("returns null when brief score is Infinity", () => {
+    const brief = { managed_service_score: Infinity };
+    expect(getAxisScore(null, brief, "managed_service_score")).toBeNull();
+  });
 });

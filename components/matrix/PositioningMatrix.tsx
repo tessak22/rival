@@ -171,7 +171,20 @@ export function PositioningMatrix({ points, config }: Props) {
             .join(", ");
           return (
             <g key={pt.slug}>
-              {/* isSelf takes visual priority over override indicators */}
+              {/* Leader line: connects true data coordinate (cy) to displaced dot (dotCy)
+                  so readers can trace an offset item back to its exact axis value. */}
+              {dotOffset !== 0 && (
+                <line
+                  x1={cx}
+                  y1={cy}
+                  x2={nearRight ? cx - 10 : cx + 10}
+                  y2={dotCy}
+                  stroke="var(--ink-faint)"
+                  strokeWidth={0.5}
+                />
+              )}
+              {/* isSelf takes visual priority over override indicators.
+                  <title> is the first child of <g> so the tooltip fires on the whole group. */}
               {pt.isSelf ? (
                 <>
                   <title>{pt.name} (you)</title>

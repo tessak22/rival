@@ -88,10 +88,10 @@ export async function POST(request: NextRequest) {
             query =
               contextBudget > 0
                 ? `${selfContext.slice(0, contextBudget)}\n\nRESEARCH QUESTION:\n${baseQuery}`
-                : baseQuery;
+                : baseQuery.slice(0, MAX_QUERY_LENGTH);
           }
         } else {
-          query = baseQuery;
+          query = baseQuery.slice(0, MAX_QUERY_LENGTH);
         }
 
         // Stream directly from SDK — each event is forwarded immediately, avoiding timeout
