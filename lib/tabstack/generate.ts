@@ -237,6 +237,20 @@ export const BRIEF_SCHEMA = {
       minimum: 0,
       maximum: 10,
       description: "0 = narrow specialist with a single focused use case; 10 = broad generalist covering many use cases"
+    },
+    managed_service_score: {
+      type: "number",
+      minimum: 0,
+      maximum: 10,
+      description:
+        "0 = fully self-hosted library or framework the user runs themselves; 10 = fully managed cloud API with no infrastructure to operate"
+    },
+    llm_included_score: {
+      type: "number",
+      minimum: 0,
+      maximum: 10,
+      description:
+        "0 = no LLM or AI capabilities included, user must bring their own; 10 = LLM and AI capabilities fully built in and ready to use"
     }
   },
   required: [
@@ -250,7 +264,9 @@ export const BRIEF_SCHEMA = {
     "brand_trust_score",
     "pricing_score",
     "market_maturity_score",
-    "feature_breadth_score"
+    "feature_breadth_score",
+    "managed_service_score",
+    "llm_included_score"
   ]
 } as const;
 
@@ -337,10 +353,11 @@ produce a structured brief covering:
    - When evidence is mixed, sparse, or ambiguous, default to Medium rather than High.
 5. Watch list: 2-3 signals to monitor next cycle
 6. Positioning axis scores — using only the competitor data provided, rate each
-   of the five dimensions on a 0–10 scale as defined in the output schema:
+   of the seven dimensions on a 0–10 scale as defined in the output schema:
    openness_score, brand_trust_score, pricing_score, market_maturity_score,
-   feature_breadth_score. Base each score on explicit signals in the data;
-   do not use general market knowledge as a substitute for absent data.
+   feature_breadth_score, managed_service_score, llm_included_score. Base each
+   score on explicit signals in the data; do not use general market knowledge
+   as a substitute for absent data.
 Be direct and specific. No generic advice.
 
 Additional competitor context:
@@ -431,6 +448,20 @@ export const SELF_PROFILE_SCHEMA = {
       minimum: 0,
       maximum: 10,
       description: "0 = narrow specialist with a single focused use case; 10 = broad generalist covering many use cases"
+    },
+    managed_service_score: {
+      type: "number",
+      minimum: 0,
+      maximum: 10,
+      description:
+        "0 = fully self-hosted library or framework the user runs themselves; 10 = fully managed cloud API with no infrastructure to operate"
+    },
+    llm_included_score: {
+      type: "number",
+      minimum: 0,
+      maximum: 10,
+      description:
+        "0 = no LLM or AI capabilities included, user must bring their own; 10 = LLM and AI capabilities fully built in and ready to use"
     }
   },
   required: [
@@ -443,7 +474,9 @@ export const SELF_PROFILE_SCHEMA = {
     "brand_trust_score",
     "pricing_score",
     "market_maturity_score",
-    "feature_breadth_score"
+    "feature_breadth_score",
+    "managed_service_score",
+    "llm_included_score"
   ]
 } as const;
 
@@ -478,11 +511,11 @@ Produce:
 3. pricing_summary — monetization model in one short paragraph.
 4. differentiators — 3–5 bullets of what makes them distinct (not marketing fluff).
 5. recent_signals — 3–5 bullets of recent changes visible in changelog, blog, or careers.
-6. Positioning axis scores — using only the data provided, rate each of the five
+6. Positioning axis scores — using only the data provided, rate each of the seven
    dimensions on a 0–10 scale as defined in the output schema: openness_score,
-   brand_trust_score, pricing_score, market_maturity_score, feature_breadth_score.
-   Base each score on explicit signals in the data; do not use general market
-   knowledge as a substitute for absent data.
+   brand_trust_score, pricing_score, market_maturity_score, feature_breadth_score,
+   managed_service_score, llm_included_score. Base each score on explicit signals
+   in the data; do not use general market knowledge as a substitute for absent data.
 
 Be direct and specific. No generic commentary. Do not speculate — only describe
 what the data shows.
