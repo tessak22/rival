@@ -366,36 +366,56 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
       {result !== null && result !== undefined && (
         <div style={{ border: "1px solid var(--paper-rule)", padding: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-            <RDSSectionHead title="Structured Report" level={2} />
+            <RDSSectionHead title="Research Report" level={2} />
             {completedTemplate && <RDSChip>{getTemplateLabel(completedTemplate)}</RDSChip>}
           </div>
-          {typeof result === "string" ? (
-            <p
-              style={{
-                margin: 0,
-                fontFamily: "var(--font-serif)",
-                fontSize: "var(--fs-14)",
-                lineHeight: "var(--lh-body)",
-                color: "var(--ink)"
-              }}
-            >
-              {result}
-            </p>
-          ) : (
-            <pre
-              style={{
-                margin: 0,
-                fontFamily: "var(--font-mono)",
-                fontSize: "var(--fs-11)",
-                lineHeight: "var(--lh-body)",
-                color: "var(--ink)",
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-word"
-              }}
-            >
-              {JSON.stringify(result, null, 2)}
-            </pre>
-          )}
+          {(() => {
+            const r = result as Record<string, unknown>;
+            const report = typeof r?.report === "string" ? r.report : typeof result === "string" ? result : null;
+            const meta = r?.metadata as Record<string, unknown> | undefined;
+            const mode = typeof meta?.mode === "string" ? meta.mode : null;
+            const complexity = typeof meta?.queryComplexity === "string" ? meta.queryComplexity : null;
+            const pagesAnalyzed = typeof meta?.totalPagesAnalyzed === "number" ? meta.totalPagesAnalyzed : null;
+
+            return (
+              <>
+                {(mode || complexity || pagesAnalyzed) && (
+                  <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+                    {mode && <RDSChip>{mode} mode</RDSChip>}
+                    {complexity && <RDSChip>{complexity} complexity</RDSChip>}
+                    {pagesAnalyzed != null && <RDSChip>{pagesAnalyzed} pages analyzed</RDSChip>}
+                  </div>
+                )}
+                {report ? (
+                  <p
+                    style={{
+                      margin: 0,
+                      fontFamily: "var(--font-serif)",
+                      fontSize: "var(--fs-14)",
+                      lineHeight: "var(--lh-body)",
+                      color: "var(--ink)"
+                    }}
+                  >
+                    {report}
+                  </p>
+                ) : (
+                  <pre
+                    style={{
+                      margin: 0,
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "var(--fs-11)",
+                      lineHeight: "var(--lh-body)",
+                      color: "var(--ink)",
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-word"
+                    }}
+                  >
+                    {JSON.stringify(result, null, 2)}
+                  </pre>
+                )}
+              </>
+            );
+          })()}
         </div>
       )}
 
