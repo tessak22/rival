@@ -1,16 +1,47 @@
-import type { NextRequest } from "next/server";
-import { Prisma } from "@prisma/client";
+// Edge runtime — no function timeout, supports long-running SSE streams.
+// Prisma is not available here; DB persistence is handled by /api/deep-dive/save.
+export const runtime = "edge";
 
-// Allow up to 120s — balanced research mode takes 1-2 minutes
-export const maxDuration = 120;
-
-import { prisma } from "@/lib/db/client";
-import { extractResult, extractCitations } from "@/lib/tabstack/research";
 import { buildPromptForTemplate } from "@/lib/deep-dive-templates";
 import { parseSseChunk } from "@/lib/utils/sse";
 
+type ResearchCitation = { claim: string; source_url: string; source_text?: string };
+
+function extractResult(data: unknown): unknown {
+  if (!data || typeof data !== "object" || Array.isArray(data)) return data ?? null;
+  const d = data as Record<string, unknown>;
+  if ("result" in d) return d.result;
+  const { citations: _c, ...rest } = d;
+  return Object.keys(rest).length > 0 ? rest : null;
+}
+
+function extractCitations(data: unknown): ResearchCitation[] {
+  if (!data || typeof data !== "object" || Array.isArray(data)) return [];
+  const raw = (data as Record<string, unknown>).citations;
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((item: unknown): ResearchCitation[] => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+    const r = item as Record<string, unknown>;
+    if (typeof r.source_url !== "string") return [];
+    try {
+      const u = new URL(r.source_url);
+      if (u.protocol !== "https:" && u.protocol !== "http:") return [];
+    } catch {
+      return [];
+    }
+    return [
+      {
+        claim: typeof r.claim === "string" ? r.claim : "",
+        source_url: r.source_url,
+        source_text: typeof r.source_text === "string" ? r.source_text : undefined
+      }
+    ];
+  });
+}
+
 type DeepDiveRequest = {
   competitorId?: string;
+  competitorName?: string;
   mode?: "fast" | "balanced";
   promptTemplate?: string | null;
 };
@@ -31,19 +62,10 @@ function buildResearchQuery(name: string): string {
 Provide inline citations for every claim.`;
 }
 
-function toJsonValue(value: unknown): Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput {
-  if (value === null || value === undefined) return Prisma.JsonNull;
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return value;
-  if (Array.isArray(value) || (typeof value === "object" && value !== null)) {
-    return value as Prisma.InputJsonValue;
-  }
-  return String(value);
-}
-
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   const body = (await request.json()) as DeepDiveRequest;
-  if (!body.competitorId) {
-    return new Response(JSON.stringify({ error: "competitorId is required" }), {
+  if (!body.competitorId || !body.competitorName) {
+    return new Response(JSON.stringify({ error: "competitorId and competitorName are required" }), {
       status: 400,
       headers: { "content-type": "application/json" }
     });
@@ -51,43 +73,28 @@ export async function POST(request: NextRequest) {
 
   const mode = body.mode ?? "balanced";
   const promptTemplate = body.promptTemplate ?? null;
-
-  const competitor = await prisma.competitor.findUnique({ where: { id: body.competitorId } });
-  if (!competitor) {
-    return new Response(JSON.stringify({ error: "Competitor not found" }), {
-      status: 404,
-      headers: { "content-type": "application/json" }
-    });
-  }
+  const query =
+    (promptTemplate ? buildPromptForTemplate(promptTemplate, body.competitorName) : null) ??
+    buildResearchQuery(body.competitorName);
 
   const stream = new ReadableStream({
     start: async (controller) => {
-      const startTime = Date.now();
-      let status: "success" | "error" = "success";
-      let rawError: string | undefined;
       let completeEventData: unknown = undefined;
-      const query =
-        (promptTemplate ? buildPromptForTemplate(promptTemplate, competitor.name) : null) ??
-        buildResearchQuery(competitor.name);
+      let errorOccurred = false;
 
       try {
-        controller.enqueue(sse("research:started", { competitorId: competitor.id, mode, promptTemplate }));
+        controller.enqueue(sse("research:started", { competitorId: body.competitorId, mode, promptTemplate }));
 
-        // Bypass the SDK's SSE parser for research — the Tabstack server sends keepalives
-        // as `data: :keepalive` which causes the SDK to call JSON.parse(":keepalive") and
-        // throw a SyntaxError. We make a direct HTTP request and handle SSE parsing
-        // ourselves using parseSseChunk, which already skips colon-prefixed data values.
         const apiKey = process.env.TABSTACK_API_KEY!;
         const baseURL = process.env.TABSTACK_BASE_URL ?? "https://api.tabstack.ai/v1";
+
         const rawResponse = await fetch(`${baseURL}/research`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-            Accept: "text/event-stream"
+            "Content-Type": "application/json"
           },
-          body: JSON.stringify({ query, mode, nocache: true }),
-          signal: AbortSignal.timeout(115_000)
+          body: JSON.stringify({ query, mode, nocache: true })
         });
 
         if (!rawResponse.ok || !rawResponse.body) {
@@ -108,15 +115,19 @@ export async function POST(request: NextRequest) {
             controller.enqueue(sse("research:progress", { event: parsed.event, data: parsed.data }));
             if (parsed.event === "complete") completeEventData = parsed.data;
             if (parsed.event === "error") {
-              status = "error";
-              rawError =
-                typeof (parsed.data as Record<string, unknown>)?.error === "string"
-                  ? String((parsed.data as Record<string, unknown>).error)
-                  : "Research failed";
+              errorOccurred = true;
+              controller.enqueue(
+                sse("research:error", {
+                  error:
+                    typeof (parsed.data as Record<string, unknown>)?.error === "string"
+                      ? String((parsed.data as Record<string, unknown>).error)
+                      : "Research failed"
+                })
+              );
               break;
             }
           }
-          if (status === "error") break;
+          if (errorOccurred) break;
         }
         if (buf.trim()) {
           for (const parsed of parseSseChunk(buf)) {
@@ -124,69 +135,23 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        if (status === "error") {
-          controller.enqueue(sse("research:error", { error: rawError }));
-        } else {
+        if (!errorOccurred) {
           const result = extractResult(completeEventData);
           const citations = extractCitations(completeEventData);
-
-          await prisma.deepDive.create({
-            data: {
-              competitorId: competitor.id,
-              mode: mode as string,
-              query,
-              result: toJsonValue(result),
-              citations: toJsonValue(citations),
-              promptTemplate: promptTemplate ?? null
-            }
-          });
-
-          controller.enqueue(sse("research:complete", { result, citations }));
+          // Include query so the client can persist it via /api/deep-dive/save
+          controller.enqueue(sse("research:complete", { result, citations, query }));
         }
       } catch (error) {
-        // Keepalive SyntaxError as belt-and-suspenders — deliver whatever we have
-        if (error instanceof SyntaxError) {
+        const msg = error instanceof Error ? error.message : "Deep dive failed";
+        // On any error, still try to deliver what we collected
+        if (completeEventData !== undefined) {
           const result = extractResult(completeEventData);
           const citations = extractCitations(completeEventData);
-          try {
-            await prisma.deepDive.create({
-              data: {
-                competitorId: competitor.id,
-                mode: mode as string,
-                query,
-                result: toJsonValue(result),
-                citations: toJsonValue(citations),
-                promptTemplate: promptTemplate ?? null
-              }
-            });
-          } catch {
-            // non-fatal
-          }
-          controller.enqueue(sse("research:complete", { result, citations }));
+          controller.enqueue(sse("research:complete", { result, citations, query }));
         } else {
-          status = "error";
-          rawError = error instanceof Error ? error.message : "Deep dive failed";
-          controller.enqueue(sse("research:error", { error: rawError }));
+          controller.enqueue(sse("research:error", { error: msg }));
         }
       } finally {
-        // Fail-open: log write must never prevent stream close
-        try {
-          await prisma.apiLog.create({
-            data: {
-              competitorId: competitor.id,
-              endpoint: "research",
-              mode,
-              nocache: true,
-              status,
-              rawError: rawError ?? null,
-              durationMs: Date.now() - startTime,
-              resultQuality: status === "success" ? "full" : "empty",
-              isDemo: false
-            }
-          });
-        } catch {
-          // api_log failure is non-fatal
-        }
         controller.close();
       }
     }

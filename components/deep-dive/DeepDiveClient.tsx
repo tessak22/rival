@@ -52,6 +52,7 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [completedTemplate, setCompletedTemplate] = useState<SelectedTemplate | null>(null);
+  const startTimeRef = { current: 0 };
 
   async function runDeepDive() {
     if (isLoading) return;
@@ -61,6 +62,7 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
     setError(null);
     setCompletedTemplate(null);
     setIsLoading(true);
+    startTimeRef.current = Date.now();
 
     const templateKey = selectedTemplate === "general" ? null : selectedTemplate;
 
@@ -68,7 +70,7 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
       const response = await fetch("/api/deep-dive", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ competitorId, mode, promptTemplate: templateKey })
+        body: JSON.stringify({ competitorId, competitorName, mode, promptTemplate: templateKey })
       });
 
       if (!response.ok || !response.body) {
@@ -97,10 +99,26 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
           const id = `${Date.now()}-${Math.random()}`;
           setEvents((prev) => [...prev, { id, event: parsed.event, data: parsed.data }]);
           if (parsed.event === "research:complete" && parsed.data && typeof parsed.data === "object") {
-            const payload = parsed.data as { result?: unknown; citations?: Citation[] };
+            const payload = parsed.data as { result?: unknown; citations?: Citation[]; query?: string };
             setResult(payload.result ?? null);
             setCitations(Array.isArray(payload.citations) ? payload.citations : []);
             setCompletedTemplate(selectedTemplate);
+            fetch("/api/deep-dive/save", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({
+                competitorId,
+                mode,
+                query: payload.query ?? "",
+                promptTemplate: selectedTemplate === "general" ? null : selectedTemplate,
+                result: payload.result ?? null,
+                citations: Array.isArray(payload.citations) ? payload.citations : [],
+                durationMs: Date.now() - startTimeRef.current,
+                status: "success"
+              })
+            }).catch(() => {
+              /* non-fatal */
+            });
           }
           if (parsed.event === "research:error") {
             const payload = parsed.data as { error?: string };
@@ -114,10 +132,26 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
           const id = `${Date.now()}-${Math.random()}`;
           setEvents((prev) => [...prev, { id, event: parsed.event, data: parsed.data }]);
           if (parsed.event === "research:complete" && parsed.data && typeof parsed.data === "object") {
-            const payload = parsed.data as { result?: unknown; citations?: Citation[] };
+            const payload = parsed.data as { result?: unknown; citations?: Citation[]; query?: string };
             setResult(payload.result ?? null);
             setCitations(Array.isArray(payload.citations) ? payload.citations : []);
             setCompletedTemplate(selectedTemplate);
+            fetch("/api/deep-dive/save", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({
+                competitorId,
+                mode,
+                query: payload.query ?? "",
+                promptTemplate: selectedTemplate === "general" ? null : selectedTemplate,
+                result: payload.result ?? null,
+                citations: Array.isArray(payload.citations) ? payload.citations : [],
+                durationMs: Date.now() - startTimeRef.current,
+                status: "success"
+              })
+            }).catch(() => {
+              /* non-fatal */
+            });
           }
           if (parsed.event === "research:error") {
             const payload = parsed.data as { error?: string };
