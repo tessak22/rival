@@ -126,7 +126,15 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Deep dive request failed");
+      const msg = err instanceof Error ? err.message : "Deep dive request failed";
+      // "Error in input stream" is a browser network error — typically a Netlify
+      // function timeout on long-running balanced mode research.
+      const isTimeout = msg.toLowerCase().includes("input stream") || msg.toLowerCase().includes("network");
+      setError(
+        isTimeout
+          ? "Research timed out — try Fast mode (10–30s) or run again. Balanced mode (1–2min) may exceed the hosting limit."
+          : msg
+      );
     } finally {
       setIsLoading(false);
     }
@@ -294,7 +302,11 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
                     whiteSpace: "nowrap"
                   }}
                 >
-                  {typeof event.data === "object" ? JSON.stringify(event.data).slice(0, 120) : String(event.data ?? "")}
+                  {typeof event.data === "object" && event.data !== null && "message" in (event.data as object)
+                    ? String((event.data as Record<string, unknown>).message)
+                    : typeof event.data === "object"
+                      ? JSON.stringify(event.data).slice(0, 120)
+                      : String(event.data ?? "")}
                 </span>
               </div>
             ))}
