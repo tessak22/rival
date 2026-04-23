@@ -99,7 +99,8 @@ export async function POST(request: Request) {
         });
 
         if (!rawResponse.ok || !rawResponse.body) {
-          throw new Error(`Tabstack research request failed: ${rawResponse.status}`);
+          const errBody = await rawResponse.text().catch(() => "");
+          throw new Error(`Tabstack research request failed: ${rawResponse.status} ${errBody}`);
         }
 
         const reader = rawResponse.body.getReader();

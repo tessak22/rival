@@ -43,6 +43,41 @@ function formatEventLabel(event: string): string {
   return event.replace("research:", "").replace(/_/g, " ");
 }
 
+function renderMarkdown(text: string): React.ReactNode {
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|\[\d+\](?:\[\d+\])*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith("*") && part.endsWith("*")) {
+      return <em key={i}>{part.slice(1, -1)}</em>;
+    }
+    if (part.startsWith("`") && part.endsWith("`")) {
+      return (
+        <code
+          key={i}
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: "0.88em",
+            background: "var(--paper-edge)",
+            padding: "1px 4px"
+          }}
+        >
+          {part.slice(1, -1)}
+        </code>
+      );
+    }
+    if (/^(\[\d+\])+$/.test(part)) {
+      return (
+        <sup key={i} style={{ fontSize: "0.7em", color: "var(--ink-faint)", letterSpacing: 0 }}>
+          {part}
+        </sup>
+      );
+    }
+    return part;
+  });
+}
+
 export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientProps) {
   const [mode, setMode] = useState<"fast" | "balanced">("balanced");
   const [selectedTemplate, setSelectedTemplate] = useState<SelectedTemplate>("general");
@@ -396,7 +431,7 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
                       color: "var(--ink)"
                     }}
                   >
-                    {report}
+                    {renderMarkdown(report)}
                   </p>
                 ) : (
                   <pre
