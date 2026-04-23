@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
         // ourselves using parseSseChunk, which already skips colon-prefixed data values.
         const apiKey = process.env.TABSTACK_API_KEY!;
         const baseURL = process.env.TABSTACK_BASE_URL ?? "https://api.tabstack.ai/v1";
-        const rawResponse = await fetch(`${baseURL}/agent/research`, {
+        const rawResponse = await fetch(`${baseURL}/research`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${apiKey}`,

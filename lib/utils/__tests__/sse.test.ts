@@ -63,11 +63,21 @@ describe("parseSseChunk", () => {
     expect(result[0]).toEqual({ event: "test", data: "not valid json" });
   });
 
-  it("skips blocks missing an event line", () => {
+  it("parses data-only blocks by extracting event type from JSON body", () => {
+    const chunk = 'data: {"event":"complete","data":{"result":"done"}}\n\n';
+    const result = parseSseChunk(chunk);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].event).toBe("complete");
+    expect(result[0].data).toEqual({ result: "done" });
+  });
+
+  it("uses 'message' as event type for data-only blocks without an event field", () => {
     const chunk = 'data: {"value":1}\n\n';
     const result = parseSseChunk(chunk);
 
-    expect(result).toHaveLength(0);
+    expect(result).toHaveLength(1);
+    expect(result[0].event).toBe("message");
   });
 
   it("skips blocks missing a data line", () => {

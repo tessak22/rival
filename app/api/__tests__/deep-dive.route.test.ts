@@ -95,7 +95,7 @@ describe("POST /api/deep-dive", () => {
     const { POST } = await import("@/app/api/deep-dive/route");
     await POST(jsonRequest({ competitorId: "cmp_1" }));
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("/agent/research"),
+      expect.stringContaining("/research"),
       expect.objectContaining({ body: expect.stringContaining('"mode":"balanced"') })
     );
   });
@@ -109,7 +109,7 @@ describe("POST /api/deep-dive", () => {
     const { POST } = await import("@/app/api/deep-dive/route");
     await POST(jsonRequest({ competitorId: "cmp_1", mode: "fast" }));
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("/agent/research"),
+      expect.stringContaining("/research"),
       expect.objectContaining({ body: expect.stringContaining('"mode":"fast"') })
     );
   });
