@@ -95,7 +95,7 @@ export async function POST(request: Request) {
             Authorization: `Bearer ${apiKey}`,
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({ query, mode })
+          body: JSON.stringify({ query, mode, nocache: true })
         });
 
         if (!rawResponse.ok || !rawResponse.body) {

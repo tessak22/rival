@@ -97,8 +97,40 @@ Cite every finding with a URL. Focus on recency — prioritize sources from the 
     key: "strategic-moves",
     label: "Recent Strategic Moves",
     description: "Funding, hires, partnerships, and product direction in the last 6 months",
-    buildPrompt: (name) =>
-      `Research ${name} and summarize notable strategic activity in the last 6 months. Cover: funding rounds and investors, leadership hires or departures, new partnerships and integrations, major product launches or strategy shifts, market positioning changes, and press coverage. Cite every claim with a URL. Flag anything signaling a significant strategic pivot.`
+    buildPrompt: (
+      name
+    ) => `You are a competitive intelligence analyst. Research ${name} and produce a summary of their notable strategic activity in the last 6 months.
+
+Cover:
+
+1. FUNDING & FINANCIALS
+   - Any funding rounds announced, amounts, investors
+   - Revenue signals or milestones mentioned publicly
+
+2. LEADERSHIP & HIRING
+   - Notable executive hires or departures
+   - Significant hiring pushes in specific areas (engineering, sales, DevRel, etc.)
+   - Any organizational signals (restructuring, new office, layoffs)
+
+3. PARTNERSHIPS & INTEGRATIONS
+   - New partnerships or integrations announced
+   - Any technology alliances or ecosystem moves
+
+4. PRODUCT DIRECTION
+   - Major feature launches or product announcements
+   - Any shifts in product strategy or target market
+   - Beta programs or early access launches
+
+5. MARKET POSITIONING CHANGES
+   - Any changes in how they're describing their product or positioning
+   - New verticals or ICPs they appear to be targeting
+   - Competitive attacks or direct comparisons to other products
+
+6. PRESS & COVERAGE
+   - Notable press mentions or media coverage
+   - Any awards, rankings, or recognition
+
+Cite every claim. Flag anything that appears to signal a significant strategic pivot.`
   }
 ];
 
