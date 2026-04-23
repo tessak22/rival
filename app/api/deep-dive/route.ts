@@ -85,7 +85,8 @@ export async function POST(request: Request) {
       try {
         controller.enqueue(sse("research:started", { competitorId: body.competitorId, mode, promptTemplate }));
 
-        const apiKey = process.env.TABSTACK_API_KEY!;
+        const apiKey = process.env.TABSTACK_API_KEY ?? "";
+        if (!apiKey) throw new Error("TABSTACK_API_KEY is not configured");
         const baseURL = process.env.TABSTACK_BASE_URL ?? "https://api.tabstack.ai/v1";
 
         const rawResponse = await fetch(`${baseURL}/research`, {

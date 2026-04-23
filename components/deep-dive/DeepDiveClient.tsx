@@ -325,7 +325,13 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
                   borderBottom: "1px solid var(--paper-rule)"
                 }}
               >
-                <RDSChip style={{ flexShrink: 0 }}>{formatEventLabel(event.event)}</RDSChip>
+                <RDSChip style={{ flexShrink: 0 }}>
+                  {formatEventLabel(
+                    typeof (event.data as Record<string, unknown>)?.event === "string"
+                      ? String((event.data as Record<string, unknown>).event)
+                      : event.event
+                  )}
+                </RDSChip>
                 <span
                   style={{
                     fontFamily: "var(--font-mono)",
@@ -336,11 +342,19 @@ export function DeepDiveClient({ competitorId, competitorName }: DeepDiveClientP
                     whiteSpace: "nowrap"
                   }}
                 >
-                  {typeof event.data === "object" && event.data !== null && "message" in (event.data as object)
-                    ? String((event.data as Record<string, unknown>).message)
-                    : typeof event.data === "object"
-                      ? JSON.stringify(event.data).slice(0, 120)
-                      : String(event.data ?? "")}
+                  {(() => {
+                    // Route wraps each event as { event, data } so the actual
+                    // message lives at event.data.data.message
+                    const d = event.data as Record<string, unknown> | null;
+                    const inner = d?.data as Record<string, unknown> | undefined;
+                    const msg =
+                      typeof inner?.message === "string"
+                        ? inner.message
+                        : typeof d?.message === "string"
+                          ? d.message
+                          : null;
+                    return msg ?? (d ? JSON.stringify(d).slice(0, 120) : "");
+                  })()}
                 </span>
               </div>
             ))}
