@@ -1,6 +1,6 @@
-// Edge runtime — no function timeout, supports long-running SSE streams.
-// Prisma is not available here; DB persistence is handled by /api/deep-dive/save.
-export const runtime = "edge";
+// maxDuration: allow up to 120s for balanced research mode.
+// DB persistence is handled by /api/deep-dive/save (called by the client on completion).
+export const maxDuration = 120;
 
 import { buildPromptForTemplate } from "@/lib/deep-dive-templates";
 import { parseSseChunk } from "@/lib/utils/sse";
