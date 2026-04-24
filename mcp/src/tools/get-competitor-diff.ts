@@ -22,12 +22,18 @@ export async function getCompetitorDiff(competitor: string, pageType: string, at
 
   if (!comp || comp.isSelf) return { error: "competitor_not_found", competitor };
 
+  // orderBy: createdAt asc → deterministic when multiple pages share the same type (e.g. geo variants)
   const page = await prisma.competitorPage.findFirst({
-    where: { competitorId: comp.id, type: pageType }
+    where: { competitorId: comp.id, type: pageType },
+    orderBy: { createdAt: "asc" }
   });
 
   if (!page) return { error: "page_type_not_tracked", competitor, page_type: pageType };
 
+  if (at !== undefined) {
+    const parsed = new Date(at);
+    if (isNaN(parsed.getTime())) throw new Error(`Invalid date for 'at': "${at}"`);
+  }
   const atFilter = at ? { scannedAt: { lte: new Date(at) } } : {};
 
   const scan = await prisma.scan.findFirst({

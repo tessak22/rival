@@ -163,6 +163,8 @@ describe("POST /api/mcp", () => {
       pages: [],
       apiLogs: [{ resultQuality: "full" }, { resultQuality: "partial" }]
     });
+    // No changed scans since pages is empty
+    scanFindManyMock.mockResolvedValue([]);
 
     const { POST } = await import("@/app/api/mcp/route");
     const res = await POST(makeRequest(rpc("tools/call", { name: "get_competitor", arguments: { slug: "acme" } }), TOKEN));
@@ -172,6 +174,29 @@ describe("POST /api/mcp", () => {
     expect(result.threat_tier).toBe("high");
     expect(result.manual_data.g2_rating).toBe(4.5);
     expect(result.health_score).toBe(75); // (1 + 0.5) / 2 = 0.75
+  });
+
+  it("tools/call get_competitor surfaces last_changed_at from non-latest scan", async () => {
+    const pageId = "page-1";
+    competitorFindUniqueMock.mockResolvedValue({
+      id: "1", name: "Acme", slug: "acme", baseUrl: "https://acme.com",
+      threatLevel: "High", isSelf: false, manualData: null,
+      pages: [{ id: pageId, type: "pricing", label: "Pricing", url: "https://acme.com/pricing", geoTarget: null, scans: [{ scannedAt: new Date("2026-04-20") }] }],
+      apiLogs: []
+    });
+    // The latest scan (2026-04-20) had no changes; the change was earlier (2026-04-01)
+    scanFindManyMock.mockResolvedValue([
+      { pageId, scannedAt: new Date("2026-04-01"), diffSummary: "Price went up" }
+    ]);
+
+    const { POST } = await import("@/app/api/mcp/route");
+    const res = await POST(makeRequest(rpc("tools/call", { name: "get_competitor", arguments: { slug: "acme" } }), TOKEN));
+    const body = await res.json();
+    const result = JSON.parse(body.result.content[0].text);
+    const pricingPage = result.tracked_pages.find((p: { page_type: string }) => p.page_type === "pricing");
+    expect(pricingPage.last_checked_at).toBe("2026-04-20T00:00:00.000Z");
+    expect(pricingPage.last_changed_at).toBe("2026-04-01T00:00:00.000Z");
+    expect(pricingPage.latest_summary).toBe("Price went up");
   });
 
   // ── get_intelligence_brief ────────────────────────────────────────────────
@@ -267,6 +292,28 @@ describe("POST /api/mcp", () => {
     const result = JSON.parse(body.result.content[0].text);
     expect(result.entries).toHaveLength(1);
     expect(result.entries[0].summary).toBe("Added MCP support");
+  });
+
+  // ── date validation ───────────────────────────────────────────────────────
+
+  it("tools/call list_recent_intel returns error for invalid since date", async () => {
+    const { POST } = await import("@/app/api/mcp/route");
+    const res = await POST(makeRequest(rpc("tools/call", { name: "list_recent_intel", arguments: { since: "not-a-date" } }), TOKEN));
+    const body = await res.json();
+    expect(body.error.code).toBe(-32000);
+    expect(body.error.message).toContain("Invalid date");
+    expect(body.error.message).toContain("since");
+  });
+
+  it("tools/call get_competitor_diff returns error for invalid at date", async () => {
+    competitorFindUniqueMock.mockResolvedValue({ id: "1", name: "Acme", isSelf: false });
+    competitorPageFindFirstMock.mockResolvedValue({ id: "p1", url: "https://acme.com/pricing", type: "pricing" });
+
+    const { POST } = await import("@/app/api/mcp/route");
+    const res = await POST(makeRequest(rpc("tools/call", { name: "get_competitor_diff", arguments: { competitor: "acme", page_type: "pricing", at: "banana" } }), TOKEN));
+    const body = await res.json();
+    expect(body.error.code).toBe(-32000);
+    expect(body.error.message).toContain("Invalid date");
   });
 
   // ── unknown tool ──────────────────────────────────────────────────────────

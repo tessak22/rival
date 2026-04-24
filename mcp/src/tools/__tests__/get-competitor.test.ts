@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const { mockPrisma } = vi.hoisted(() => ({
-  mockPrisma: { competitor: { findUnique: vi.fn() } }
+  mockPrisma: {
+    competitor: { findUnique: vi.fn() },
+    scan: { findMany: vi.fn() }
+  }
 }));
 vi.mock("../../db.js", () => ({ prisma: mockPrisma }));
 
@@ -45,6 +48,7 @@ const makeCompetitor = (overrides: {
 describe("getCompetitor", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockPrisma.scan.findMany.mockResolvedValue([]); // default: no changed scans
   });
 
   it("returns competitor_not_found when no record exists", async () => {
@@ -136,19 +140,24 @@ describe("getCompetitor", () => {
     });
   });
 
-  it("returns last_changed_at when scan hasChanges=true", async () => {
+  it("returns last_changed_at from the separate changed-scans query", async () => {
+    const checkedDate = new Date("2025-04-10T00:00:00Z");
     const changeDate = new Date("2025-04-01T00:00:00Z");
+    const pageId = "page-uuid";
     mockPrisma.competitor.findUnique.mockResolvedValue(
       makeCompetitor({
         pages: [
-          makePage({
-            scans: [{ scannedAt: changeDate, hasChanges: true, diffSummary: "Price went up" }]
-          })
+          makePage({ scans: [{ scannedAt: checkedDate }] })
         ]
       })
     );
+    // Change recorded by the separate query, not from the inline scans array
+    mockPrisma.scan.findMany.mockResolvedValue([
+      { pageId, scannedAt: changeDate, diffSummary: "Price went up" }
+    ]);
     const result = await getCompetitor("acme");
     if ("error" in result) throw new Error("unexpected error");
+    expect(result.tracked_pages[0].last_checked_at).toBe(checkedDate.toISOString());
     expect(result.tracked_pages[0].last_changed_at).toBe(changeDate.toISOString());
     expect(result.tracked_pages[0].latest_summary).toBe("Price went up");
   });

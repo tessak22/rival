@@ -50,6 +50,12 @@ function healthScore(logs: Array<{ resultQuality: string | null }>): number {
 
 const TRUNCATE_AT = 8000;
 
+function parseDateArg(s: string, paramName: string): Date {
+  const d = new Date(s);
+  if (isNaN(d.getTime())) throw new Error(`Invalid date for '${paramName}': "${s}"`);
+  return d;
+}
+
 function truncateContent(s: string | null): { content: string | null; wasTruncated: boolean } {
   if (!s) return { content: null, wasTruncated: false };
   if (s.length <= TRUNCATE_AT) return { content: s, wasTruncated: false };
@@ -115,10 +121,11 @@ async function toolGetCompetitor(slug: string) {
     include: {
       pages: {
         include: {
+          // Only latest scan needed for last_checked_at — change data fetched separately below.
           scans: {
             orderBy: { scannedAt: "desc" },
             take: 1,
-            select: { scannedAt: true, hasChanges: true, diffSummary: true }
+            select: { scannedAt: true }
           }
         }
       },
@@ -132,6 +139,19 @@ async function toolGetCompetitor(slug: string) {
   });
 
   if (!c || c.isSelf) return { error: "competitor_not_found", slug };
+
+  // Separate query for last changed scan per page — avoids the take:1 truncation problem
+  // where a page with no recent change would miss older change records.
+  const latestChangedScans =
+    c.pages.length > 0
+      ? await prisma.scan.findMany({
+          where: { pageId: { in: c.pages.map((p) => p.id) }, hasChanges: true },
+          orderBy: { scannedAt: "desc" },
+          distinct: ["pageId"],
+          select: { pageId: true, scannedAt: true, diffSummary: true }
+        })
+      : [];
+  const changedByPageId = new Map(latestChangedScans.map((s) => [s.pageId, s]));
 
   const m = (c.manualData ?? {}) as Record<string, unknown>;
 
@@ -158,15 +178,15 @@ async function toolGetCompetitor(slug: string) {
     },
     tracked_pages: c.pages.map((p) => {
       const latestScan = p.scans[0] ?? null;
-      const latestChange = p.scans.find((s) => s.hasChanges) ?? null;
+      const changedScan = changedByPageId.get(p.id) ?? null;
       return {
         page_type: p.type,
         label: p.label,
         url: p.url,
         geo_target: p.geoTarget ?? null,
         last_checked_at: latestScan?.scannedAt.toISOString() ?? null,
-        last_changed_at: latestChange?.scannedAt.toISOString() ?? null,
-        latest_summary: latestChange?.diffSummary ?? null
+        last_changed_at: changedScan?.scannedAt.toISOString() ?? null,
+        latest_summary: changedScan?.diffSummary ?? null
       };
     })
   };
@@ -307,8 +327,8 @@ async function toolListRecentIntel(params: {
   page_type?: string;
   limit?: number;
 }) {
-  const since = params.since ? new Date(params.since) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  const until = params.until ? new Date(params.until) : new Date();
+  const since = params.since ? parseDateArg(params.since, "since") : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const until = params.until ? parseDateArg(params.until, "until") : new Date();
   const limit = Math.min(params.limit ?? 50, 200);
 
   const baseWhere = params.competitor
@@ -354,13 +374,15 @@ async function toolGetCompetitorDiff(competitor: string, pageType: string, at?: 
 
   if (!comp || comp.isSelf) return { error: "competitor_not_found", competitor };
 
+  // orderBy: createdAt asc → deterministic when multiple pages share the same type (e.g. geo variants)
   const page = await prisma.competitorPage.findFirst({
-    where: { competitorId: comp.id, type: pageType }
+    where: { competitorId: comp.id, type: pageType },
+    orderBy: { createdAt: "asc" }
   });
 
   if (!page) return { error: "page_type_not_tracked", competitor, page_type: pageType };
 
-  const atFilter = at ? { scannedAt: { lte: new Date(at) } } : {};
+  const atFilter = at ? { scannedAt: { lte: parseDateArg(at, "at") } } : {};
 
   const scan = await prisma.scan.findFirst({
     where: { pageId: page.id, hasChanges: true, ...atFilter },
@@ -390,7 +412,7 @@ async function toolGetCompetitorDiff(competitor: string, pageType: string, at?: 
 }
 
 async function toolSearchIntel(query: string, since?: string, limit = 25) {
-  const sinceDate = since ? new Date(since) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const sinceDate = since ? parseDateArg(since, "since") : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const safeLimit = Math.min(limit, 100);
 
   const scans = await prisma.scan.findMany({

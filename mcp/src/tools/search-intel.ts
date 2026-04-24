@@ -2,8 +2,14 @@ import { prisma } from "../db.js";
 
 const MAX_LIMIT = 100;
 
+function parseDateArg(s: string, paramName: string): Date {
+  const d = new Date(s);
+  if (isNaN(d.getTime())) throw new Error(`Invalid date for '${paramName}': "${s}"`);
+  return d;
+}
+
 export async function searchIntel(query: string, since?: string, limit = 25) {
-  const sinceDate = since ? new Date(since) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const sinceDate = since ? parseDateArg(since, "since") : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const safeLimit = Math.min(limit, MAX_LIMIT);
 
   const scans = await prisma.scan.findMany({

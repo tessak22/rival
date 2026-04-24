@@ -2,6 +2,12 @@ import { prisma } from "../db.js";
 
 const MAX_LIMIT = 200;
 
+function parseDateArg(s: string, paramName: string): Date {
+  const d = new Date(s);
+  if (isNaN(d.getTime())) throw new Error(`Invalid date for '${paramName}': "${s}"`);
+  return d;
+}
+
 export async function listRecentIntel(params: {
   since?: string;
   until?: string;
@@ -9,8 +15,8 @@ export async function listRecentIntel(params: {
   page_type?: string;
   limit?: number;
 }) {
-  const since = params.since ? new Date(params.since) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  const until = params.until ? new Date(params.until) : new Date();
+  const since = params.since ? parseDateArg(params.since, "since") : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const until = params.until ? parseDateArg(params.until, "until") : new Date();
   const limit = Math.min(params.limit ?? 50, MAX_LIMIT);
 
   const competitorFilter = params.competitor

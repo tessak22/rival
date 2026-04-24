@@ -14,10 +14,11 @@ export async function getCompetitor(slug: string) {
     include: {
       pages: {
         include: {
+          // Only latest scan for last_checked_at — change data fetched separately below.
           scans: {
             orderBy: { scannedAt: "desc" },
             take: 1,
-            select: { scannedAt: true, hasChanges: true, diffSummary: true }
+            select: { scannedAt: true }
           }
         }
       },
@@ -33,6 +34,18 @@ export async function getCompetitor(slug: string) {
   if (!competitor || competitor.isSelf) {
     return { error: "competitor_not_found", slug };
   }
+
+  // Separate query for last changed scan per page — avoids the take:1 truncation problem.
+  const latestChangedScans =
+    competitor.pages.length > 0
+      ? await prisma.scan.findMany({
+          where: { pageId: { in: competitor.pages.map((p) => p.id) }, hasChanges: true },
+          orderBy: { scannedAt: "desc" },
+          distinct: ["pageId"],
+          select: { pageId: true, scannedAt: true, diffSummary: true }
+        })
+      : [];
+  const changedByPageId = new Map(latestChangedScans.map((s) => [s.pageId, s]));
 
   const manual = (competitor.manualData ?? {}) as Record<string, unknown>;
 
@@ -60,15 +73,15 @@ export async function getCompetitor(slug: string) {
     },
     tracked_pages: competitor.pages.map((p) => {
       const latestScan = p.scans[0] ?? null;
-      const latestChange = p.scans.find((s) => s.hasChanges) ?? null;
+      const changedScan = changedByPageId.get(p.id) ?? null;
       return {
         page_type: p.type,
         label: p.label,
         url: p.url,
         geo_target: p.geoTarget ?? null,
         last_checked_at: latestScan?.scannedAt.toISOString() ?? null,
-        last_changed_at: latestChange?.scannedAt.toISOString() ?? null,
-        latest_summary: latestChange?.diffSummary ?? null
+        last_changed_at: changedScan?.scannedAt.toISOString() ?? null,
+        latest_summary: changedScan?.diffSummary ?? null
       };
     })
   };
