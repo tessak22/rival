@@ -207,6 +207,7 @@ export async function pushCompetitorToQuiver(
             source_type: "other",
             raw_notes: rawNotes,
             contact_company: name,
+            contact_segment: "Competitor",
             research_date: today
           }
         }
