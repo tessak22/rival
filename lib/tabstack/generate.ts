@@ -546,3 +546,69 @@ ${contextData}`;
     expectedFields: SELF_PROFILE_EXPECTED_FIELDS
   });
 }
+
+// ---------------------------------------------------------------------------
+// Demo intelligence brief
+// ---------------------------------------------------------------------------
+
+export const DEMO_BRIEF_SCHEMA = {
+  type: "object",
+  properties: {
+    positioning_signal: {
+      type: "string",
+      description: "How this company is positioning itself right now, in one sentence."
+    },
+    opportunity: {
+      type: "string",
+      description: "One specific gap or weakness a competitor could exploit."
+    },
+    watch_signal: {
+      type: "string",
+      description: "One signal worth monitoring in the next competitive cycle."
+    }
+  },
+  required: ["positioning_signal", "opportunity", "watch_signal"]
+} as const;
+
+export const DEMO_BRIEF_EXPECTED_FIELDS: string[] = [...DEMO_BRIEF_SCHEMA.required];
+
+export type GenerateDemoBriefInput = {
+  url: string;
+  contextData: string;
+  isDemo?: boolean;
+};
+
+/**
+ * Synthesize a 3-field intelligence brief from multi-surface demo scan results.
+ * Always uses effort: low and nocache: true. No competitor/page IDs — demo only.
+ */
+export async function generateDemoBrief(input: GenerateDemoBriefInput): Promise<GenerateJsonResponse> {
+  const client = getTabstackClient();
+  const contextData = input.contextData.slice(0, MAX_CONTEXT_LENGTH);
+
+  const instructions = `You are a competitive intelligence analyst. Based on this scan data from ${input.url}, write exactly three things:
+1. How this company is positioning itself right now — one sentence.
+2. One specific gap or weakness a competitor could exploit.
+3. One signal worth monitoring in the next competitive cycle.
+Be direct and specific. No generic advice.
+
+Scan data:
+${contextData}`;
+
+  const requestPayload: GenerateJsonParams = {
+    url: input.url,
+    instructions,
+    json_schema: DEMO_BRIEF_SCHEMA,
+    effort: toSdkEffort("low"),
+    nocache: true
+  };
+
+  return logger.call(() => client.generate.json(requestPayload), {
+    endpoint: "generate",
+    url: input.url,
+    effort: "low",
+    nocache: true,
+    isDemo: input.isDemo,
+    expectedFields: DEMO_BRIEF_EXPECTED_FIELDS
+  });
+}
