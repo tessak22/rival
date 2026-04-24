@@ -193,6 +193,7 @@ export async function pushCompetitorToQuiver(
       method: "POST",
       headers: {
         "content-type": "application/json",
+        "accept": "application/json, text/event-stream",
         authorization: `Bearer ${secret}`
       },
       body: JSON.stringify({
@@ -217,7 +218,10 @@ export async function pushCompetitorToQuiver(
       return;
     }
 
-    const body = (await response.json()) as { result?: unknown; error?: { message?: string } };
+    // Quiver's MCP endpoint returns SSE format: "event: message\ndata: {...}\n\n"
+    const text = await response.text();
+    const dataLine = text.split("\n").find((l) => l.startsWith("data:"));
+    const body = dataLine ? (JSON.parse(dataLine.slice(5).trim()) as { result?: unknown; error?: { message?: string } }) : {};
     if (body.error) {
       console.error(`[quiver] push error for ${name}:`, body.error.message);
     } else {
