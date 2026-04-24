@@ -11,6 +11,7 @@ Rival tracks competitor pricing, changelogs, careers, docs, social, GitHub, and 
 - API telemetry and schema quality analytics at `/insights`
 - Demo mode (`/demo`) with anonymous rate-limited scans
 - Diff summaries and competitor intelligence briefs
+- **MCP server** — query all competitor data from Claude Desktop, Claude Code, or any MCP-compatible AI client
 
 ## Tech Stack
 
@@ -222,6 +223,63 @@ This checks:
 - diffs are being produced when prior scans exist
 - `api_logs` are populated
 - intelligence brief artifacts are present
+
+## MCP Server
+
+Rival ships a built-in MCP server that exposes all competitor intelligence as read-only tools. Once registered, any MCP-compatible AI client (Claude Desktop, Claude Code, or custom agents) can query your competitor data directly — no manual exports, no copy-pasting.
+
+### Tools
+
+| Tool | Description |
+|---|---|
+| `list_competitors` | All tracked competitors with threat tier, health score, and last change timestamp |
+| `get_competitor` | Full snapshot — tracked pages, manual data (funding, G2, traffic) |
+| `get_competitor_data` | Current extracted data by page type — pricing tiers, job listings, tech stack from JDs, GitHub stats, blog topics, review themes |
+| `get_intelligence_brief` | AI-generated brief — positioning/content/product opportunities, threat reasoning, watch list, 7 axis scores |
+| `get_deep_dives` | Agentic research reports with citations |
+| `list_recent_intel` | Intel feed — recent changes, filterable by time, competitor, and page type |
+| `get_competitor_diff` | Before/after content for a specific change |
+| `search_intel` | Full-text search across the intel feed |
+
+### Local setup (Claude Desktop / Claude Code)
+
+Build the server:
+
+```bash
+cd mcp && npm install && npm run build
+```
+
+Add to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "rival": {
+      "command": "node",
+      "args": ["/absolute/path/to/rival/mcp/dist/index.js"],
+      "env": {
+        "DATABASE_URL": "postgresql://..."
+      }
+    }
+  }
+}
+```
+
+### HTTP transport (self-hosted server)
+
+For shared or remote access, run the server in HTTP mode with bearer auth:
+
+```bash
+RIVAL_MCP_TRANSPORT=http \
+RIVAL_MCP_TOKEN=your-secret-token \
+DATABASE_URL=postgresql://... \
+PORT=3100 \
+node mcp/dist/index.js
+```
+
+Or use the built-in HTTP endpoint that ships with the Next.js app at `POST /api/mcp`. Set `RIVAL_MCP_TOKEN` in your environment and point any MCP client at `https://your-rival-instance.com/api/mcp` with `Authorization: Bearer <token>`.
+
+See `mcp/README.md` for full setup details and tool reference.
 
 ## Demo Mode
 
