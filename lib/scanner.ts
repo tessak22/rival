@@ -468,7 +468,7 @@ async function runPrimaryScan(input: ScanPageInput): Promise<{
       competitorId: input.competitorId,
       pageId: input.pageId,
       url: input.url,
-      effort: input.effortOverride ?? "low",
+      effort: input.effortOverride ?? route.effort ?? "low",
       nocache,
       geoTarget: input.geoTarget,
       isDemo: input.isDemo,
