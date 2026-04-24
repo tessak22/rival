@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 const {
   scanPageMock,
   inferBlogPageTypeMock,
+  inferPageTypeFromUrlMock,
   demoIpLockCreateMock,
   demoIpLockDeleteMock,
   demoScanCountMock,
@@ -12,13 +13,18 @@ const {
 } = vi.hoisted(() => ({
   scanPageMock: vi.fn(),
   inferBlogPageTypeMock: vi.fn(),
+  inferPageTypeFromUrlMock: vi.fn(),
   demoIpLockCreateMock: vi.fn(),
   demoIpLockDeleteMock: vi.fn(),
   demoScanCountMock: vi.fn(),
   demoScanCreateMock: vi.fn()
 }));
 
-vi.mock("@/lib/scanner", () => ({ scanPage: scanPageMock, inferBlogPageType: inferBlogPageTypeMock }));
+vi.mock("@/lib/scanner", () => ({
+  scanPage: scanPageMock,
+  inferBlogPageType: inferBlogPageTypeMock,
+  inferPageTypeFromUrl: inferPageTypeFromUrlMock
+}));
 vi.mock("@/lib/db/client", () => ({
   prisma: {
     demoIpLock: {
@@ -89,6 +95,7 @@ describe("POST /api/demo", () => {
     vi.resetModules();
     scanPageMock.mockReset();
     inferBlogPageTypeMock.mockReset();
+    inferPageTypeFromUrlMock.mockReset();
     demoIpLockCreateMock.mockReset();
     demoIpLockDeleteMock.mockReset();
     demoScanCountMock.mockReset();
@@ -101,6 +108,7 @@ describe("POST /api/demo", () => {
     demoScanCreateMock.mockResolvedValue({});
     scanPageMock.mockResolvedValue(SCAN_RESULT);
     inferBlogPageTypeMock.mockReturnValue(null);
+    inferPageTypeFromUrlMock.mockReturnValue(null);
   });
 
   it("returns 429 when a concurrent lock is held", async () => {

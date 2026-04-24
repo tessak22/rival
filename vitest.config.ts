@@ -11,6 +11,7 @@ export default defineConfig({
     }
   },
   test: {
+    exclude: ["node_modules/**", ".worktrees/**", ".netlify/**"],
     environment: "node",
     clearMocks: true,
     restoreMocks: true,
