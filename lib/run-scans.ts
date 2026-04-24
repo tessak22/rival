@@ -1,5 +1,6 @@
 import { generateCompetitorBrief, generateSelfBrief } from "./brief";
 import { prisma } from "./db/client";
+import { pushCompetitorToQuiver } from "./quiver";
 import { scanPage } from "./scanner";
 
 const DEFAULT_CONCURRENCY = 3;
@@ -7,6 +8,8 @@ const STALE_LOCK_AGE_MS = 60 * 60 * 1000; // 1 hour
 
 type CompetitorWithPages = {
   id: string;
+  name: string;
+  baseUrl: string;
   isSelf: boolean;
   pages: Array<{
     id: string;
@@ -57,6 +60,10 @@ async function processCompetitor(competitor: CompetitorWithPages, briefNocache: 
     item.briefGenerated = true;
   } catch (error) {
     item.errors.push(`brief: ${error instanceof Error ? error.message : "brief failed"}`);
+  }
+
+  if (!competitor.isSelf) {
+    await pushCompetitorToQuiver(competitor.id, competitor.name, competitor.baseUrl);
   }
 
   return item;
