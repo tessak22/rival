@@ -1,8 +1,36 @@
 # Rival MCP Server
 
-A standalone MCP server that exposes all Rival competitor intelligence data as read-only tools. Once registered in Claude Desktop or Claude Code, Claude can query your full competitor database directly without any manual data export.
+Exposes all Rival competitive intelligence as read-only MCP tools. Two modes:
 
-## Quickstart: Claude Desktop
+- **Hosted (Netlify)** — `POST /api/mcp` on your live Rival deployment. No extra infrastructure. Set `RIVAL_MCP_TOKEN` in Netlify env vars, point any MCP client at the URL.
+- **Local stdio** — run the compiled server directly for Claude Desktop.
+
+## Quickstart: Hosted (Netlify)
+
+Set `RIVAL_MCP_TOKEN` in your Netlify environment variables, then configure your MCP client to use the HTTP endpoint:
+
+```json
+{
+  "mcpServers": {
+    "rival": {
+      "url": "https://your-rival.netlify.app/api/mcp",
+      "headers": {
+        "Authorization": "Bearer your-token-here"
+      }
+    }
+  }
+}
+```
+
+Test with curl:
+```bash
+curl -X POST https://your-rival.netlify.app/api/mcp \
+  -H "Authorization: Bearer your-token-here" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+```
+
+## Quickstart: Claude Desktop (local stdio)
 
 Build the server first:
 
