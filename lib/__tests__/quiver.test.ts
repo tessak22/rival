@@ -27,7 +27,8 @@ const NAME = "Acme";
 const BASE_URL = "https://acme.com";
 
 function makeOkResponse(body: unknown) {
-  return { ok: true, json: async () => body } as Response;
+  const sse = `event: message\ndata: ${JSON.stringify(body)}\n\n`;
+  return { ok: true, text: async () => sse } as unknown as Response;
 }
 
 describe("pushCompetitorToQuiver", () => {
@@ -144,7 +145,7 @@ describe("pushCompetitorToQuiver", () => {
   });
 
   it("does not throw when Quiver returns a non-OK response", async () => {
-    fetchMock.mockResolvedValueOnce({ ok: false, status: 401 } as Response);
+    fetchMock.mockResolvedValueOnce({ ok: false, status: 401, text: async () => "" } as unknown as Response);
     const { pushCompetitorToQuiver } = await import("@/lib/quiver");
     await expect(pushCompetitorToQuiver(COMPETITOR_ID, NAME, BASE_URL)).resolves.toBeUndefined();
   });
