@@ -354,6 +354,22 @@ describe("scanPage", () => {
     expect(automateExtractMock).not.toHaveBeenCalled();
   });
 
+  it("uses effortOverride when provided, ignoring the per-type routing effort", async () => {
+    const { scanPage } = await import("@/lib/scanner");
+
+    await scanPage({
+      competitorId: "cmp_1",
+      pageId: "page_1",
+      url: "https://example.com/pricing",
+      type: "pricing",
+      effortOverride: "low" // pricing normally routes to effort: "high"
+    });
+
+    expect(extractJsonMock).toHaveBeenCalledWith(
+      expect.objectContaining({ effort: "low" })
+    );
+  });
+
   it("uses automate fallback for blog when extract/json is empty", async () => {
     extractJsonMock.mockResolvedValueOnce({ data: {} });
     extractMarkdownMock.mockResolvedValueOnce({
