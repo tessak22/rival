@@ -40,50 +40,111 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function ResultValue({ value }: { value: unknown }): React.ReactNode {
-  if (value === null || value === undefined) {
-    return <span style={{ color: "var(--ink-faint)", fontStyle: "italic" }}>—</span>;
-  }
+function isEmpty(value: unknown): boolean {
+  if (value === null || value === undefined) return true;
+  if (typeof value === "string") return value.trim().length === 0;
+  if (Array.isArray(value)) return value.length === 0;
+  if (isObject(value)) return Object.keys(value).length === 0;
+  return false;
+}
+
+const kvLabel: React.CSSProperties = {
+  fontFamily: "var(--font-mono)",
+  fontSize: 10,
+  letterSpacing: "0.14em",
+  color: "var(--ink-faint)",
+  fontWeight: 600,
+  marginBottom: 4,
+  textTransform: "uppercase"
+};
+
+function FieldValue({ value }: { value: unknown }): React.ReactNode {
   if (typeof value === "boolean") {
     return <span style={{ color: value ? "var(--ok)" : "var(--accent-hot)" }}>{value ? "Yes" : "No"}</span>;
   }
   if (Array.isArray(value)) {
-    if (value.length === 0) {
-      return <span style={{ color: "var(--ink-faint)", fontStyle: "italic" }}>empty</span>;
+    const items = value.filter((v) => v !== null && v !== undefined);
+    if (isObject(items[0])) {
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {items.map((item, i) => (
+            <div
+              key={i}
+              style={{
+                fontSize: 13,
+                lineHeight: 1.4,
+                padding: "6px 0",
+                borderBottom: "1px dotted var(--paper-rule-2)"
+              }}
+            >
+              {isObject(item)
+                ? Object.entries(item)
+                    .filter(([, v]) => !isEmpty(v))
+                    .map(([k, v]) => (
+                      <span key={k} style={{ marginRight: 12 }}>
+                        <span
+                          style={{
+                            fontFamily: "var(--font-mono)",
+                            fontSize: 9,
+                            color: "var(--ink-faint)",
+                            marginRight: 4
+                          }}
+                        >
+                          {k.replace(/_/g, " ")}
+                        </span>
+                        {String(v)}
+                      </span>
+                    ))
+                : String(item)}
+            </div>
+          ))}
+        </div>
+      );
     }
     return (
       <ul style={{ margin: 0, paddingLeft: 16, listStyle: "disc" }}>
-        {value.map((item, i) => (
-          <li key={i} style={{ marginBottom: 2 }}>
-            <ResultValue value={item} />
+        {items.map((item, i) => (
+          <li key={i} style={{ fontSize: 14, lineHeight: 1.55, marginBottom: 2 }}>
+            {String(item)}
           </li>
         ))}
       </ul>
     );
   }
   if (isObject(value)) {
-    return <ResultObject obj={value} />;
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        {Object.entries(value)
+          .filter(([, v]) => !isEmpty(v))
+          .map(([k, v]) => (
+            <div key={k} style={{ fontSize: 13 }}>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: "var(--ink-faint)", marginRight: 6 }}>
+                {k.replace(/_/g, " ")}
+              </span>
+              {String(v)}
+            </div>
+          ))}
+      </div>
+    );
   }
-  return <span>{String(value)}</span>;
+  return <span style={{ fontSize: 14, lineHeight: 1.55 }}>{String(value)}</span>;
 }
 
-function ResultObject({ obj }: { obj: Record<string, unknown> }): React.ReactNode {
+function ExtractedFields({ result }: { result: unknown }) {
+  if (!isObject(result) || Object.keys(result).length === 0) {
+    return (
+      <p style={{ color: "var(--ink-faint)", fontStyle: "italic", fontSize: 14, margin: 0 }}>
+        No data extracted — page may have blocked the scan.
+      </p>
+    );
+  }
+  const entries = Object.entries(result).filter(([, v]) => !isEmpty(v));
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      {Object.entries(obj).map(([key, val]) => (
-        <div key={key} style={{ display: "flex", gap: 8 }}>
-          <span
-            style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: 10,
-              color: "var(--ink-faint)",
-              flexShrink: 0,
-              paddingTop: 2
-            }}
-          >
-            {key.replace(/_/g, " ")}:
-          </span>
-          <ResultValue value={val} />
+    <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+      {entries.map(([key]) => (
+        <div key={key} style={{ padding: "12px 0", borderBottom: "1px dotted var(--paper-rule-2)" }}>
+          <div style={kvLabel}>{key.replace(/_/g, " ")}</div>
+          <FieldValue value={result[key]} />
         </div>
       ))}
     </div>
@@ -91,7 +152,6 @@ function ResultObject({ obj }: { obj: Record<string, unknown> }): React.ReactNod
 }
 
 function ScanResult({ data }: { data: ScanCompleteData }) {
-  const result = data.result;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -99,52 +159,7 @@ function ScanResult({ data }: { data: ScanCompleteData }) {
         {data.usedFallback && <RDSChip tone="hot">Fallback triggered</RDSChip>}
         {data.hasChanges && <RDSChip tone="ok">Changes detected</RDSChip>}
       </div>
-      {isObject(result) && Object.keys(result).length > 0 ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-          {Object.entries(result).map(([key, value]) => {
-            const isEmpty =
-              value === null ||
-              value === undefined ||
-              (Array.isArray(value) && value.length === 0) ||
-              (typeof value === "string" && value.trim().length === 0) ||
-              (typeof value === "number" && value === 0);
-            return (
-              <div
-                key={key}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "200px 1fr",
-                  gap: 16,
-                  padding: "10px 0",
-                  borderBottom: "1px dotted var(--paper-rule-2)",
-                  alignItems: "start",
-                  opacity: isEmpty ? 0.45 : 1
-                }}
-              >
-                <div
-                  style={{
-                    fontFamily: "var(--font-mono)",
-                    fontSize: 10,
-                    letterSpacing: "0.1em",
-                    color: "var(--ink-faint)",
-                    textTransform: "uppercase",
-                    paddingTop: 3
-                  }}
-                >
-                  {key.replace(/_/g, " ")}
-                </div>
-                <div style={{ fontSize: 14, lineHeight: 1.5, color: "var(--ink)" }}>
-                  <ResultValue value={value} />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <p style={{ color: "var(--ink-faint)", fontStyle: "italic", fontSize: 14, margin: 0 }}>
-          No data extracted — page may have blocked the scan.
-        </p>
-      )}
+      <ExtractedFields result={data.result} />
     </div>
   );
 }
@@ -367,60 +382,16 @@ function ProgressRow({
 function MultiSurfaceResults({ pageResults }: { pageResults: PageCompleteData[] }) {
   if (pageResults.length === 0) return null;
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
       {pageResults.map((page) => (
         <div key={page.type}>
-          <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-            <RDSChip tone="solid">{page.type}</RDSChip>
-            <RDSChip tone="solid">{page.endpointUsed}</RDSChip>
-            {page.usedFallback && <RDSChip tone="hot">Fallback triggered</RDSChip>}
-          </div>
-          {isObject(page.result) && Object.keys(page.result).length > 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-              {Object.entries(page.result as Record<string, unknown>).map(([key, value]) => {
-                const isEmpty =
-                  value === null ||
-                  value === undefined ||
-                  (Array.isArray(value) && value.length === 0) ||
-                  (typeof value === "string" && value.trim().length === 0) ||
-                  (typeof value === "number" && value === 0);
-                return (
-                  <div
-                    key={key}
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "200px 1fr",
-                      gap: 16,
-                      padding: "10px 0",
-                      borderBottom: "1px dotted var(--paper-rule-2)",
-                      alignItems: "start",
-                      opacity: isEmpty ? 0.45 : 1
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontFamily: "var(--font-mono)",
-                        fontSize: 10,
-                        letterSpacing: "0.1em",
-                        color: "var(--ink-faint)",
-                        textTransform: "uppercase",
-                        paddingTop: 3
-                      }}
-                    >
-                      {key.replace(/_/g, " ")}
-                    </div>
-                    <div style={{ fontSize: 14, lineHeight: 1.5, color: "var(--ink)" }}>
-                      <ResultValue value={value} />
-                    </div>
-                  </div>
-                );
-              })}
+          <RDSSectionHead title={page.type.charAt(0).toUpperCase() + page.type.slice(1)} count={page.endpointUsed} />
+          {page.usedFallback && (
+            <div style={{ marginBottom: 8 }}>
+              <RDSChip tone="hot">Fallback triggered</RDSChip>
             </div>
-          ) : (
-            <p style={{ color: "var(--ink-faint)", fontStyle: "italic", fontSize: 14, margin: 0 }}>
-              No data extracted — page may have blocked the scan.
-            </p>
           )}
+          <ExtractedFields result={page.result} />
         </div>
       ))}
     </div>
