@@ -458,6 +458,9 @@ export function RDSFooter() {
           <Link href="/insights" style={navLink}>
             API Insights
           </Link>
+          <Link href="/demo" style={navLink}>
+            Demo
+          </Link>
         </div>
         <a
           href="https://tabstack.ai"
