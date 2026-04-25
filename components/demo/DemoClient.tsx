@@ -589,56 +589,74 @@ export function DemoClient() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <label style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 14, fontWeight: 600 }}>
-          URL
+      <div
+        style={{
+          background: "var(--paper-edge)",
+          padding: "20px 24px 24px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 16
+        }}
+      >
+        <label style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <span
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 11,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: "var(--ink-mute)"
+            }}
+          >
+            URL to scan
+          </span>
           <input
             value={url}
             onChange={(event) => setUrl(event.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && !isRunning && url.trim() && runDemo()}
             placeholder="https://example.com/pricing"
             style={{
               fontFamily: "var(--font-mono)",
-              fontSize: 13,
-              padding: "8px 12px",
+              fontSize: 14,
+              padding: "10px 14px",
               border: "1px solid var(--ink)",
               background: "var(--paper)",
               color: "var(--ink)",
-              width: "100%",
-              maxWidth: 480
+              width: "100%"
             }}
           />
         </label>
-        <div>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <button
             type="button"
             onClick={runDemo}
             disabled={isRunning || !url.trim()}
             style={{
               fontFamily: "var(--font-sans)",
-              fontWeight: 600,
-              fontSize: 13,
-              padding: "10px 14px",
-              background: isRunning || !url.trim() ? "var(--paper-edge)" : "var(--ink)",
+              fontWeight: 700,
+              fontSize: 14,
+              padding: "10px 20px",
+              background: isRunning || !url.trim() ? "var(--paper-rule-2)" : "var(--ink)",
               color: isRunning || !url.trim() ? "var(--ink-faint)" : "var(--ink-bg-text)",
-              border: "1px solid var(--ink)",
-              cursor: isRunning || !url.trim() ? "not-allowed" : "pointer"
+              border: "none",
+              cursor: isRunning || !url.trim() ? "not-allowed" : "pointer",
+              letterSpacing: "0.01em"
             }}
           >
-            {isRunning ? "Scanning..." : "Run demo"}
+            {isRunning ? "Scanning…" : "Run scan →"}
           </button>
+          {error ? (
+            <span
+              style={{
+                fontSize: 13,
+                color: "var(--accent-hot)",
+                fontFamily: "var(--font-mono)"
+              }}
+            >
+              {error}
+            </span>
+          ) : null}
         </div>
-        {error ? (
-          <p
-            style={{
-              margin: 0,
-              fontSize: 13,
-              color: "var(--accent-hot)",
-              fontFamily: "var(--font-mono)"
-            }}
-          >
-            {error}
-          </p>
-        ) : null}
       </div>
 
       {events.length > 0 && (
