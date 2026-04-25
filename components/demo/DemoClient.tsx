@@ -294,7 +294,13 @@ function MultiSurfaceProgressLog({
             key={type}
             symbol={done ? "✓" : running ? "→" : "·"}
             tone={done ? "ok" : running ? "accent" : "faint"}
-            label={done ? `${type} — extracted` : running ? `${type} — extracting…` : type}
+            label={
+              done
+                ? `${type.charAt(0).toUpperCase() + type.slice(1)} — extracted`
+                : running
+                  ? `${type.charAt(0).toUpperCase() + type.slice(1)} — extracting…`
+                  : type.charAt(0).toUpperCase() + type.slice(1)
+            }
             detail=""
             done={done}
           />

@@ -38,7 +38,9 @@ function buildSurfaces(parsedUrl: URL): Array<{ type: string; url: string }> {
   return [
     { type: "homepage", url: parsedUrl.toString() },
     { type: "pricing", url: `${base}/pricing` },
+    { type: "docs", url: `${base}/docs` },
     { type: "blog", url: `${base}/blog` },
+    { type: "changelog", url: `${base}/changelog` },
     { type: "careers", url: `${base}/careers` }
   ];
 }
