@@ -66,16 +66,6 @@ function inferPageType(rawUrl: string): string {
   if (lower.includes("docs")) return "docs";
   if (lower.includes("github.com")) return "github";
   if (inferBlogPageType(rawUrl)) return "blog";
-  // Review platforms — content_blocked is expected and the most valuable
-  // experience-logging signal in the codebase. Infer before generic checks.
-  if (
-    lower.includes("g2.com") ||
-    lower.includes("capterra.com") ||
-    lower.includes("trustpilot.com") ||
-    lower.includes("producthunt.com")
-  ) {
-    return "reviews";
-  }
   if (
     lower.includes("linkedin.com") ||
     lower.includes("twitter.com") ||
@@ -347,7 +337,7 @@ export async function POST(request: NextRequest) {
         }
       },
       cancel() {
-        void releaseLock(hashedIp);
+        if (!isLocal) void releaseLock(hashedIp);
       }
     });
 
