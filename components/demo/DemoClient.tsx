@@ -45,9 +45,7 @@ function ResultValue({ value }: { value: unknown }): React.ReactNode {
     return <span style={{ color: "var(--ink-faint)", fontStyle: "italic" }}>—</span>;
   }
   if (typeof value === "boolean") {
-    return (
-      <span style={{ color: value ? "var(--ok)" : "var(--accent-hot)" }}>{value ? "Yes" : "No"}</span>
-    );
+    return <span style={{ color: value ? "var(--ok)" : "var(--accent-hot)" }}>{value ? "Yes" : "No"}</span>;
   }
   if (Array.isArray(value)) {
     if (value.length === 0) {
@@ -151,13 +149,7 @@ function ScanResult({ data }: { data: ScanCompleteData }) {
   );
 }
 
-function ProgressLog({
-  events,
-  isRunning
-}: {
-  events: DemoEvent[];
-  isRunning: boolean;
-}) {
+function ProgressLog({ events, isRunning }: { events: DemoEvent[]; isRunning: boolean }) {
   const labels: Record<string, string> = {
     "scan:started": "Scan started",
     "scan:endpoint": "Endpoint selected",
@@ -172,11 +164,7 @@ function ProgressLog({
         const label = labels[e.event] ?? e.event;
         const isError = e.event === "scan:error" || e.event === "scan:timeout";
         const isComplete = e.event === "scan:complete";
-        const color = isError
-          ? "var(--accent-hot)"
-          : isComplete
-            ? "var(--ok)"
-            : "var(--ink)";
+        const color = isError ? "var(--accent-hot)" : isComplete ? "var(--ok)" : "var(--ink)";
         return (
           <div
             key={e.id}
@@ -264,9 +252,7 @@ function ProgressLog({
           >
             ·
           </span>
-          <div style={{ fontSize: 14, color: "var(--ink-faint)", fontStyle: "italic" }}>
-            Scanning…
-          </div>
+          <div style={{ fontSize: 14, color: "var(--ink-faint)", fontStyle: "italic" }}>Scanning…</div>
         </div>
       )}
     </div>
@@ -340,8 +326,7 @@ function ProgressRow({
   detail: string;
   done: boolean;
 }) {
-  const color =
-    tone === "ok" ? "var(--ok)" : tone === "accent" ? "var(--accent)" : "var(--ink-faint)";
+  const color = tone === "ok" ? "var(--ok)" : tone === "accent" ? "var(--accent)" : "var(--ink-faint)";
   return (
     <div
       style={{
@@ -352,9 +337,7 @@ function ProgressRow({
         opacity: done || tone === "accent" ? 1 : 0.35
       }}
     >
-      <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, color, width: 16, flexShrink: 0 }}>
-        {symbol}
-      </span>
+      <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, color, width: 16, flexShrink: 0 }}>{symbol}</span>
       <div>
         <div style={{ fontSize: 14, fontWeight: 600 }}>{label}</div>
         {detail && (
@@ -662,8 +645,7 @@ export function DemoClient() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns:
-              (isMultiSurface && hasResult) || (!isMultiSurface && hasResult) ? "1fr 2fr" : "1fr",
+            gridTemplateColumns: (isMultiSurface && hasResult) || (!isMultiSurface && hasResult) ? "1fr 2fr" : "1fr",
             gap: 32
           }}
         >
@@ -676,9 +658,7 @@ export function DemoClient() {
                 briefPending={briefPending}
                 brief={brief}
                 isRunning={isRunning}
-                startedUrl={
-                  (events.find((e) => e.event === "scan:started")?.data as { url?: string })?.url ?? ""
-                }
+                startedUrl={(events.find((e) => e.event === "scan:started")?.data as { url?: string })?.url ?? ""}
               />
             ) : (
               <ProgressLog events={events} isRunning={isRunning} />

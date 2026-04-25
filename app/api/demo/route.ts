@@ -18,8 +18,14 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error("scan_timeout")), ms);
     promise.then(
-      (value) => { clearTimeout(timer); resolve(value); },
-      (err: unknown) => { clearTimeout(timer); reject(err); }
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err: unknown) => {
+        clearTimeout(timer);
+        reject(err);
+      }
     );
   });
 }
@@ -117,9 +123,7 @@ function extractDemoBriefData(
   raw: unknown
 ): { positioning_signal: string; opportunity: string; watch_signal: string } | null {
   const payload =
-    isPlainObject(raw) && "data" in (raw as Record<string, unknown>)
-      ? (raw as Record<string, unknown>).data
-      : raw;
+    isPlainObject(raw) && "data" in (raw as Record<string, unknown>) ? (raw as Record<string, unknown>).data : raw;
   if (!isPlainObject(payload)) return null;
   const d = payload as Record<string, unknown>;
   if (
@@ -300,7 +304,8 @@ export async function POST(request: NextRequest) {
                 url: parsedUrl.toString(),
                 type,
                 isDemo: true,
-                customTask: type === "custom" ? "Extract high-signal competitive intelligence from this page." : undefined
+                customTask:
+                  type === "custom" ? "Extract high-signal competitive intelligence from this page." : undefined
               }),
               SCAN_TIMEOUT_MS
             );
@@ -321,7 +326,8 @@ export async function POST(request: NextRequest) {
           if (error instanceof Error && error.message === "scan_timeout") {
             controller.enqueue(
               sse("scan:timeout", {
-                message: "Scan exceeded the 22s limit — try a simpler page type (homepage, blog, docs) for faster results."
+                message:
+                  "Scan exceeded the 22s limit — try a simpler page type (homepage, blog, docs) for faster results."
               })
             );
           } else {

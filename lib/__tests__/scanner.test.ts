@@ -365,9 +365,7 @@ describe("scanPage", () => {
       effortOverride: "low" // pricing normally routes to effort: "high"
     });
 
-    expect(extractJsonMock).toHaveBeenCalledWith(
-      expect.objectContaining({ effort: "low" })
-    );
+    expect(extractJsonMock).toHaveBeenCalledWith(expect.objectContaining({ effort: "low" }));
   });
 
   it("uses automate fallback for blog when extract/json is empty", async () => {

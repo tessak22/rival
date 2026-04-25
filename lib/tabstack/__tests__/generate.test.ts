@@ -593,7 +593,6 @@ describe("generateSelfProfile", () => {
     getTabstackClientMock.mockReturnValue({ generate: { json: generateJsonMock } });
   });
 
-
   it("calls tabstack /generate with SELF_PROFILE_SCHEMA and the provided context", async () => {
     const { generateSelfProfile, SELF_PROFILE_EXPECTED_FIELDS } = await import("@/lib/tabstack/generate");
     const mockProfile = {
