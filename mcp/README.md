@@ -23,6 +23,7 @@ Set `RIVAL_MCP_TOKEN` in your Netlify environment variables, then configure your
 ```
 
 Test with curl:
+
 ```bash
 curl -X POST https://your-rival.netlify.app/api/mcp \
   -H "Authorization: Bearer your-token-here" \
@@ -89,16 +90,16 @@ curl -X POST http://localhost:3100/mcp \
 
 ## Tools
 
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `list_competitors` | All tracked competitors sorted high→low threat | — |
-| `get_competitor` | Full snapshot: threat tier, health, pages, funding, traffic, G2 | `slug` |
-| `get_competitor_data` | Structured extracted data: pricing, roles, tech stack, blog topics | `slug`, `page_type?` |
-| `get_intelligence_brief` | AI brief: positioning/content/product opportunities, 7 axis scores | `slug` |
-| `get_deep_dives` | Agentic research reports with citations | `slug`, `limit?` (1-10) |
-| `list_recent_intel` | Intel feed: recent changes filterable by time, competitor, page type | `since?`, `until?`, `competitor?`, `page_type?`, `limit?` |
-| `get_competitor_diff` | Before/after content for a specific change | `competitor`, `page_type`, `at?` |
-| `search_intel` | Full-text search across the intel feed | `query`, `since?`, `limit?` |
+| Tool                     | Description                                                          | Key Parameters                                            |
+| ------------------------ | -------------------------------------------------------------------- | --------------------------------------------------------- |
+| `list_competitors`       | All tracked competitors sorted high→low threat                       | —                                                         |
+| `get_competitor`         | Full snapshot: threat tier, health, pages, funding, traffic, G2      | `slug`                                                    |
+| `get_competitor_data`    | Structured extracted data: pricing, roles, tech stack, blog topics   | `slug`, `page_type?`                                      |
+| `get_intelligence_brief` | AI brief: positioning/content/product opportunities, 7 axis scores   | `slug`                                                    |
+| `get_deep_dives`         | Agentic research reports with citations                              | `slug`, `limit?` (1-10)                                   |
+| `list_recent_intel`      | Intel feed: recent changes filterable by time, competitor, page type | `since?`, `until?`, `competitor?`, `page_type?`, `limit?` |
+| `get_competitor_diff`    | Before/after content for a specific change                           | `competitor`, `page_type`, `at?`                          |
+| `search_intel`           | Full-text search across the intel feed                               | `query`, `since?`, `limit?`                               |
 
 ## Running Alongside Quiver MCP
 

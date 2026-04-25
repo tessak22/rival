@@ -1,11 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const {
-  competitorFindUniqueMock,
-  competitorPageFindManyMock,
-  scanFindManyMock,
-  fetchMock
-} = vi.hoisted(() => ({
+const { competitorFindUniqueMock, competitorPageFindManyMock, scanFindManyMock, fetchMock } = vi.hoisted(() => ({
   competitorFindUniqueMock: vi.fn(),
   competitorPageFindManyMock: vi.fn(),
   scanFindManyMock: vi.fn(),
@@ -120,13 +115,15 @@ describe("pushCompetitorToQuiver", () => {
     competitorPageFindManyMock.mockResolvedValue([
       {
         type: "pricing",
-        scans: [{
-          rawResult: {
-            pricing_transparent: false,
-            has_free_tier: false,
-            tiers: [{ name: "Pro", price: "$99/mo", is_self_serve: true }]
+        scans: [
+          {
+            rawResult: {
+              pricing_transparent: false,
+              has_free_tier: false,
+              tiers: [{ name: "Pro", price: "$99/mo", is_self_serve: true }]
+            }
           }
-        }]
+        ]
       }
     ]);
 
@@ -151,9 +148,7 @@ describe("pushCompetitorToQuiver", () => {
   });
 
   it("does not throw when Quiver returns a JSON-RPC error", async () => {
-    fetchMock.mockResolvedValueOnce(
-      makeOkResponse({ error: { code: -32000, message: "Something went wrong" } })
-    );
+    fetchMock.mockResolvedValueOnce(makeOkResponse({ error: { code: -32000, message: "Something went wrong" } }));
     const { pushCompetitorToQuiver } = await import("@/lib/quiver");
     await expect(pushCompetitorToQuiver(COMPETITOR_ID, NAME, BASE_URL)).resolves.toBeUndefined();
   });

@@ -27,12 +27,14 @@ const makePage = (overrides: {
   url: overrides.url ?? "https://acme.com/pricing",
   scans: overrides.noScans
     ? []
-    : [{
-        scannedAt: scanDate,
-        endpointUsed: "extract.json",
-        rawResult: overrides.rawResult ?? null,
-        markdownResult: overrides.markdownResult ?? null
-      }]
+    : [
+        {
+          scannedAt: scanDate,
+          endpointUsed: "extract.json",
+          rawResult: overrides.rawResult ?? null,
+          markdownResult: overrides.markdownResult ?? null
+        }
+      ]
 });
 
 describe("getCompetitorData", () => {
@@ -54,9 +56,7 @@ describe("getCompetitorData", () => {
 
   it("returns pages with rawResult data", async () => {
     mockPrisma.competitor.findUnique.mockResolvedValue(mockCompetitor);
-    mockPrisma.competitorPage.findMany.mockResolvedValue([
-      makePage({ rawResult: { tiers: ["free", "pro"] } })
-    ]);
+    mockPrisma.competitorPage.findMany.mockResolvedValue([makePage({ rawResult: { tiers: ["free", "pro"] } })]);
     const result = await getCompetitorData("acme");
     if ("error" in result) throw new Error("unexpected error");
     expect(result.pages).toHaveLength(1);
@@ -77,9 +77,7 @@ describe("getCompetitorData", () => {
 
   it("filters pages by page_type when provided", async () => {
     mockPrisma.competitor.findUnique.mockResolvedValue(mockCompetitor);
-    mockPrisma.competitorPage.findMany.mockResolvedValue([
-      makePage({ type: "pricing", rawResult: { price: 99 } })
-    ]);
+    mockPrisma.competitorPage.findMany.mockResolvedValue([makePage({ type: "pricing", rawResult: { price: 99 } })]);
     await getCompetitorData("acme", "pricing");
     expect(mockPrisma.competitorPage.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -90,9 +88,7 @@ describe("getCompetitorData", () => {
 
   it("returns empty pages array when no scans exist", async () => {
     mockPrisma.competitor.findUnique.mockResolvedValue(mockCompetitor);
-    mockPrisma.competitorPage.findMany.mockResolvedValue([
-      makePage({ noScans: true })
-    ]);
+    mockPrisma.competitorPage.findMany.mockResolvedValue([makePage({ noScans: true })]);
     const result = await getCompetitorData("acme");
     if ("error" in result) throw new Error("unexpected error");
     expect(result.pages).toEqual([]);
@@ -100,9 +96,7 @@ describe("getCompetitorData", () => {
 
   it("excludes pages where both rawResult and markdownResult are null", async () => {
     mockPrisma.competitor.findUnique.mockResolvedValue(mockCompetitor);
-    mockPrisma.competitorPage.findMany.mockResolvedValue([
-      makePage({ rawResult: null, markdownResult: null })
-    ]);
+    mockPrisma.competitorPage.findMany.mockResolvedValue([makePage({ rawResult: null, markdownResult: null })]);
     const result = await getCompetitorData("acme");
     if ("error" in result) throw new Error("unexpected error");
     expect(result.pages).toEqual([]);

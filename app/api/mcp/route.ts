@@ -43,7 +43,6 @@ function threatOrder(level: string | null): number {
   return 3;
 }
 
-
 const TRUNCATE_AT = 8000;
 
 function parseDateArg(s: string, paramName: string): Date {
@@ -93,9 +92,8 @@ async function toolListCompetitors() {
   return {
     competitors: sorted.map((c) => {
       const lastChange =
-        c.pages
-          .flatMap((p) => p.scans)
-          .sort((a, b) => b.scannedAt.getTime() - a.scannedAt.getTime())[0]?.scannedAt ?? null;
+        c.pages.flatMap((p) => p.scans).sort((a, b) => b.scannedAt.getTime() - a.scannedAt.getTime())[0]?.scannedAt ??
+        null;
       return {
         name: c.name,
         slug: c.slug,
@@ -243,7 +241,7 @@ async function toolGetIntelligenceBrief(slug: string) {
     competitor: c.name,
     slug: c.slug,
     generated_at: c.briefGeneratedAt?.toISOString() ?? null,
-    threat_level: typeof brief.threat_level === "string" ? brief.threat_level : c.threatLevel ?? null,
+    threat_level: typeof brief.threat_level === "string" ? brief.threat_level : (c.threatLevel ?? null),
     threat_reasoning: typeof brief.threat_reasoning === "string" ? brief.threat_reasoning : null,
     positioning_opportunity: typeof brief.positioning_opportunity === "string" ? brief.positioning_opportunity : null,
     content_opportunity: typeof brief.content_opportunity === "string" ? brief.content_opportunity : null,
@@ -502,7 +500,8 @@ const TOOL_DEFS = [
   },
   {
     name: "list_recent_intel",
-    description: "The intel feed — recent competitor changes, filterable by time window, competitor slug, and page type.",
+    description:
+      "The intel feed — recent competitor changes, filterable by time window, competitor slug, and page type.",
     inputSchema: {
       type: "object",
       properties: {

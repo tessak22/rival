@@ -38,16 +38,15 @@ export async function listCompetitors() {
     }
   });
 
-  const sorted = [...competitors].sort((a, b) =>
-    threatOrder(a.threatLevel) - threatOrder(b.threatLevel) ||
-    a.name.localeCompare(b.name)
+  const sorted = [...competitors].sort(
+    (a, b) => threatOrder(a.threatLevel) - threatOrder(b.threatLevel) || a.name.localeCompare(b.name)
   );
 
   return {
     competitors: sorted.map((c) => {
-      const lastChange = c.pages
-        .flatMap((p) => p.scans)
-        .sort((a, b) => b.scannedAt.getTime() - a.scannedAt.getTime())[0]?.scannedAt ?? null;
+      const lastChange =
+        c.pages.flatMap((p) => p.scans).sort((a, b) => b.scannedAt.getTime() - a.scannedAt.getTime())[0]?.scannedAt ??
+        null;
 
       return {
         name: c.name,

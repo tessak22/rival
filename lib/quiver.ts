@@ -111,7 +111,10 @@ async function buildReport(competitorId: string, name: string, baseUrl: string):
     if (tiers.length > 0) {
       tiers.forEach((tier: unknown) => {
         const t = asObj(tier);
-        if (t?.name) lines.push(`- ${t.name}: ${t.price ?? "—"}${t.per_unit ? ` + ${t.per_unit}` : ""}${t.is_self_serve === false ? " (sales required)" : ""}`);
+        if (t?.name)
+          lines.push(
+            `- ${t.name}: ${t.price ?? "—"}${t.per_unit ? ` + ${t.per_unit}` : ""}${t.is_self_serve === false ? " (sales required)" : ""}`
+          );
       });
     }
     lines.push("");
@@ -121,7 +124,8 @@ async function buildReport(competitorId: string, name: string, baseUrl: string):
   const careers = asObj(scansByType.get("careers"));
   if (careers) {
     lines.push("## Hiring Signals");
-    if (careers.total_count != null) lines.push(`Open roles: ${careers.total_count} | Trend: ${careers.hiring_trend ?? "unknown"}`);
+    if (careers.total_count != null)
+      lines.push(`Open roles: ${careers.total_count} | Trend: ${careers.hiring_trend ?? "unknown"}`);
     if (careers.devrel_roles_open) lines.push("DevRel roles open — community investment signal");
     if (careers.leadership_roles_open) lines.push("Leadership roles open — org change signal");
     const stack = Array.isArray(careers.aggregate_tech_stack)
@@ -136,7 +140,9 @@ async function buildReport(competitorId: string, name: string, baseUrl: string):
   if (reviews) {
     lines.push("## Customer Sentiment");
     if (reviews.platform && reviews.overall_rating != null) {
-      lines.push(`${reviews.platform}: ${reviews.overall_rating}/5${reviews.review_count ? ` (${reviews.review_count} reviews)` : ""}`);
+      lines.push(
+        `${reviews.platform}: ${reviews.overall_rating}/5${reviews.review_count ? ` (${reviews.review_count} reviews)` : ""}`
+      );
     }
     const praise = Array.isArray(reviews.top_praise_themes)
       ? (reviews.top_praise_themes as unknown[]).filter((x): x is string => typeof x === "string")
@@ -158,7 +164,9 @@ async function buildReport(competitorId: string, name: string, baseUrl: string):
     if (github.forks != null) parts.push(`${github.forks} forks`);
     if (github.last_commit_date) parts.push(`last commit ${github.last_commit_date}`);
     if (parts.length > 0) lines.push(parts.join(" | "));
-    const topics = Array.isArray(github.topics) ? (github.topics as unknown[]).filter((x): x is string => typeof x === "string") : [];
+    const topics = Array.isArray(github.topics)
+      ? (github.topics as unknown[]).filter((x): x is string => typeof x === "string")
+      : [];
     if (topics.length > 0) lines.push(`Topics: ${topics.join(", ")}`);
     lines.push("");
   }
@@ -175,11 +183,7 @@ async function buildReport(competitorId: string, name: string, baseUrl: string):
   return lines.join("\n").trim();
 }
 
-export async function pushCompetitorToQuiver(
-  competitorId: string,
-  name: string,
-  baseUrl: string
-): Promise<void> {
+export async function pushCompetitorToQuiver(competitorId: string, name: string, baseUrl: string): Promise<void> {
   if (!isConfigured()) return;
 
   const url = process.env.QUIVER_MCP_URL!;
@@ -193,7 +197,7 @@ export async function pushCompetitorToQuiver(
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "accept": "application/json, text/event-stream",
+        accept: "application/json, text/event-stream",
         authorization: `Bearer ${secret}`
       },
       body: JSON.stringify({
@@ -222,7 +226,9 @@ export async function pushCompetitorToQuiver(
     // Quiver's MCP endpoint returns SSE format: "event: message\ndata: {...}\n\n"
     const text = await response.text();
     const dataLine = text.split("\n").find((l) => l.startsWith("data:"));
-    const body = dataLine ? (JSON.parse(dataLine.slice(5).trim()) as { result?: unknown; error?: { message?: string } }) : {};
+    const body = dataLine
+      ? (JSON.parse(dataLine.slice(5).trim()) as { result?: unknown; error?: { message?: string } })
+      : {};
     if (body.error) {
       console.error(`[quiver] push error for ${name}:`, body.error.message);
     } else {

@@ -230,16 +230,16 @@ Rival ships a built-in MCP server that exposes all competitor intelligence as re
 
 ### Tools
 
-| Tool | Description |
-|---|---|
-| `list_competitors` | All tracked competitors with threat tier, health score, and last change timestamp |
-| `get_competitor` | Full snapshot — tracked pages, manual data (funding, G2, traffic) |
-| `get_competitor_data` | Current extracted data by page type — pricing tiers, job listings, tech stack from JDs, GitHub stats, blog topics, review themes |
-| `get_intelligence_brief` | AI-generated brief — positioning/content/product opportunities, threat reasoning, watch list, 7 axis scores |
-| `get_deep_dives` | Agentic research reports with citations |
-| `list_recent_intel` | Intel feed — recent changes, filterable by time, competitor, and page type |
-| `get_competitor_diff` | Before/after content for a specific change |
-| `search_intel` | Full-text search across the intel feed |
+| Tool                     | Description                                                                                                                      |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| `list_competitors`       | All tracked competitors with threat tier, health score, and last change timestamp                                                |
+| `get_competitor`         | Full snapshot — tracked pages, manual data (funding, G2, traffic)                                                                |
+| `get_competitor_data`    | Current extracted data by page type — pricing tiers, job listings, tech stack from JDs, GitHub stats, blog topics, review themes |
+| `get_intelligence_brief` | AI-generated brief — positioning/content/product opportunities, threat reasoning, watch list, 7 axis scores                      |
+| `get_deep_dives`         | Agentic research reports with citations                                                                                          |
+| `list_recent_intel`      | Intel feed — recent changes, filterable by time, competitor, and page type                                                       |
+| `get_competitor_diff`    | Before/after content for a specific change                                                                                       |
+| `search_intel`           | Full-text search across the intel feed                                                                                           |
 
 ### Local setup (Claude Desktop / Claude Code)
 

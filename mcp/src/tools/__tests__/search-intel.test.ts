@@ -57,8 +57,7 @@ describe("searchIntel", () => {
     expect(Array.isArray(orClause)).toBe(true);
     const hasDiffSummaryFilter = orClause.some(
       (c: Record<string, unknown>) =>
-        typeof c.diffSummary === "object" &&
-        (c.diffSummary as Record<string, unknown>).mode === "insensitive"
+        typeof c.diffSummary === "object" && (c.diffSummary as Record<string, unknown>).mode === "insensitive"
     );
     expect(hasDiffSummaryFilter).toBe(true);
   });

@@ -31,7 +31,7 @@ export async function getIntelligenceBrief(slug: string) {
     competitor: competitor.name,
     slug: competitor.slug,
     generated_at: competitor.briefGeneratedAt?.toISOString() ?? null,
-    threat_level: typeof brief.threat_level === "string" ? brief.threat_level : competitor.threatLevel ?? null,
+    threat_level: typeof brief.threat_level === "string" ? brief.threat_level : (competitor.threatLevel ?? null),
     threat_reasoning: typeof brief.threat_reasoning === "string" ? brief.threat_reasoning : null,
     positioning_opportunity: typeof brief.positioning_opportunity === "string" ? brief.positioning_opportunity : null,
     content_opportunity: typeof brief.content_opportunity === "string" ? brief.content_opportunity : null,

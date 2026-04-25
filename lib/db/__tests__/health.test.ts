@@ -33,9 +33,7 @@ describe("calcHealthScore", () => {
 
   it("returns 0 when all pages have empty quality", async () => {
     const { calcHealthScore } = await import("@/lib/db/health");
-    const rows = [
-      { competitor_id: "c1", page_id: "p1", result_quality: "empty", page_type: "homepage" }
-    ];
+    const rows = [{ competitor_id: "c1", page_id: "p1", result_quality: "empty", page_type: "homepage" }];
     expect(calcHealthScore(rows)).toBe(0);
   });
 

@@ -99,9 +99,7 @@ describe("getCompetitor", () => {
   });
 
   it("uses employees fallback for employee_count", async () => {
-    mockPrisma.competitor.findUnique.mockResolvedValue(
-      makeCompetitor({ manualData: { employees: 500 } })
-    );
+    mockPrisma.competitor.findUnique.mockResolvedValue(makeCompetitor({ manualData: { employees: 500 } }));
     const result = await getCompetitor("acme");
     if ("error" in result) throw new Error("unexpected error");
     expect(result.manual_data.employee_count).toBe(500);
@@ -146,15 +144,11 @@ describe("getCompetitor", () => {
     const pageId = "page-uuid";
     mockPrisma.competitor.findUnique.mockResolvedValue(
       makeCompetitor({
-        pages: [
-          makePage({ scans: [{ scannedAt: checkedDate }] })
-        ]
+        pages: [makePage({ scans: [{ scannedAt: checkedDate }] })]
       })
     );
     // Change recorded by the separate query, not from the inline scans array
-    mockPrisma.scan.findMany.mockResolvedValue([
-      { pageId, scannedAt: changeDate, diffSummary: "Price went up" }
-    ]);
+    mockPrisma.scan.findMany.mockResolvedValue([{ pageId, scannedAt: changeDate, diffSummary: "Price went up" }]);
     const result = await getCompetitor("acme");
     if ("error" in result) throw new Error("unexpected error");
     expect(result.tracked_pages[0].last_checked_at).toBe(checkedDate.toISOString());
@@ -165,11 +159,7 @@ describe("getCompetitor", () => {
   it("returns health_score 100 when all logs are full quality", async () => {
     mockPrisma.competitor.findUnique.mockResolvedValue(
       makeCompetitor({
-        apiLogs: [
-          { resultQuality: "full" },
-          { resultQuality: "full" },
-          { resultQuality: "full" }
-        ]
+        apiLogs: [{ resultQuality: "full" }, { resultQuality: "full" }, { resultQuality: "full" }]
       })
     );
     const result = await getCompetitor("acme");

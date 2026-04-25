@@ -77,9 +77,7 @@ describe("listRecentIntel", () => {
   });
 
   it("sets has_more=true when results exceed limit", async () => {
-    const scans = Array.from({ length: 6 }, (_, i) =>
-      makeScan({ id: `scan-${i}` })
-    );
+    const scans = Array.from({ length: 6 }, (_, i) => makeScan({ id: `scan-${i}` }));
     mockPrisma.scan.findMany.mockResolvedValue(scans);
     const result = await listRecentIntel({ limit: 5 });
     expect(result.has_more).toBe(true);
@@ -87,9 +85,7 @@ describe("listRecentIntel", () => {
   });
 
   it("sets has_more=false when results are at or below limit", async () => {
-    const scans = Array.from({ length: 3 }, (_, i) =>
-      makeScan({ id: `scan-${i}` })
-    );
+    const scans = Array.from({ length: 3 }, (_, i) => makeScan({ id: `scan-${i}` }));
     mockPrisma.scan.findMany.mockResolvedValue(scans);
     const result = await listRecentIntel({ limit: 5 });
     expect(result.has_more).toBe(false);

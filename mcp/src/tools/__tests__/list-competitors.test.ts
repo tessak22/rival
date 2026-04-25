@@ -100,10 +100,7 @@ describe("listCompetitors", () => {
       makeCompetitor({
         name: "Change Co",
         slug: "change-co",
-        pages: [
-          { scans: [{ scannedAt: earlier }] },
-          { scans: [{ scannedAt: later }] }
-        ]
+        pages: [{ scans: [{ scannedAt: earlier }] }, { scans: [{ scannedAt: later }] }]
       })
     ]);
     const result = await listCompetitors();

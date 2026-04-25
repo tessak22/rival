@@ -65,9 +65,7 @@ describe("getDeepDives", () => {
 
   it("falls back to stringified result when result.report is not a string", async () => {
     mockPrisma.competitor.findUnique.mockResolvedValue(mockCompetitor);
-    mockPrisma.deepDive.findMany.mockResolvedValue([
-      makeDeepDive({ result: { summary: "complex object" } })
-    ]);
+    mockPrisma.deepDive.findMany.mockResolvedValue([makeDeepDive({ result: { summary: "complex object" } })]);
     const result = await getDeepDives("acme");
     if ("error" in result) throw new Error("unexpected error");
     expect(typeof result.deep_dives[0].report).toBe("string");
@@ -114,8 +112,6 @@ describe("getDeepDives", () => {
     mockPrisma.competitor.findUnique.mockResolvedValue(mockCompetitor);
     mockPrisma.deepDive.findMany.mockResolvedValue([]);
     await getDeepDives("acme", 5);
-    expect(mockPrisma.deepDive.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ take: 5 })
-    );
+    expect(mockPrisma.deepDive.findMany).toHaveBeenCalledWith(expect.objectContaining({ take: 5 }));
   });
 });

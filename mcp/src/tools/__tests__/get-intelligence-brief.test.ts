@@ -114,9 +114,7 @@ describe("getIntelligenceBrief", () => {
   });
 
   it("returns null axis scores when brief is missing those fields", async () => {
-    mockPrisma.competitor.findUnique.mockResolvedValue(
-      makeCompetitor({ intelligenceBrief: { threat_level: "low" } })
-    );
+    mockPrisma.competitor.findUnique.mockResolvedValue(makeCompetitor({ intelligenceBrief: { threat_level: "low" } }));
     const result = await getIntelligenceBrief("acme");
     if ("error" in result) throw new Error("unexpected error");
     expect(result.axis_scores.openness).toBeNull();

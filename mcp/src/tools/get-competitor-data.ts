@@ -30,9 +30,7 @@ export async function getCompetitorData(slug: string, pageType?: string) {
     .map((p) => {
       const scan = p.scans[0];
       const data: unknown =
-        p.type === "changelog" && scan.markdownResult
-          ? { content: scan.markdownResult }
-          : scan.rawResult;
+        p.type === "changelog" && scan.markdownResult ? { content: scan.markdownResult } : scan.rawResult;
 
       return {
         page_type: p.type,
