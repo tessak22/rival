@@ -16,6 +16,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/db/client";
+import { competitorHealthScores } from "@/lib/db/health";
 
 export const dynamic = "force-dynamic";
 
@@ -42,11 +43,6 @@ function threatOrder(level: string | null): number {
   return 3;
 }
 
-function healthScore(logs: Array<{ resultQuality: string | null }>): number {
-  if (logs.length === 0) return 0;
-  const sum = logs.reduce((acc, l) => acc + (l.resultQuality === "full" ? 1 : l.resultQuality === "partial" ? 0.5 : 0), 0);
-  return Math.round((sum / logs.length) * 100);
-}
 
 const TRUNCATE_AT = 8000;
 
@@ -83,15 +79,12 @@ async function toolListCompetitors() {
             select: { scannedAt: true }
           }
         }
-      },
-      apiLogs: {
-        where: { isDemo: false },
-        orderBy: { calledAt: "desc" },
-        take: 50,
-        select: { resultQuality: true }
       }
     }
   });
+
+  const ids = competitors.map((c) => c.id);
+  const healthMap = await competitorHealthScores(ids);
 
   const sorted = [...competitors].sort(
     (a, b) => threatOrder(a.threatLevel) - threatOrder(b.threatLevel) || a.name.localeCompare(b.name)
@@ -107,7 +100,7 @@ async function toolListCompetitors() {
         name: c.name,
         slug: c.slug,
         threat_tier: c.threatLevel?.toLowerCase() ?? "unknown",
-        health_score: healthScore(c.apiLogs),
+        health_score: healthMap.get(c.id) ?? 0,
         last_change_detected_at: lastChange?.toISOString() ?? null,
         url: c.baseUrl
       };
@@ -128,17 +121,13 @@ async function toolGetCompetitor(slug: string) {
             select: { scannedAt: true }
           }
         }
-      },
-      apiLogs: {
-        where: { isDemo: false },
-        orderBy: { calledAt: "desc" },
-        take: 50,
-        select: { resultQuality: true }
       }
     }
   });
 
   if (!c || c.isSelf) return { error: "competitor_not_found", slug };
+
+  const healthMap = await competitorHealthScores([c.id]);
 
   // Separate query for last changed scan per page — avoids the take:1 truncation problem
   // where a page with no recent change would miss older change records.
@@ -160,7 +149,7 @@ async function toolGetCompetitor(slug: string) {
     slug: c.slug,
     base_url: c.baseUrl,
     threat_tier: c.threatLevel?.toLowerCase() ?? "unknown",
-    health_score: healthScore(c.apiLogs),
+    health_score: healthMap.get(c.id) ?? 0,
     manual_data: {
       founded: m.founded ?? null,
       employee_count: m.employee_count ?? m.employees ?? null,

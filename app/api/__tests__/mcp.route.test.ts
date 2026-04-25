@@ -8,7 +8,8 @@ const {
   competitorPageFindFirstMock,
   scanFindManyMock,
   scanFindFirstMock,
-  deepDiveFindManyMock
+  deepDiveFindManyMock,
+  competitorHealthScoresMock
 } = vi.hoisted(() => ({
   competitorFindManyMock: vi.fn(),
   competitorFindUniqueMock: vi.fn(),
@@ -16,7 +17,8 @@ const {
   competitorPageFindFirstMock: vi.fn(),
   scanFindManyMock: vi.fn(),
   scanFindFirstMock: vi.fn(),
-  deepDiveFindManyMock: vi.fn()
+  deepDiveFindManyMock: vi.fn(),
+  competitorHealthScoresMock: vi.fn()
 }));
 
 vi.mock("@/lib/db/client", () => ({
@@ -26,6 +28,10 @@ vi.mock("@/lib/db/client", () => ({
     scan: { findMany: scanFindManyMock, findFirst: scanFindFirstMock },
     deepDive: { findMany: deepDiveFindManyMock }
   }
+}));
+
+vi.mock("@/lib/db/health", () => ({
+  competitorHealthScores: competitorHealthScoresMock
 }));
 
 const TOKEN = "test-secret";
@@ -50,6 +56,8 @@ describe("POST /api/mcp", () => {
     vi.resetModules();
     vi.clearAllMocks();
     process.env.RIVAL_MCP_TOKEN = TOKEN;
+    // Default health mock — tests that care about a specific score override this.
+    competitorHealthScoresMock.mockResolvedValue(new Map());
   });
 
   // ── Auth ──────────────────────────────────────────────────────────────────
@@ -127,12 +135,21 @@ describe("POST /api/mcp", () => {
     expect(body.error.code).toBe(-32700);
   });
 
+  it("returns 400 with Missing tool name when tools/call has no name", async () => {
+    const { POST } = await import("@/app/api/mcp/route");
+    const res = await POST(makeRequest(rpc("tools/call", { arguments: {} }), TOKEN));
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe(-32602);
+    expect(body.error.message).toBe("Missing tool name");
+  });
+
   // ── list_competitors ──────────────────────────────────────────────────────
 
   it("tools/call list_competitors returns sorted competitor list", async () => {
     competitorFindManyMock.mockResolvedValue([
-      { id: "1", name: "Low Corp", slug: "low-corp", baseUrl: "https://low.co", threatLevel: "Low", isSelf: false, pages: [], apiLogs: [] },
-      { id: "2", name: "High Corp", slug: "high-corp", baseUrl: "https://high.co", threatLevel: "High", isSelf: false, pages: [], apiLogs: [] }
+      { id: "1", name: "Low Corp", slug: "low-corp", baseUrl: "https://low.co", threatLevel: "Low", isSelf: false, pages: [] },
+      { id: "2", name: "High Corp", slug: "high-corp", baseUrl: "https://high.co", threatLevel: "High", isSelf: false, pages: [] }
     ]);
 
     const { POST } = await import("@/app/api/mcp/route");
@@ -141,6 +158,24 @@ describe("POST /api/mcp", () => {
     const result = JSON.parse(body.result.content[0].text);
     expect(result.competitors[0].slug).toBe("high-corp");
     expect(result.competitors[1].slug).toBe("low-corp");
+  });
+
+  it("tools/call list_competitors defaults health_score to 0 when competitor absent from health map", async () => {
+    competitorFindManyMock.mockResolvedValue([
+      { id: "1", name: "Alpha", slug: "alpha", baseUrl: "https://alpha.co", threatLevel: "High", isSelf: false, pages: [] },
+      { id: "2", name: "Beta", slug: "beta", baseUrl: "https://beta.co", threatLevel: "Low", isSelf: false, pages: [] }
+    ]);
+    // Health map only contains one of the two competitors — exercises the ?? 0 fallback.
+    competitorHealthScoresMock.mockResolvedValue(new Map([["1", 85]]));
+
+    const { POST } = await import("@/app/api/mcp/route");
+    const res = await POST(makeRequest(rpc("tools/call", { name: "list_competitors", arguments: {} }), TOKEN));
+    const body = await res.json();
+    const result = JSON.parse(body.result.content[0].text);
+    const alpha = result.competitors.find((c: { slug: string }) => c.slug === "alpha");
+    const beta = result.competitors.find((c: { slug: string }) => c.slug === "beta");
+    expect(alpha.health_score).toBe(85);
+    expect(beta.health_score).toBe(0);
   });
 
   // ── get_competitor ────────────────────────────────────────────────────────
@@ -155,15 +190,30 @@ describe("POST /api/mcp", () => {
     expect(result.error).toBe("competitor_not_found");
   });
 
-  it("tools/call get_competitor returns full snapshot", async () => {
+  it("tools/call get_competitor defaults health_score to 0 when absent from health map", async () => {
+    competitorFindUniqueMock.mockResolvedValue({
+      id: "1", name: "Acme", slug: "acme", baseUrl: "https://acme.com",
+      threatLevel: "High", isSelf: false, manualData: null, pages: []
+    });
+    // Empty map exercises the ?? 0 fallback in toolGetCompetitor.
+    competitorHealthScoresMock.mockResolvedValue(new Map());
+    scanFindManyMock.mockResolvedValue([]);
+
+    const { POST } = await import("@/app/api/mcp/route");
+    const res = await POST(makeRequest(rpc("tools/call", { name: "get_competitor", arguments: { slug: "acme" } }), TOKEN));
+    const body = await res.json();
+    const result = JSON.parse(body.result.content[0].text);
+    expect(result.health_score).toBe(0);
+  });
+
+  it("tools/call get_competitor returns full snapshot with per-page health score", async () => {
     competitorFindUniqueMock.mockResolvedValue({
       id: "1", name: "Acme", slug: "acme", baseUrl: "https://acme.com",
       threatLevel: "High", isSelf: false,
       manualData: { g2_rating: 4.5, total_funding: "$10M" },
-      pages: [],
-      apiLogs: [{ resultQuality: "full" }, { resultQuality: "partial" }]
+      pages: []
     });
-    // No changed scans since pages is empty
+    competitorHealthScoresMock.mockResolvedValue(new Map([["1", 75]]));
     scanFindManyMock.mockResolvedValue([]);
 
     const { POST } = await import("@/app/api/mcp/route");
@@ -173,7 +223,7 @@ describe("POST /api/mcp", () => {
     expect(result.name).toBe("Acme");
     expect(result.threat_tier).toBe("high");
     expect(result.manual_data.g2_rating).toBe(4.5);
-    expect(result.health_score).toBe(75); // (1 + 0.5) / 2 = 0.75
+    expect(result.health_score).toBe(75); // most-recent-per-page average from health module
   });
 
   it("tools/call get_competitor surfaces last_changed_at from non-latest scan", async () => {
@@ -295,6 +345,40 @@ describe("POST /api/mcp", () => {
   });
 
   // ── date validation ───────────────────────────────────────────────────────
+
+  it("tools/call list_recent_intel returns has_more true when results exceed limit", async () => {
+    const makeScan = (id: string, summary: string | null) => ({
+      id,
+      scannedAt: new Date("2026-04-20T10:00:00Z"),
+      diffSummary: summary,
+      page: { type: "pricing", url: "https://acme.com/pricing", competitor: { name: "Acme", slug: "acme" } }
+    });
+    // Return limit+1 scans (limit=1) so hasMore is true; second entry has null diffSummary.
+    scanFindManyMock.mockResolvedValue([makeScan("s1", "Price went up"), makeScan("s2", null)]);
+
+    const { POST } = await import("@/app/api/mcp/route");
+    const res = await POST(makeRequest(rpc("tools/call", { name: "list_recent_intel", arguments: { limit: 1 } }), TOKEN));
+    const body = await res.json();
+    const result = JSON.parse(body.result.content[0].text);
+    expect(result.has_more).toBe(true);
+    expect(result.entries).toHaveLength(1);
+    expect(result.entries[0].summary).toBe("Price went up");
+  });
+
+  it("tools/call list_recent_intel maps null diffSummary to null", async () => {
+    scanFindManyMock.mockResolvedValue([{
+      id: "s1",
+      scannedAt: new Date("2026-04-20T10:00:00Z"),
+      diffSummary: null,
+      page: { type: "homepage", url: "https://acme.com", competitor: { name: "Acme", slug: "acme" } }
+    }]);
+
+    const { POST } = await import("@/app/api/mcp/route");
+    const res = await POST(makeRequest(rpc("tools/call", { name: "list_recent_intel", arguments: {} }), TOKEN));
+    const body = await res.json();
+    const result = JSON.parse(body.result.content[0].text);
+    expect(result.entries[0].summary).toBeNull();
+  });
 
   it("tools/call list_recent_intel returns error for invalid since date", async () => {
     const { POST } = await import("@/app/api/mcp/route");

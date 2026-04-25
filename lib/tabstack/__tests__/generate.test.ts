@@ -156,7 +156,7 @@ describe("generateDiff", () => {
     expect(sdkCall.effort).toBe("max"); // toSdkEffortMock: "high" → "max"
   });
 
-  it("passes expectedFields derived from DIFF_SCHEMA.required to logger", async () => {
+  it("passes DIFF_EXPECTED_FIELDS (empty) to logger so no-change results are not penalized", async () => {
     const { generateDiff, DIFF_EXPECTED_FIELDS } = await import("@/lib/tabstack/generate");
     generateJsonMock.mockResolvedValue({ added: [], changed: [], removed: [], summary: "" });
 
@@ -551,13 +551,21 @@ describe("schema exports", () => {
     vi.resetModules();
   });
 
-  it("DIFF_SCHEMA has required fields", async () => {
+  it("DIFF_SCHEMA has required fields (drives LLM output shape)", async () => {
     const { DIFF_SCHEMA } = await import("@/lib/tabstack/generate");
     expect(DIFF_SCHEMA.type).toBe("object");
     expect(DIFF_SCHEMA.required).toContain("added");
     expect(DIFF_SCHEMA.required).toContain("changed");
     expect(DIFF_SCHEMA.required).toContain("removed");
     expect(DIFF_SCHEMA.required).toContain("summary");
+  });
+
+  it("DIFF_EXPECTED_FIELDS is empty so no-change diffs are not penalized", async () => {
+    // Empty arrays (added:[], changed:[], removed:[]) and empty summary are
+    // valid no-change diff results, not missing data. DIFF_EXPECTED_FIELDS must
+    // be empty so the logger scores any non-null diff response as quality "full".
+    const { DIFF_EXPECTED_FIELDS } = await import("@/lib/tabstack/generate");
+    expect(DIFF_EXPECTED_FIELDS).toHaveLength(0);
   });
 
   it("BRIEF_SCHEMA has required fields", async () => {

@@ -13,6 +13,7 @@ import {
 } from "@/components/rds";
 import { prisma } from "@/lib/db/client";
 import { getSelfCompetitor } from "@/lib/db/competitors";
+import { latestQualityPerPage } from "@/lib/db/health";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +42,7 @@ async function loadDashboardData() {
   });
   const competitorIds = competitors.map((c) => c.id);
 
-  const [recentScans, recentLogs, self] = await Promise.all([
+  const [recentScans, qualityRows, self] = await Promise.all([
     prisma.scan.findMany({
       where: { page: { competitorId: { in: competitorIds } } },
       select: {
@@ -52,12 +53,7 @@ async function loadDashboardData() {
       orderBy: { scannedAt: "desc" },
       take: 5000
     }),
-    prisma.apiLog.findMany({
-      where: { competitorId: { in: competitorIds }, resultQuality: { not: null } },
-      select: { competitorId: true, resultQuality: true, page: { select: { type: true } } },
-      orderBy: { calledAt: "desc" },
-      take: 5000
-    }),
+    latestQualityPerPage(competitorIds),
     getSelfCompetitor()
   ]);
 
@@ -72,25 +68,24 @@ async function loadDashboardData() {
     }
   }
 
-  const schemaScoresByCompetitor = new Map<string, number[]>();
+  // Health per competitor and schema coverage per page type both derived from
+  // the most-recent quality result per page — not a rolling historical average.
+  const scoresByCompetitor = new Map<string, number[]>();
   const schemaScoresByType = new Map<string, number[]>();
-  for (const log of recentLogs) {
-    if (!log.resultQuality) continue;
-    const score = log.resultQuality === "full" ? 1 : log.resultQuality === "partial" ? 0.5 : 0;
-    if (log.competitorId) {
-      schemaScoresByCompetitor.set(log.competitorId, [
-        ...(schemaScoresByCompetitor.get(log.competitorId) ?? []),
-        score
-      ]);
-    }
-    const type = log.page?.type ?? null;
-    if (type) {
-      schemaScoresByType.set(type, [...(schemaScoresByType.get(type) ?? []), score]);
+  for (const row of qualityRows) {
+    const score = row.result_quality === "full" ? 1 : row.result_quality === "partial" ? 0.5 : 0;
+    const cScores = scoresByCompetitor.get(row.competitor_id) ?? [];
+    cScores.push(score);
+    scoresByCompetitor.set(row.competitor_id, cScores);
+    if (row.page_type) {
+      const tScores = schemaScoresByType.get(row.page_type) ?? [];
+      tScores.push(score);
+      schemaScoresByType.set(row.page_type, tScores);
     }
   }
 
   const competitorRows = competitors.map((competitor) => {
-    const scores = schemaScoresByCompetitor.get(competitor.id) ?? [];
+    const scores = scoresByCompetitor.get(competitor.id) ?? [];
     const health = scores.length === 0 ? 0 : Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100);
     const category = pickStringField(competitor.manualData, ["category"]);
     const hq = pickStringField(competitor.manualData, ["hq", "headquarters"]);

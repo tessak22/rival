@@ -73,7 +73,10 @@ export const DIFF_SCHEMA = {
   required: ["added", "changed", "removed", "summary"]
 } as const;
 
-export const DIFF_EXPECTED_FIELDS: string[] = [...DIFF_SCHEMA.required];
+// Empty: empty arrays (added/changed/removed:[]) and empty summary are valid
+// no-change results, not missing data. The logger treats zero expected fields
+// as "full" for any non-null response, which is the correct signal here.
+export const DIFF_EXPECTED_FIELDS: string[] = [];
 
 export type GenerateDiffInput = {
   competitorId?: string | null;
