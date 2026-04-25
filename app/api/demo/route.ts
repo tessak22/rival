@@ -1,3 +1,6 @@
+// Netlify caps at 26s. Scan timeout fires at 22s, leaving 4s buffer.
+export const maxDuration = 26;
+
 import { createHash } from "node:crypto";
 
 import { Prisma } from "@prisma/client";
@@ -351,7 +354,8 @@ export async function POST(request: NextRequest) {
       headers: {
         "content-type": "text/event-stream",
         "cache-control": "no-cache, no-transform",
-        connection: "keep-alive"
+        connection: "keep-alive",
+        "x-accel-buffering": "no"
       }
     });
   } finally {
