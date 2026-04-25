@@ -9,7 +9,8 @@ const {
   demoIpLockCreateMock,
   demoIpLockDeleteMock,
   demoScanCountMock,
-  demoScanCreateMock
+  demoScanCreateMock,
+  generateDemoBriefMock
 } = vi.hoisted(() => ({
   scanPageMock: vi.fn(),
   inferBlogPageTypeMock: vi.fn(),
@@ -17,7 +18,8 @@ const {
   demoIpLockCreateMock: vi.fn(),
   demoIpLockDeleteMock: vi.fn(),
   demoScanCountMock: vi.fn(),
-  demoScanCreateMock: vi.fn()
+  demoScanCreateMock: vi.fn(),
+  generateDemoBriefMock: vi.fn()
 }));
 
 vi.mock("@/lib/scanner", () => ({
@@ -25,6 +27,7 @@ vi.mock("@/lib/scanner", () => ({
   inferBlogPageType: inferBlogPageTypeMock,
   inferPageTypeFromUrl: inferPageTypeFromUrlMock
 }));
+vi.mock("@/lib/tabstack/generate", () => ({ generateDemoBrief: generateDemoBriefMock }));
 vi.mock("@/lib/db/client", () => ({
   prisma: {
     demoIpLock: {
@@ -100,6 +103,7 @@ describe("POST /api/demo", () => {
     demoIpLockDeleteMock.mockReset();
     demoScanCountMock.mockReset();
     demoScanCreateMock.mockReset();
+    generateDemoBriefMock.mockReset();
 
     // Default: lock acquired, within daily limit, scan succeeds
     demoIpLockCreateMock.mockResolvedValue({ ipHash: "abc" });
@@ -109,6 +113,9 @@ describe("POST /api/demo", () => {
     scanPageMock.mockResolvedValue(SCAN_RESULT);
     inferBlogPageTypeMock.mockReturnValue(null);
     inferPageTypeFromUrlMock.mockReturnValue(null);
+    generateDemoBriefMock.mockResolvedValue({
+      data: { positioning_signal: "pos", opportunity: "opp", watch_signal: "watch" }
+    });
   });
 
   it("returns 429 when a concurrent lock is held", async () => {
@@ -240,7 +247,7 @@ describe("POST /api/demo", () => {
 
   it("scan:complete event contains scan result fields", async () => {
     const { POST } = await import("@/app/api/demo/route");
-    const res = await POST(makeRequest({ url: "https://example.com" }));
+    const res = await POST(makeRequest({ url: "https://example.com/pricing" }));
     const events = await drainStream(getBody(res));
 
     const complete = events.find((e) => e.event === "scan:complete");
@@ -252,7 +259,7 @@ describe("POST /api/demo", () => {
 
   it("creates a demoScan record after a successful scan", async () => {
     const { POST } = await import("@/app/api/demo/route");
-    const res = await POST(makeRequest({ url: "https://example.com" }));
+    const res = await POST(makeRequest({ url: "https://example.com/pricing" }));
     await drainStream(getBody(res));
 
     expect(demoScanCreateMock).toHaveBeenCalledOnce();
@@ -260,7 +267,7 @@ describe("POST /api/demo", () => {
 
   it("releases the lock after stream completes successfully", async () => {
     const { POST } = await import("@/app/api/demo/route");
-    const res = await POST(makeRequest({ url: "https://example.com" }));
+    const res = await POST(makeRequest({ url: "https://example.com/pricing" }));
     await drainStream(getBody(res));
 
     expect(demoIpLockDeleteMock).toHaveBeenCalled();
@@ -270,7 +277,7 @@ describe("POST /api/demo", () => {
     scanPageMock.mockRejectedValueOnce(new Error("Scan failed hard"));
 
     const { POST } = await import("@/app/api/demo/route");
-    const res = await POST(makeRequest({ url: "https://example.com" }));
+    const res = await POST(makeRequest({ url: "https://example.com/pricing" }));
     const events = await drainStream(getBody(res));
 
     const errorEvent = events.find((e) => e.event === "scan:error");
@@ -283,7 +290,7 @@ describe("POST /api/demo", () => {
     scanPageMock.mockRejectedValueOnce("string rejection");
 
     const { POST } = await import("@/app/api/demo/route");
-    const res = await POST(makeRequest({ url: "https://example.com" }));
+    const res = await POST(makeRequest({ url: "https://example.com/pricing" }));
     const events = await drainStream(getBody(res));
 
     const errorEvent = events.find((e) => e.event === "scan:error");
@@ -362,5 +369,154 @@ describe("POST /api/demo", () => {
     await drainStream(getBody(res));
 
     expect(scanPageMock).toHaveBeenCalledWith(expect.objectContaining({ type: "pricing", customTask: undefined }));
+  });
+
+  describe("multi-surface scan (root URL)", () => {
+    it("emits scan:surfaces with 4 pages for a root URL", async () => {
+      const { POST } = await import("@/app/api/demo/route");
+      const res = await POST(makeRequest({ url: "https://example.com" }));
+      const events = await drainStream(getBody(res));
+
+      const surfacesEvent = events.find((e) => e.event === "scan:surfaces");
+      expect(surfacesEvent).toBeDefined();
+      const pages = (surfacesEvent?.data as { pages: Array<{ type: string; url: string }> }).pages;
+      expect(pages.map((p) => p.type)).toEqual(["homepage", "pricing", "blog", "careers"]);
+      expect(pages.find((p) => p.type === "homepage")?.url).toBe("https://example.com/");
+      expect(pages.find((p) => p.type === "pricing")?.url).toBe("https://example.com/pricing");
+      expect(pages.find((p) => p.type === "blog")?.url).toBe("https://example.com/blog");
+      expect(pages.find((p) => p.type === "careers")?.url).toBe("https://example.com/careers");
+    });
+
+    it("calls scanPage 4 times with effortOverride: low and isDemo: true", async () => {
+      const { POST } = await import("@/app/api/demo/route");
+      const res = await POST(makeRequest({ url: "https://example.com" }));
+      await drainStream(getBody(res));
+
+      expect(scanPageMock).toHaveBeenCalledTimes(4);
+      for (const call of scanPageMock.mock.calls) {
+        expect(call[0]).toMatchObject({ effortOverride: "low", isDemo: true });
+      }
+    });
+
+    it("emits scan:page_complete for each non-empty surface result", async () => {
+      const { POST } = await import("@/app/api/demo/route");
+      const res = await POST(makeRequest({ url: "https://example.com" }));
+      const events = await drainStream(getBody(res));
+
+      const pageCompletes = events.filter((e) => e.event === "scan:page_complete");
+      expect(pageCompletes.length).toBe(4);
+      const types = pageCompletes.map((e) => (e.data as { type: string }).type);
+      expect(types).toContain("homepage");
+      expect(types).toContain("pricing");
+    });
+
+    it("scan:page_complete carries type, url, result, endpointUsed, usedFallback", async () => {
+      const { POST } = await import("@/app/api/demo/route");
+      const res = await POST(makeRequest({ url: "https://example.com" }));
+      const events = await drainStream(getBody(res));
+
+      const homepageComplete = events.find(
+        (e) => e.event === "scan:page_complete" && (e.data as { type: string }).type === "homepage"
+      );
+      expect(homepageComplete?.data).toMatchObject({
+        type: "homepage",
+        url: "https://example.com/",
+        result: SCAN_RESULT.rawResult,
+        endpointUsed: "extract/json",
+        usedFallback: false
+      });
+    });
+
+    it("emits scan:brief_started then scan:brief_complete after page results", async () => {
+      const { POST } = await import("@/app/api/demo/route");
+      const res = await POST(makeRequest({ url: "https://example.com" }));
+      const events = await drainStream(getBody(res));
+
+      const names = events.map((e) => e.event);
+      expect(names).toContain("scan:brief_started");
+      expect(names).toContain("scan:brief_complete");
+      const briefIdx = names.indexOf("scan:brief_started");
+      const lastPageIdx = names.lastIndexOf("scan:page_complete");
+      expect(briefIdx).toBeGreaterThan(lastPageIdx);
+    });
+
+    it("scan:brief_complete contains positioning_signal, opportunity, watch_signal", async () => {
+      const { POST } = await import("@/app/api/demo/route");
+      const res = await POST(makeRequest({ url: "https://example.com" }));
+      const events = await drainStream(getBody(res));
+
+      const briefEvent = events.find((e) => e.event === "scan:brief_complete");
+      expect(briefEvent?.data).toMatchObject({
+        positioning_signal: "pos",
+        opportunity: "opp",
+        watch_signal: "watch"
+      });
+    });
+
+    it("creates exactly 1 demoScan record regardless of surface count", async () => {
+      const { POST } = await import("@/app/api/demo/route");
+      const res = await POST(makeRequest({ url: "https://example.com" }));
+      await drainStream(getBody(res));
+
+      expect(demoScanCreateMock).toHaveBeenCalledOnce();
+    });
+
+    it("silently drops surfaces with empty rawResult — no scan:page_complete for them", async () => {
+      scanPageMock
+        .mockResolvedValueOnce(SCAN_RESULT)
+        .mockResolvedValueOnce({ ...SCAN_RESULT, rawResult: null })
+        .mockResolvedValueOnce(SCAN_RESULT)
+        .mockResolvedValueOnce(SCAN_RESULT);
+
+      const { POST } = await import("@/app/api/demo/route");
+      const res = await POST(makeRequest({ url: "https://example.com" }));
+      const events = await drainStream(getBody(res));
+
+      const pageCompletes = events.filter((e) => e.event === "scan:page_complete");
+      expect(pageCompletes.length).toBe(3);
+      const types = pageCompletes.map((e) => (e.data as { type: string }).type);
+      expect(types).not.toContain("pricing");
+    });
+
+    it("omits brief when all surfaces return empty", async () => {
+      scanPageMock.mockResolvedValue({ ...SCAN_RESULT, rawResult: null });
+
+      const { POST } = await import("@/app/api/demo/route");
+      const res = await POST(makeRequest({ url: "https://example.com" }));
+      const events = await drainStream(getBody(res));
+
+      expect(events.find((e) => e.event === "scan:brief_started")).toBeUndefined();
+      expect(events.find((e) => e.event === "scan:brief_complete")).toBeUndefined();
+    });
+
+    it("omits brief silently when generateDemoBrief throws", async () => {
+      generateDemoBriefMock.mockRejectedValueOnce(new Error("Generate failed"));
+
+      const { POST } = await import("@/app/api/demo/route");
+      const res = await POST(makeRequest({ url: "https://example.com" }));
+      const events = await drainStream(getBody(res));
+
+      expect(events.filter((e) => e.event === "scan:page_complete").length).toBe(4);
+      expect(events.find((e) => e.event === "scan:error")).toBeUndefined();
+    });
+
+    it("does not trigger multi-surface for a non-root URL", async () => {
+      const { POST } = await import("@/app/api/demo/route");
+      const res = await POST(makeRequest({ url: "https://example.com/pricing" }));
+      const events = await drainStream(getBody(res));
+
+      expect(events.find((e) => e.event === "scan:surfaces")).toBeUndefined();
+      expect(scanPageMock).toHaveBeenCalledOnce();
+      expect(events.find((e) => e.event === "scan:complete")).toBeDefined();
+    });
+
+    it("does not emit scan:endpoint or scan:complete for a root URL (multi-surface path)", async () => {
+      const { POST } = await import("@/app/api/demo/route");
+      const res = await POST(makeRequest({ url: "https://example.com" }));
+      const events = await drainStream(getBody(res));
+
+      expect(events.find((e) => e.event === "scan:endpoint")).toBeUndefined();
+      expect(events.find((e) => e.event === "scan:complete")).toBeUndefined();
+    });
   });
 });

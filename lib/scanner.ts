@@ -171,6 +171,7 @@ export type ScanPageInput = {
   nocache?: boolean;
   isDemo?: boolean;
   customTask?: string;
+  effortOverride?: TabstackEffort; // forces effort on all Tabstack calls — used by demo mode
 };
 
 export type ScanPageOutput = {
@@ -381,7 +382,7 @@ async function runPrimaryScan(input: ScanPageInput): Promise<{
       competitorId: input.competitorId,
       pageId: input.pageId,
       url: input.url,
-      effort: route.effort ?? "low",
+      effort: input.effortOverride ?? route.effort ?? "low",
       nocache,
       geoTarget: input.geoTarget,
       isDemo: input.isDemo
@@ -421,7 +422,7 @@ async function runPrimaryScan(input: ScanPageInput): Promise<{
       url: input.url,
       jsonSchema: toMutableJsonSchema(route.jsonSchema),
       expectedFields: route.expectedFields ? [...route.expectedFields] : undefined,
-      effort: route.effort ?? "low",
+      effort: input.effortOverride ?? route.effort ?? "low",
       nocache,
       geoTarget: input.geoTarget,
       isDemo: input.isDemo,
@@ -467,7 +468,7 @@ async function runPrimaryScan(input: ScanPageInput): Promise<{
       competitorId: input.competitorId,
       pageId: input.pageId,
       url: input.url,
-      effort: "low",
+      effort: input.effortOverride ?? route.effort ?? "low",
       nocache,
       geoTarget: input.geoTarget,
       isDemo: input.isDemo,

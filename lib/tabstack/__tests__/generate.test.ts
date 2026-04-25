@@ -593,6 +593,7 @@ describe("generateSelfProfile", () => {
     getTabstackClientMock.mockReturnValue({ generate: { json: generateJsonMock } });
   });
 
+
   it("calls tabstack /generate with SELF_PROFILE_SCHEMA and the provided context", async () => {
     const { generateSelfProfile, SELF_PROFILE_EXPECTED_FIELDS } = await import("@/lib/tabstack/generate");
     const mockProfile = {
@@ -668,5 +669,68 @@ describe("generateSelfProfile", () => {
     expect(metadata.competitorId).toBe("self_1");
     expect(metadata.endpoint).toBe("generate");
     expect(metadata.expectedFields).toEqual(SELF_PROFILE_EXPECTED_FIELDS);
+  });
+});
+
+describe("generateDemoBrief", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    loggerCallMock.mockClear();
+    generateJsonMock.mockClear();
+    process.env.TABSTACK_API_KEY = "test-key";
+    loggerCallMock.mockImplementation((fn: () => Promise<unknown>) => fn());
+    toSdkEffortMock.mockImplementation((effort: string) => (effort === "high" ? "max" : "standard"));
+    toGeoTargetMock.mockImplementation((code?: string | null) => {
+      if (!code) return undefined;
+      const n = code.trim().toUpperCase();
+      return /^[A-Z]{2}$/.test(n) ? { country: n } : undefined;
+    });
+    getTabstackClientMock.mockReturnValue({ generate: { json: generateJsonMock } });
+    generateJsonMock.mockResolvedValue({
+      data: { positioning_signal: "p", opportunity: "o", watch_signal: "w" }
+    });
+  });
+
+  it("calls generate.json with DEMO_BRIEF_SCHEMA and effort: low", async () => {
+    const { generateDemoBrief } = await import("@/lib/tabstack/generate");
+
+    await generateDemoBrief({
+      url: "https://example.com",
+      contextData: '{"homepage": {"primary_tagline": "Hello"}}',
+      isDemo: true
+    });
+
+    expect(generateJsonMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: "https://example.com",
+        effort: "standard", // toSdkEffort("low") => "standard"
+        json_schema: expect.objectContaining({
+          required: expect.arrayContaining(["positioning_signal", "opportunity", "watch_signal"])
+        })
+      })
+    );
+  });
+
+  it("passes isDemo: true to the logger", async () => {
+    const { generateDemoBrief } = await import("@/lib/tabstack/generate");
+
+    await generateDemoBrief({
+      url: "https://example.com",
+      contextData: "{}",
+      isDemo: true
+    });
+
+    expect(loggerCallMock).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({ endpoint: "generate", isDemo: true, nocache: true })
+    );
+  });
+
+  it("returns the SDK response", async () => {
+    const { generateDemoBrief } = await import("@/lib/tabstack/generate");
+
+    const result = await generateDemoBrief({ url: "https://example.com", contextData: "{}" });
+
+    expect(result).toEqual({ data: { positioning_signal: "p", opportunity: "o", watch_signal: "w" } });
   });
 });
