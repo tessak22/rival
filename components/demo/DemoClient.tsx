@@ -280,16 +280,23 @@ function MultiSurfaceProgressLog({
   briefPending,
   brief,
   isRunning,
-  startedUrl
+  startedUrl,
+  events
 }: {
   surfaces: Array<{ type: string; url: string }>;
   pageResults: PageCompleteData[];
   briefPending: boolean;
   brief: BriefData | null;
+  events: DemoEvent[];
   isRunning: boolean;
   startedUrl: string;
 }) {
   const completedTypes = new Set(pageResults.map((r) => r.type));
+  const skippedTypes = new Set(
+    events
+      .filter((e) => e.event === "scan:page_skipped" && isObject(e.data) && typeof e.data.type === "string")
+      .map((e) => (e.data as { type: string }).type)
+  );
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
@@ -302,22 +309,26 @@ function MultiSurfaceProgressLog({
         done
       />
       {surfaces.map(({ type }) => {
+        const label = type.charAt(0).toUpperCase() + type.slice(1);
         const done = completedTypes.has(type);
-        const running = isRunning && !done;
+        const skipped = skippedTypes.has(type);
+        const running = isRunning && !done && !skipped;
         return (
           <ProgressRow
             key={type}
-            symbol={done ? "✓" : running ? "→" : "·"}
+            symbol={done ? "✓" : skipped ? "·" : running ? "→" : "·"}
             tone={done ? "ok" : running ? "accent" : "faint"}
             label={
               done
-                ? `${type.charAt(0).toUpperCase() + type.slice(1)} — extracted`
-                : running
-                  ? `${type.charAt(0).toUpperCase() + type.slice(1)} — extracting…`
-                  : type.charAt(0).toUpperCase() + type.slice(1)
+                ? `${label} — extracted`
+                : skipped
+                  ? `${label} — not found`
+                  : running
+                    ? `${label} — extracting…`
+                    : label
             }
             detail=""
-            done={done}
+            done={done || skipped}
           />
         );
       })}
@@ -653,6 +664,7 @@ export function DemoClient() {
                 briefPending={briefPending}
                 brief={brief}
                 isRunning={isRunning}
+                events={events}
                 startedUrl={(events.find((e) => e.event === "scan:started")?.data as { url?: string })?.url ?? ""}
               />
             ) : (

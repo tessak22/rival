@@ -264,9 +264,17 @@ export async function POST(request: NextRequest) {
             const successfulResults: Array<{ type: string; result: unknown }> = [];
 
             for (const outcome of outcomes) {
-              if (outcome.status === "rejected") continue;
+              if (outcome.status === "rejected") {
+                controller.enqueue(
+                  sse("scan:page_skipped", { type: (outcome.reason as { type?: string })?.type ?? "unknown" })
+                );
+                continue;
+              }
               const { type: surfaceType, url: surfaceUrl, result } = outcome.value;
-              if (demoResultIsEmpty(result.rawResult)) continue;
+              if (demoResultIsEmpty(result.rawResult)) {
+                controller.enqueue(sse("scan:page_skipped", { type: surfaceType }));
+                continue;
+              }
               controller.enqueue(
                 sse("scan:page_complete", {
                   type: surfaceType,
