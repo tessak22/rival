@@ -160,7 +160,13 @@ async function loadDashboardData() {
       .map((c) => [c.slug, (c.manual as Record<string, unknown>).priority as number])
   );
 
-  return { self, competitors: competitorRows, feed, schema: { overall: schemaOverall, fields: schemaFields }, priorityBySlug };
+  return {
+    self,
+    competitors: competitorRows,
+    feed,
+    schema: { overall: schemaOverall, fields: schemaFields },
+    priorityBySlug
+  };
 }
 
 function pickStringField(blob: unknown, keys: string[]): string | null {

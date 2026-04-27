@@ -372,7 +372,7 @@ describe("POST /api/demo", () => {
   });
 
   describe("multi-surface scan (root URL)", () => {
-    it("emits scan:surfaces with 4 pages for a root URL", async () => {
+    it("emits scan:surfaces with 6 pages for a root URL", async () => {
       const { POST } = await import("@/app/api/demo/route");
       const res = await POST(makeRequest({ url: "https://example.com" }));
       const events = await drainStream(getBody(res));
@@ -380,10 +380,12 @@ describe("POST /api/demo", () => {
       const surfacesEvent = events.find((e) => e.event === "scan:surfaces");
       expect(surfacesEvent).toBeDefined();
       const pages = (surfacesEvent?.data as { pages: Array<{ type: string; url: string }> }).pages;
-      expect(pages.map((p) => p.type)).toEqual(["homepage", "pricing", "blog", "careers"]);
+      expect(pages.map((p) => p.type)).toEqual(["homepage", "pricing", "docs", "blog", "changelog", "careers"]);
       expect(pages.find((p) => p.type === "homepage")?.url).toBe("https://example.com/");
       expect(pages.find((p) => p.type === "pricing")?.url).toBe("https://example.com/pricing");
+      expect(pages.find((p) => p.type === "docs")?.url).toBe("https://example.com/docs");
       expect(pages.find((p) => p.type === "blog")?.url).toBe("https://example.com/blog");
+      expect(pages.find((p) => p.type === "changelog")?.url).toBe("https://example.com/changelog");
       expect(pages.find((p) => p.type === "careers")?.url).toBe("https://example.com/careers");
     });
 
@@ -392,7 +394,7 @@ describe("POST /api/demo", () => {
       const res = await POST(makeRequest({ url: "https://example.com" }));
       await drainStream(getBody(res));
 
-      expect(scanPageMock).toHaveBeenCalledTimes(4);
+      expect(scanPageMock).toHaveBeenCalledTimes(6);
       for (const call of scanPageMock.mock.calls) {
         expect(call[0]).toMatchObject({ effortOverride: "low", isDemo: true });
       }
@@ -404,7 +406,7 @@ describe("POST /api/demo", () => {
       const events = await drainStream(getBody(res));
 
       const pageCompletes = events.filter((e) => e.event === "scan:page_complete");
-      expect(pageCompletes.length).toBe(4);
+      expect(pageCompletes.length).toBe(6);
       const types = pageCompletes.map((e) => (e.data as { type: string }).type);
       expect(types).toContain("homepage");
       expect(types).toContain("pricing");
@@ -473,7 +475,7 @@ describe("POST /api/demo", () => {
       const events = await drainStream(getBody(res));
 
       const pageCompletes = events.filter((e) => e.event === "scan:page_complete");
-      expect(pageCompletes.length).toBe(3);
+      expect(pageCompletes.length).toBe(5);
       const types = pageCompletes.map((e) => (e.data as { type: string }).type);
       expect(types).not.toContain("pricing");
     });
@@ -496,7 +498,7 @@ describe("POST /api/demo", () => {
       const res = await POST(makeRequest({ url: "https://example.com" }));
       const events = await drainStream(getBody(res));
 
-      expect(events.filter((e) => e.event === "scan:page_complete").length).toBe(4);
+      expect(events.filter((e) => e.event === "scan:page_complete").length).toBe(6);
       expect(events.find((e) => e.event === "scan:error")).toBeUndefined();
     });
 
