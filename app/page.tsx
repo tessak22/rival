@@ -14,6 +14,7 @@ import {
 import { prisma } from "@/lib/db/client";
 import { getSelfCompetitor } from "@/lib/db/competitors";
 import { latestQualityPerPage } from "@/lib/db/health";
+import { loadRivalConfig } from "@/lib/config/rival-config";
 
 export const dynamic = "force-dynamic";
 
@@ -152,7 +153,14 @@ async function loadDashboardData() {
       ? 0
       : Math.round(schemaFields.reduce((acc, f) => acc + f.coverage, 0) / schemaFields.length);
 
-  return { self, competitors: competitorRows, feed, schema: { overall: schemaOverall, fields: schemaFields } };
+  const config = loadRivalConfig();
+  const priorityBySlug = new Map(
+    config.competitors
+      .filter((c) => typeof (c.manual as Record<string, unknown> | undefined)?.priority === "number")
+      .map((c) => [c.slug, (c.manual as Record<string, unknown>).priority as number])
+  );
+
+  return { self, competitors: competitorRows, feed, schema: { overall: schemaOverall, fields: schemaFields }, priorityBySlug };
 }
 
 function pickStringField(blob: unknown, keys: string[]): string | null {
@@ -203,7 +211,7 @@ export default async function HomePage() {
       <HeaderRow self={data.self} generatedAt={`${generatedAt} UTC`} />
       <HeadlineStrip generatedAt={generatedAt} rows={data.competitors} />
       <LeadStory feed={data.feed} />
-      <ThreatsSection rows={data.competitors} />
+      <ThreatsSection rows={data.competitors} priorityBySlug={data.priorityBySlug} />
       <ActiveSignals feed={data.feed} />
       <WatchAndSchema rows={data.competitors} schema={data.schema} />
       <RDSFooter />
@@ -494,8 +502,24 @@ function formatScannedAt(d: Date): string {
   }).format(d);
 }
 
-function ThreatsSection({ rows }: { rows: DashboardData["competitors"] }) {
-  const sorted = [...rows].sort((a, b) => b.health - a.health || b.changeCount - a.changeCount);
+const THREAT_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 };
+
+function ThreatsSection({
+  rows,
+  priorityBySlug
+}: {
+  rows: DashboardData["competitors"];
+  priorityBySlug: Map<string, number>;
+}) {
+  const sorted = [...rows].sort((a, b) => {
+    const ta = THREAT_ORDER[a.threatLevel] ?? 2;
+    const tb = THREAT_ORDER[b.threatLevel] ?? 2;
+    if (ta !== tb) return ta - tb;
+    const pa = priorityBySlug.get(a.slug) ?? Infinity;
+    const pb = priorityBySlug.get(b.slug) ?? Infinity;
+    if (pa !== pb) return pa - pb;
+    return a.name.localeCompare(b.name);
+  });
   return (
     <div style={{ marginTop: 28 }}>
       <RDSSectionHead title="Threats" count={`${sorted.length} tracked`} />
