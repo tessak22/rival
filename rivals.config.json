@@ -110,6 +110,7 @@
         { "label": "GitHub", "url": "https://github.com/microsoft/playwright", "type": "github" },
         { "label": "Docs", "url": "https://playwright.dev/docs/intro", "type": "docs" },
         { "label": "Changelog", "url": "https://github.com/microsoft/playwright/releases", "type": "changelog" },
+        { "label": "Blog", "url": "https://dev.to/playwright", "type": "blog" },
         { "label": "About", "url": "https://playwright.dev/community/welcome", "type": "profile" },
         { "label": "Twitter/X", "url": "https://x.com/playwrightweb", "type": "social" },
         { "label": "Reviews", "url": "https://www.g2.com/products/playwright/reviews", "type": "reviews" }
@@ -147,6 +148,84 @@
         { "label": "About", "url": "https://www.langchain.com/about", "type": "profile" },
         { "label": "Twitter/X", "url": "https://x.com/langchainai", "type": "social" },
         { "label": "Reviews", "url": "https://www.g2.com/products/langchain/reviews", "type": "reviews" }
+      ]
+    },
+    {
+      "name": "Parallel AI",
+      "slug": "parallel-ai",
+      "url": "https://parallel.ai",
+      "pages": [
+        { "label": "Homepage", "url": "https://parallel.ai", "type": "homepage" },
+        { "label": "Pricing", "url": "https://parallel.ai/pricing", "type": "pricing", "geo_target": "US" },
+        { "label": "Docs", "url": "https://docs.parallel.ai/home", "type": "docs" },
+        { "label": "Blog", "url": "https://parallel.ai/blog", "type": "blog" },
+        { "label": "About", "url": "https://parallel.ai/about", "type": "profile" },
+        { "label": "Careers", "url": "https://jobs.ashbyhq.com/parallel", "type": "careers" },
+        { "label": "Changelog", "url": "https://docs.parallel.ai/resources/changelog", "type": "changelog" },
+        { "label": "GitHub", "url": "https://github.com/parallel-web", "type": "github" },
+        { "label": "Twitter/X", "url": "https://x.com/p0", "type": "social" }
+      ]
+    },
+    {
+      "name": "Exa",
+      "slug": "exa",
+      "url": "https://exa.ai",
+      "pages": [
+        { "label": "Homepage", "url": "https://exa.ai", "type": "homepage" },
+        { "label": "Pricing", "url": "https://exa.ai/pricing", "type": "pricing", "geo_target": "US" },
+        { "label": "Docs", "url": "https://exa.ai/docs", "type": "docs" },
+        { "label": "Blog", "url": "https://exa.ai/blog", "type": "blog" },
+        { "label": "Careers", "url": "https://exa.ai/careers", "type": "careers" },
+        { "label": "About", "url": "https://exa.ai/about", "type": "profile" },
+        { "label": "Changelog", "url": "https://exa.ai/docs/changelog", "type": "changelog" },
+        { "label": "GitHub", "url": "https://github.com/exa-labs", "type": "github" },
+        { "label": "Twitter/X", "url": "https://x.com/ExaAILabs", "type": "social" },
+        { "label": "Reviews", "url": "https://www.producthunt.com/products/exa-ai", "type": "reviews" }
+      ]
+    },
+    {
+      "name": "Perplexity",
+      "slug": "perplexity",
+      "url": "https://www.perplexity.ai",
+      "pages": [
+        { "label": "Homepage", "url": "https://www.perplexity.ai", "type": "homepage" },
+        { "label": "Pricing", "url": "https://www.perplexity.ai/pro", "type": "pricing", "geo_target": "US" },
+        { "label": "Docs", "url": "https://docs.perplexity.ai", "type": "docs" },
+        { "label": "Blog", "url": "https://www.perplexity.ai/hub", "type": "blog" },
+        { "label": "Careers", "url": "https://www.perplexity.ai/hub/careers", "type": "careers" },
+        { "label": "Changelog", "url": "https://www.perplexity.ai/changelog", "type": "changelog" },
+        { "label": "GitHub", "url": "https://github.com/perplexityai", "type": "github" },
+        { "label": "Twitter/X", "url": "https://x.com/perplexity_ai", "type": "social" },
+        { "label": "Reviews", "url": "https://www.producthunt.com/products/perplexity-ai", "type": "reviews" }
+      ]
+    },
+    {
+      "name": "Bright Data",
+      "slug": "brightdata",
+      "url": "https://brightdata.com",
+      "pages": [
+        { "label": "Homepage", "url": "https://brightdata.com", "type": "homepage" },
+        { "label": "Pricing", "url": "https://brightdata.com/pricing", "type": "pricing", "geo_target": "US" },
+        { "label": "Docs", "url": "https://docs.brightdata.com", "type": "docs" },
+        { "label": "Blog", "url": "https://brightdata.com/blog", "type": "blog" },
+        { "label": "Careers", "url": "https://brightdata.com/careers", "type": "careers" },
+        { "label": "About", "url": "https://brightdata.com/about", "type": "profile" },
+        { "label": "Changelog", "url": "https://docs.brightdata.com/release-notes", "type": "changelog" },
+        { "label": "GitHub", "url": "https://github.com/brightdata", "type": "github" },
+        { "label": "Twitter/X", "url": "https://x.com/brightdata", "type": "social" },
+        { "label": "Reviews", "url": "https://www.g2.com/products/bright-data/reviews", "type": "reviews" }
+      ]
+    },
+    {
+      "name": "Browser AI",
+      "slug": "browser-ai",
+      "url": "https://browser.ai",
+      "pages": [
+        { "label": "Homepage", "url": "https://browser.ai", "type": "homepage" },
+        { "label": "Pricing", "url": "https://browser.ai/pricing", "type": "pricing", "geo_target": "US" },
+        { "label": "Docs", "url": "https://docs.browser.ai/general/start", "type": "docs" },
+        { "label": "Blog", "url": "https://browser.ai/news", "type": "blog" },
+        { "label": "GitHub", "url": "https://github.com/browserai", "type": "github" }
       ]
     }
   ],
