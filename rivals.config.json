@@ -90,6 +90,7 @@
     {
       "name": "Steel",
       "slug": "steel",
+      "matrix": false,
       "url": "https://steel.dev",
       "pages": [
         { "label": "Homepage", "url": "https://steel.dev", "type": "homepage" },
@@ -136,6 +137,7 @@
     {
       "name": "LangChain Browser Tools",
       "slug": "langchain-browser",
+      "matrix": false,
       "url": "https://langchain.com",
       "pages": [
         { "label": "Homepage", "url": "https://langchain.com", "type": "homepage" },
@@ -153,6 +155,7 @@
     {
       "name": "Parallel AI",
       "slug": "parallel-ai",
+      "matrix": false,
       "url": "https://parallel.ai",
       "pages": [
         { "label": "Homepage", "url": "https://parallel.ai", "type": "homepage" },
@@ -169,6 +172,7 @@
     {
       "name": "Exa",
       "slug": "exa",
+      "matrix": false,
       "url": "https://exa.ai",
       "pages": [
         { "label": "Homepage", "url": "https://exa.ai", "type": "homepage" },
@@ -186,6 +190,7 @@
     {
       "name": "Perplexity",
       "slug": "perplexity",
+      "matrix": false,
       "url": "https://www.perplexity.ai",
       "pages": [
         { "label": "Homepage", "url": "https://www.perplexity.ai", "type": "homepage" },
@@ -202,6 +207,7 @@
     {
       "name": "Bright Data",
       "slug": "brightdata",
+      "matrix": false,
       "url": "https://brightdata.com",
       "pages": [
         { "label": "Homepage", "url": "https://brightdata.com", "type": "homepage" },
@@ -219,6 +225,7 @@
     {
       "name": "Browser AI",
       "slug": "browser-ai",
+      "matrix": false,
       "url": "https://browser.ai",
       "pages": [
         { "label": "Homepage", "url": "https://browser.ai", "type": "homepage" },
@@ -231,6 +238,7 @@
     {
       "name": "fastCRW",
       "slug": "fastcrw",
+      "matrix": false,
       "url": "https://fastcrw.com",
       "pages": [
         { "label": "Homepage", "url": "https://fastcrw.com", "type": "homepage" },

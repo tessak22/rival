@@ -20,8 +20,22 @@ export default async function MatrixPage() {
     }
   }
 
+  const rivalConfig = (() => {
+    try {
+      return loadRivalConfig();
+    } catch {
+      return null;
+    }
+  })();
+  const matrixExcluded = new Set(
+    [...(rivalConfig?.competitors ?? []), ...(rivalConfig?.self ? [rivalConfig.self] : [])]
+      .filter((c) => c.matrix === false)
+      .map((c) => c.slug)
+  );
+
   const competitors = await prisma.competitor.findMany({
     select: { id: true, name: true, slug: true, intelligenceBrief: true, manualData: true, isSelf: true },
+    where: matrixExcluded.size > 0 ? { slug: { notIn: [...matrixExcluded] } } : undefined,
     orderBy: [{ isSelf: "asc" }, { name: "asc" }]
   });
 

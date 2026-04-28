@@ -44,6 +44,7 @@ export type RivalConfigEntry = {
   name: string;
   slug: string;
   url: string;
+  matrix?: boolean;
   manual?: Record<string, unknown> & { manual_last_updated?: string };
   pages?: Array<{
     label: string;
