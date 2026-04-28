@@ -171,7 +171,7 @@ export function PositioningMatrix({ points, config }: Props) {
                   y1={cy}
                   x2={nearRight ? cx - 10 : cx + 10}
                   y2={dotCy}
-                  stroke="var(--ink-faint)"
+                  stroke="transparent"
                   strokeWidth={0.5}
                 />
               )}
