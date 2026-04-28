@@ -4,6 +4,7 @@ import { getAxisScore } from "@/lib/matrix/overrides";
 import { PositioningMatrix, type MatrixPoint } from "@/components/matrix/PositioningMatrix";
 import { MatrixDownloadButton } from "@/components/matrix/MatrixDownloadButton";
 import { RDSPageShell, RDSHeader, RDSFooter, RDSEmpty, RDSKicker } from "@/components/rds";
+import rivalConfigJson from "../../rivals.config.json";
 
 export const dynamic = "force-dynamic";
 
@@ -20,15 +21,8 @@ export default async function MatrixPage() {
     }
   }
 
-  const rivalConfig = (() => {
-    try {
-      return loadRivalConfig();
-    } catch {
-      return null;
-    }
-  })();
   const matrixExcluded = new Set(
-    [...(rivalConfig?.competitors ?? []), ...(rivalConfig?.self ? [rivalConfig.self] : [])]
+    (rivalConfigJson.competitors as Array<{ slug: string; matrix?: boolean }>)
       .filter((c) => c.matrix === false)
       .map((c) => c.slug)
   );
