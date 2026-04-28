@@ -75,7 +75,7 @@
       "url": "https://browser-use.com",
       "manual": {
         "matrix_overrides": {
-          "managed_service_score": 4,
+          "managed_service_score": 3,
           "llm_included_score": 2
         }
       },
