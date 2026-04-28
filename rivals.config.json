@@ -24,6 +24,12 @@
       "name": "Firecrawl",
       "slug": "firecrawl",
       "url": "https://firecrawl.dev",
+      "manual": {
+        "matrix_overrides": {
+          "managed_service_score": 7,
+          "llm_included_score": 7
+        }
+      },
       "pages": [
         { "label": "Homepage", "url": "https://firecrawl.dev", "type": "homepage" },
         { "label": "Pricing", "url": "https://firecrawl.dev/pricing", "type": "pricing", "geo_target": "US" },
@@ -67,6 +73,12 @@
       "name": "Browser Use",
       "slug": "browser-use",
       "url": "https://browser-use.com",
+      "manual": {
+        "matrix_overrides": {
+          "managed_service_score": 2,
+          "llm_included_score": 2
+        }
+      },
       "pages": [
         { "label": "Homepage", "url": "https://browser-use.com", "type": "homepage" },
         { "label": "Pricing", "url": "https://browser-use.com/pricing", "type": "pricing", "geo_target": "US" },
@@ -83,6 +95,12 @@
       "name": "Stagehand",
       "slug": "stagehand",
       "url": "https://stagehand.dev",
+      "manual": {
+        "matrix_overrides": {
+          "managed_service_score": 2,
+          "llm_included_score": 3
+        }
+      },
       "pages": [
         { "label": "Homepage", "url": "https://stagehand.dev", "type": "homepage" },
         { "label": "GitHub", "url": "https://github.com/browserbase/stagehand", "type": "github" },
@@ -112,6 +130,12 @@
       "name": "Playwright",
       "slug": "playwright",
       "url": "https://playwright.dev",
+      "manual": {
+        "matrix_overrides": {
+          "managed_service_score": 1,
+          "llm_included_score": 1
+        }
+      },
       "pages": [
         { "label": "Homepage", "url": "https://playwright.dev", "type": "homepage" },
         { "label": "GitHub", "url": "https://github.com/microsoft/playwright", "type": "github" },
@@ -127,6 +151,12 @@
       "name": "Apify",
       "slug": "apify",
       "url": "https://apify.com",
+      "manual": {
+        "matrix_overrides": {
+          "managed_service_score": 8,
+          "llm_included_score": 4
+        }
+      },
       "pages": [
         { "label": "Homepage", "url": "https://apify.com", "type": "homepage" },
         { "label": "Pricing", "url": "https://apify.com/pricing", "type": "pricing", "geo_target": "US" },

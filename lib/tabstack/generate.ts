@@ -253,7 +253,7 @@ export const BRIEF_SCHEMA = {
       minimum: 0,
       maximum: 10,
       description:
-        "0 = no LLM or AI capabilities included, user must bring their own; 10 = LLM and AI capabilities fully built in and ready to use"
+        "0 = user must supply their own LLM API key (e.g. OpenAI, Anthropic) or there is no AI at all; 10 = vendor hosts and operates the LLM, no API key required from the user"
     }
   },
   required: [
@@ -464,7 +464,7 @@ export const SELF_PROFILE_SCHEMA = {
       minimum: 0,
       maximum: 10,
       description:
-        "0 = no LLM or AI capabilities included, user must bring their own; 10 = LLM and AI capabilities fully built in and ready to use"
+        "0 = user must supply their own LLM API key (e.g. OpenAI, Anthropic) or there is no AI at all; 10 = vendor hosts and operates the LLM, no API key required from the user"
     }
   },
   required: [
