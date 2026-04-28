@@ -482,11 +482,11 @@ async function runPrimaryScan(input: ScanPageInput): Promise<{
     const markdownContent = extractMarkdownContent(markdownResponse);
 
     // In demo mode the automate step routinely exceeds the per-page timeout budget.
-    // Markdown alone is enough for brief generation and keeps the surface marked as extracted.
+    // Truncate markdown to keep contextData small enough for the 5s brief timeout.
     if (input.isDemo && markdownContent) {
       return {
         endpointUsed: "extract/markdown",
-        rawResult: markdownContent,
+        rawResult: markdownContent.slice(0, 1500),
         markdownResult: markdownContent,
         usedFallback: true
       };
