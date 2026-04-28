@@ -227,6 +227,18 @@
         { "label": "Blog", "url": "https://browser.ai/news", "type": "blog" },
         { "label": "GitHub", "url": "https://github.com/browserai", "type": "github" }
       ]
+    },
+    {
+      "name": "fastCRW",
+      "slug": "fastcrw",
+      "url": "https://fastcrw.com",
+      "pages": [
+        { "label": "Homepage", "url": "https://fastcrw.com", "type": "homepage" },
+        { "label": "Pricing", "url": "https://fastcrw.com/pricing", "type": "pricing", "geo_target": "US" },
+        { "label": "Docs", "url": "https://docs.fastcrw.com", "type": "docs" },
+        { "label": "Blog", "url": "https://fastcrw.com/blog", "type": "blog" },
+        { "label": "GitHub", "url": "https://github.com/us/crw", "type": "github" }
+      ]
     }
   ],
   "schedule": "0 9 * * 1-5",
