@@ -3,6 +3,12 @@
     "name": "Tabstack",
     "slug": "tabstack",
     "url": "https://tabstack.ai",
+    "manual": {
+      "matrix_overrides": {
+        "managed_service_score": 10,
+        "llm_included_score": 9
+      }
+    },
     "pages": [
       { "label": "Homepage", "url": "https://tabstack.ai", "type": "homepage" },
       { "label": "Pricing", "url": "https://tabstack.ai/pricing", "type": "pricing", "geo_target": "US" },
