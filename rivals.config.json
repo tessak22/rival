@@ -75,7 +75,7 @@
       "url": "https://browser-use.com",
       "manual": {
         "matrix_overrides": {
-          "managed_service_score": 2,
+          "managed_service_score": 4,
           "llm_included_score": 2
         }
       },
@@ -97,8 +97,8 @@
       "url": "https://stagehand.dev",
       "manual": {
         "matrix_overrides": {
-          "managed_service_score": 2,
-          "llm_included_score": 3
+          "managed_service_score": 1,
+          "llm_included_score": 4
         }
       },
       "pages": [
