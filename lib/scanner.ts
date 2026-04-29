@@ -196,6 +196,20 @@ function resolveRouting(type: string): RoutingDefinition {
   return ROUTING_BY_TYPE["custom"];
 }
 
+// Merges a new scan result with a previous one at the field level.
+// For each field where the new result is empty but the previous had data,
+// the previous value is preserved. Fields with new data are always updated.
+function mergeWithPrevious(newResult: unknown, previousResult: unknown): unknown {
+  if (!isPlainObject(newResult) || !isPlainObject(previousResult)) return newResult;
+  const merged = { ...(newResult as Record<string, unknown>) };
+  for (const [key, prevValue] of Object.entries(previousResult as Record<string, unknown>)) {
+    if (valueIsEmpty(merged[key]) && !valueIsEmpty(prevValue)) {
+      merged[key] = prevValue;
+    }
+  }
+  return merged;
+}
+
 function valueIsEmpty(value: unknown, depth = 0): boolean {
   if (depth > MAX_EMPTY_CHECK_DEPTH) return false;
   if (value === null || value === undefined) return true;
@@ -649,12 +663,17 @@ export async function scanPage(input: ScanPageInput): Promise<ScanPageOutput> {
     }
   }
 
+  const mergedRawResult =
+    previousScan?.rawResult && isPlainObject(scanResult.rawResult)
+      ? mergeWithPrevious(scanResult.rawResult, previousScan.rawResult)
+      : scanResult.rawResult;
+
   const createdScan = persistScan
     ? await prisma.scan.create({
         data: {
           pageId: pageId as string,
           endpointUsed: scanResult.endpointUsed,
-          rawResult: toScanJson(scanResult.rawResult),
+          rawResult: toScanJson(mergedRawResult),
           markdownResult: scanResult.markdownResult,
           hasChanges,
           diffSummary
@@ -666,7 +685,7 @@ export async function scanPage(input: ScanPageInput): Promise<ScanPageOutput> {
   return {
     endpointUsed: scanResult.endpointUsed,
     usedFallback: scanResult.usedFallback,
-    rawResult: scanResult.rawResult,
+    rawResult: mergedRawResult,
     markdownResult: scanResult.markdownResult,
     diffSummary,
     hasChanges,
