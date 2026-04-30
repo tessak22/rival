@@ -518,7 +518,7 @@ function SelfBriefSection({ brief }: { brief: Record<string, unknown> }) {
 
   return (
     <div style={{ marginTop: 36 }}>
-      <RDSSectionHead title="Self Profile" count="OWN SURFACES" />
+      <RDSSectionHead title="Self Profile" count={null} />
       {positioning && (
         <p
           style={{
@@ -535,7 +535,7 @@ function SelfBriefSection({ brief }: { brief: Record<string, unknown> }) {
         </p>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 10, marginBottom: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(${scores.length}, 1fr)`, gap: 10, marginBottom: 24 }}>
         {scores.map(({ label, key }) => {
           const val = typeof brief[key] === "number" ? (brief[key] as number) : null;
           return (
