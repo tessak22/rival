@@ -89,6 +89,7 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
   }).length;
 
   const intelligenceBrief = asObject<Record<string, unknown>>(competitor.intelligenceBrief);
+  const isSelf = competitor.isSelf;
   const category = pickString(competitor.manualData, ["category"]) ?? inferCategoryFromTier(competitor.threatLevel);
   const hq =
     pickString(competitor.manualData, ["hq", "headquarters"]) ?? profileData?.offices_or_locations?.[0] ?? null;
@@ -139,7 +140,7 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
 
       <DeepDivePromo name={competitor.name} slug={competitor.slug} />
 
-      {intelligenceBrief && <IntelligenceBriefSection brief={intelligenceBrief} />}
+      {intelligenceBrief && (isSelf ? <SelfBriefSection brief={intelligenceBrief} /> : <IntelligenceBriefSection brief={intelligenceBrief} />)}
 
       <HomepageSection data={homepageData} scan={homepageScan} health={healthFor(qualityByType, "homepage")} />
 
@@ -489,6 +490,134 @@ function HeroUrl({ rawUrl }: { rawUrl: string }) {
     >
       {label}
     </a>
+  );
+}
+
+// ── Self Profile Brief ───────────────────────────────────────────
+
+function SelfBriefSection({ brief }: { brief: Record<string, unknown> }) {
+  const positioning = typeof brief.positioning_summary === "string" ? brief.positioning_summary : null;
+  const icp = typeof brief.icp_summary === "string" ? brief.icp_summary : null;
+  const pricing = typeof brief.pricing_summary === "string" ? brief.pricing_summary : null;
+  const differentiators = Array.isArray(brief.differentiators)
+    ? (brief.differentiators as unknown[]).filter((x): x is string => typeof x === "string")
+    : [];
+  const signals = Array.isArray(brief.recent_signals)
+    ? (brief.recent_signals as unknown[]).filter((x): x is string => typeof x === "string")
+    : [];
+
+  const scores: Array<{ label: string; key: string }> = [
+    { label: "MANAGED SVC", key: "managed_service_score" },
+    { label: "LLM INCLUDED", key: "llm_included_score" },
+    { label: "FEATURE BREADTH", key: "feature_breadth_score" },
+    { label: "OPENNESS", key: "openness_score" },
+    { label: "BRAND TRUST", key: "brand_trust_score" },
+    { label: "MARKET MATURITY", key: "market_maturity_score" },
+    { label: "PRICING", key: "pricing_score" }
+  ];
+
+  return (
+    <div style={{ marginTop: 36 }}>
+      <RDSSectionHead title="Self Profile" count="OWN SURFACES" />
+      {positioning && (
+        <p
+          style={{
+            fontSize: 17,
+            lineHeight: 1.55,
+            color: "var(--ink)",
+            textWrap: "pretty",
+            margin: "0 0 18px",
+            paddingLeft: 16,
+            borderLeft: "3px solid var(--accent)"
+          }}
+        >
+          {positioning}
+        </p>
+      )}
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 10, marginBottom: 24 }}>
+        {scores.map(({ label, key }) => {
+          const val = typeof brief[key] === "number" ? (brief[key] as number) : null;
+          return (
+            <div
+              key={key}
+              style={{ padding: "10px 12px", background: "var(--paper-tint)", border: "1px solid var(--paper-rule)" }}
+            >
+              <div
+                style={{
+                  fontSize: val != null ? 28 : 18,
+                  fontWeight: 700,
+                  lineHeight: 1,
+                  letterSpacing: "-0.02em",
+                  color: val != null ? "var(--ink)" : "var(--ink-ghost)"
+                }}
+              >
+                {val != null ? val : "—"}
+              </div>
+              <div
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 9,
+                  letterSpacing: "0.12em",
+                  color: "var(--ink-faint)",
+                  marginTop: 4,
+                  lineHeight: 1.3
+                }}
+              >
+                {label}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+        <div>
+          {icp && (
+            <>
+              <KVLabel>ICP SUMMARY</KVLabel>
+              <p style={{ margin: "0 0 18px", fontSize: 14, lineHeight: 1.55, color: "var(--ink)", textWrap: "pretty" }}>
+                {icp}
+              </p>
+            </>
+          )}
+          {pricing && (
+            <>
+              <KVLabel>PRICING SUMMARY</KVLabel>
+              <p style={{ margin: 0, fontSize: 14, lineHeight: 1.55, color: "var(--ink)", textWrap: "pretty" }}>
+                {pricing}
+              </p>
+            </>
+          )}
+        </div>
+        <div>
+          {differentiators.length > 0 && (
+            <>
+              <KVLabel>DIFFERENTIATORS</KVLabel>
+              <ul style={{ margin: "0 0 18px", paddingLeft: 18 }}>
+                {differentiators.map((d, i) => (
+                  <li key={i} style={{ fontSize: 14, lineHeight: 1.55, marginBottom: 3 }}>
+                    {d}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          {signals.length > 0 && (
+            <>
+              <KVLabel>RECENT SIGNALS</KVLabel>
+              <ul style={{ margin: 0, paddingLeft: 18 }}>
+                {signals.map((s, i) => (
+                  <li key={i} style={{ fontSize: 14, lineHeight: 1.55, marginBottom: 3, color: "var(--ink-2)" }}>
+                    {s}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
