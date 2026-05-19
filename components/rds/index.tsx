@@ -381,14 +381,25 @@ export function RDSHeader({
   left,
   right,
   wordmarkSize = 44,
-  wordmarkHref = "/"
+  wordmarkHref = "/",
+  showNav = true
 }: {
   left?: ReactNode;
   right?: ReactNode;
   wordmarkSize?: number;
   wordmarkHref?: string | null;
+  showNav?: boolean;
 }) {
   const mark = <RDSWordmark size={wordmarkSize} />;
+  const navLink: CSSProperties = {
+    fontFamily: "var(--font-mono)",
+    fontSize: "var(--fs-11)",
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+    color: "var(--ink-mute)",
+    textDecoration: "none"
+  };
+
   return (
     <div style={{ marginBottom: 24 }}>
       <div
@@ -423,6 +434,28 @@ export function RDSHeader({
           {right}
         </div>
       </div>
+      {showNav ? (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 24,
+            paddingTop: 12,
+            borderBottom: "1px solid var(--paper-rule)",
+            paddingBottom: 12
+          }}
+        >
+          <Link href="/matrix" style={navLink}>
+            Matrix
+          </Link>
+          <Link href="/insights" style={navLink}>
+            API Insights
+          </Link>
+          <Link href="/demo" style={navLink}>
+            Demo
+          </Link>
+        </div>
+      ) : null}
     </div>
   );
 }
