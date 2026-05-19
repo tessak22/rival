@@ -215,7 +215,7 @@ export default async function HomePage() {
   return (
     <RDSPageShell>
       <HeaderRow self={data.self} generatedAt={`${generatedAt} UTC`} />
-      <HeadlineStrip generatedAt={generatedAt} rows={data.competitors} />
+      <HeadlineStrip generatedAt={generatedAt} rows={data.competitors} feed={data.feed} />
       <LeadStory feed={data.feed} />
       <ThreatsSection rows={data.competitors} priorityBySlug={data.priorityBySlug} />
       <ActiveSignals feed={data.feed} />
@@ -283,7 +283,15 @@ function SelfChip({ name, slug }: { name: string; slug: string }) {
   );
 }
 
-function HeadlineStrip({ generatedAt, rows }: { generatedAt: string; rows: DashboardData["competitors"] }) {
+function HeadlineStrip({
+  generatedAt,
+  rows,
+  feed
+}: {
+  generatedAt: string;
+  rows: DashboardData["competitors"];
+  feed: DashboardData["feed"];
+}) {
   const topMovers = rows
     .filter((r) => r.changeCount > 0)
     .sort((a, b) => b.changeCount - a.changeCount || b.health - a.health)
@@ -311,7 +319,7 @@ function HeadlineStrip({ generatedAt, rows }: { generatedAt: string; rows: Dashb
             fontStyle: "italic"
           }}
         >
-          {buildLede(rows, topMovers)}
+          {buildLede(rows, topMovers, feed)}
         </p>
       </div>
       <div style={{ borderLeft: "1px solid var(--paper-rule-2)", paddingLeft: 24 }}>
@@ -383,7 +391,19 @@ function HeadlineStrip({ generatedAt, rows }: { generatedAt: string; rows: Dashb
   );
 }
 
-function buildLede(rows: DashboardData["competitors"], topMovers: DashboardData["competitors"]): string {
+function buildLede(
+  rows: DashboardData["competitors"],
+  topMovers: DashboardData["competitors"],
+  feed: DashboardData["feed"]
+): string {
+  const latestWithSummary = feed.find((item) => typeof item.summary === "string" && item.summary.trim().length > 0);
+  if (latestWithSummary?.summary) {
+    const surface = (latestWithSummary.pageType ?? latestWithSummary.pageLabel).toLowerCase();
+    return `Latest scan: ${latestWithSummary.competitorName} on ${surface} — ${toLedeTeaser(latestWithSummary.summary)}`;
+  }
+  if (feed[0]) {
+    return `${buildLeadHeadline(feed[0])} — change detected, review Active Signals below.`;
+  }
   if (topMovers.length === 0) {
     return `All ${rows.length} tracked competitors are quiet in the last 24 hours — schema coverage and positioning stable across the board.`;
   }
@@ -392,6 +412,16 @@ function buildLede(rows: DashboardData["competitors"], topMovers: DashboardData[
     .map((m) => m.name)
     .join(", ");
   return `${topMovers.length} competitor${topMovers.length === 1 ? "" : "s"} moved overnight — ${names} saw the largest shift${topMovers.length > 1 ? "s" : ""}. Review the Threats list and Active Signals below.`;
+}
+
+function toLedeTeaser(summary: string): string {
+  const compact = summary.replace(/\s+/g, " ").trim();
+  if (compact.length === 0) return "Change detected.";
+
+  const sentence = compact.match(/^(.{1,220}?[.!?])(?:\s|$)/)?.[1];
+  if (sentence) return sentence;
+  if (compact.length <= 220) return compact;
+  return `${compact.slice(0, 217).trimEnd()}...`;
 }
 
 function LeadStory({ feed }: { feed: DashboardData["feed"] }) {
