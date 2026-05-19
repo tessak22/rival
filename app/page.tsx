@@ -396,16 +396,26 @@ function buildLede(
   topMovers: DashboardData["competitors"],
   feed: DashboardData["feed"]
 ): string {
-  const latestWithSummary = feed.find((item) => typeof item.summary === "string" && item.summary.trim().length > 0);
+  const lead = feed[0] ?? null;
+  const latestWithSummary = feed.find(
+    (item) => item.id !== lead?.id && typeof item.summary === "string" && item.summary.trim().length > 0
+  );
   if (latestWithSummary?.summary) {
     const surface = (latestWithSummary.pageType ?? latestWithSummary.pageLabel).toLowerCase();
     return `Latest scan: ${latestWithSummary.competitorName} on ${surface} — ${toLedeTeaser(latestWithSummary.summary)}`;
   }
-  if (feed[0]) {
-    return `${buildLeadHeadline(feed[0])} — change detected, review Active Signals below.`;
-  }
   if (topMovers.length === 0) {
     return `All ${rows.length} tracked competitors are quiet in the last 24 hours — schema coverage and positioning stable across the board.`;
+  }
+  if (lead) {
+    const surface = (lead.pageType ?? lead.pageLabel).toLowerCase();
+    const leadRow = rows.find((r) => r.id === lead.competitorId);
+    const leadChanges = leadRow?.changeCount ?? 0;
+    const topNames = topMovers
+      .slice(0, 3)
+      .map((m) => m.name)
+      .join(", ");
+    return `Overnight watch: ${topMovers.length} competitors moved. ${lead.competitorName} led activity on ${surface}${leadChanges > 0 ? ` (+${leadChanges} signals in 24h)` : ""}; ${topNames} drive today's threat pressure.`;
   }
   const names = topMovers
     .slice(0, 3)
