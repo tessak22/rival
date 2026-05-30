@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-## [0.1.0] - 2026-05-30
+## [1.0.0] - 2026-05-30
 
 Initial public release of Rival — an open-source competitive intelligence dashboard powered by the [Tabstack API](https://tabstack.ai).
 
@@ -39,4 +39,4 @@ Full endpoint wrappers in `lib/tabstack/` covering `extract-json`, `extract-mark
 - `.claude/settings.local.json` gitignored to prevent credentials in Claude Code Bash allow-lists from being committed
 - Placeholder config uses RFC-reserved `*.example.com` domains so a fresh clone can never accidentally trigger real Tabstack API calls against unintended targets
 
-[0.1.0]: https://github.com/tessak22/rival/releases/tag/v0.1.0
+[1.0.0]: https://github.com/tessak22/rival/releases/tag/v1.0.0
