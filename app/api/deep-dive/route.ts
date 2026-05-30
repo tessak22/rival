@@ -4,40 +4,7 @@ export const maxDuration = 120;
 
 import { buildPromptForTemplate } from "@/lib/deep-dive-templates";
 import { parseSseChunk } from "@/lib/utils/sse";
-
-type ResearchCitation = { claim: string; source_url: string; source_text?: string };
-
-function extractResult(data: unknown): unknown {
-  if (!data || typeof data !== "object" || Array.isArray(data)) return data ?? null;
-  const d = data as Record<string, unknown>;
-  if ("result" in d) return d.result;
-  const { citations: _c, ...rest } = d;
-  return Object.keys(rest).length > 0 ? rest : null;
-}
-
-function extractCitations(data: unknown): ResearchCitation[] {
-  if (!data || typeof data !== "object" || Array.isArray(data)) return [];
-  const raw = (data as Record<string, unknown>).citations;
-  if (!Array.isArray(raw)) return [];
-  return raw.flatMap((item: unknown): ResearchCitation[] => {
-    if (!item || typeof item !== "object" || Array.isArray(item)) return [];
-    const r = item as Record<string, unknown>;
-    if (typeof r.source_url !== "string") return [];
-    try {
-      const u = new URL(r.source_url);
-      if (u.protocol !== "https:" && u.protocol !== "http:") return [];
-    } catch {
-      return [];
-    }
-    return [
-      {
-        claim: typeof r.claim === "string" ? r.claim : "",
-        source_url: r.source_url,
-        source_text: typeof r.source_text === "string" ? r.source_text : undefined
-      }
-    ];
-  });
-}
+import { extractCitations, extractResult } from "@/lib/tabstack/research";
 
 type DeepDiveRequest = {
   competitorId?: string;

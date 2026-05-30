@@ -292,6 +292,130 @@ describe("runResearch", () => {
 
     await expect(runResearch({ query: "q", mode: "fast" })).rejects.toThrow("Network failure");
   });
+
+  it("extracts citations from metadata.citedPages (actual Tabstack API shape)", async () => {
+    const { runResearch } = await import("@/lib/tabstack/research");
+    researchMock.mockResolvedValue(
+      makeStream([
+        {
+          event: "complete",
+          data: {
+            report: "Browser Use raised $17M [1].",
+            metadata: {
+              citedPages: [
+                { id: "v1", url: "https://browser-use.com/posts/seed-round", title: "We Raised $17M", claims: [], sourceQueries: [] }
+              ]
+            }
+          }
+        }
+      ])
+    );
+
+    const result = await runResearch({ query: "q", mode: "fast" });
+
+    expect(result.citations).toHaveLength(1);
+    expect(result.citations[0].source_url).toBe("https://browser-use.com/posts/seed-round");
+    expect(result.citations[0].claim).toBe("We Raised $17M");
+  });
+
+  it("prefers citedPages over data.citations when both are present", async () => {
+    const { runResearch } = await import("@/lib/tabstack/research");
+    researchMock.mockResolvedValue(
+      makeStream([
+        {
+          event: "complete",
+          data: {
+            citations: [{ claim: "From citations field", source_url: "https://citations.com" }],
+            metadata: {
+              citedPages: [
+                { id: "v1", url: "https://citedpages.com", title: "From citedPages", claims: [], sourceQueries: [] }
+              ]
+            }
+          }
+        }
+      ])
+    );
+
+    const result = await runResearch({ query: "q", mode: "fast" });
+
+    expect(result.citations).toHaveLength(1);
+    expect(result.citations[0].source_url).toBe("https://citedpages.com");
+  });
+
+  it("uses first string from citedPages.claims when populated, falls back to title otherwise", async () => {
+    const { runResearch } = await import("@/lib/tabstack/research");
+    researchMock.mockResolvedValue(
+      makeStream([
+        {
+          event: "complete",
+          data: {
+            metadata: {
+              citedPages: [
+                { id: "v1", url: "https://a.com", title: "Title A", claims: ["Specific claim"], sourceQueries: [] },
+                { id: "v2", url: "https://b.com", title: "Title B", claims: [], sourceQueries: [] }
+              ]
+            }
+          }
+        }
+      ])
+    );
+
+    const result = await runResearch({ query: "q", mode: "fast" });
+
+    expect(result.citations).toHaveLength(2);
+    expect(result.citations[0].claim).toBe("Specific claim");
+    expect(result.citations[1].claim).toBe("Title B");
+  });
+
+  it("falls through to data.citations when all citedPages entries have invalid URLs", async () => {
+    const { runResearch } = await import("@/lib/tabstack/research");
+    researchMock.mockResolvedValue(
+      makeStream([
+        {
+          event: "complete",
+          data: {
+            citations: [{ claim: "Valid fallback", source_url: "https://citations.com" }],
+            metadata: {
+              citedPages: [
+                { id: "v1", url: "javascript:alert(1)", title: "Bad", claims: [] },
+                { id: "v2", url: "file:///etc/passwd", title: "Also bad", claims: [] }
+              ]
+            }
+          }
+        }
+      ])
+    );
+
+    const result = await runResearch({ query: "q", mode: "fast" });
+
+    expect(result.citations).toHaveLength(1);
+    expect(result.citations[0].source_url).toBe("https://citations.com");
+  });
+
+  it("rejects citedPages entries with non-http/https URLs", async () => {
+    const { runResearch } = await import("@/lib/tabstack/research");
+    researchMock.mockResolvedValue(
+      makeStream([
+        {
+          event: "complete",
+          data: {
+            metadata: {
+              citedPages: [
+                { id: "v1", url: "https://safe.com", title: "Safe", claims: [] },
+                { id: "v2", url: "javascript:alert(1)", title: "Bad", claims: [] },
+                { id: "v3", url: "file:///etc/passwd", title: "Also bad", claims: [] }
+              ]
+            }
+          }
+        }
+      ])
+    );
+
+    const result = await runResearch({ query: "q", mode: "fast" });
+
+    expect(result.citations).toHaveLength(1);
+    expect(result.citations[0].source_url).toBe("https://safe.com");
+  });
 });
 
 describe("runResearch with self-context injection", () => {
