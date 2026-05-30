@@ -6,8 +6,6 @@ import { buildPromptForTemplate } from "@/lib/deep-dive-templates";
 import { parseSseChunk } from "@/lib/utils/sse";
 import { extractCitations, extractResult } from "@/lib/tabstack/research";
 
-type ResearchCitation = { claim: string; source_url: string; source_text?: string };
-
 type DeepDiveRequest = {
   competitorId?: string;
   competitorName?: string;
