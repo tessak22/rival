@@ -23,3 +23,16 @@ notes-local/
 # Netlify local link state (per-developer)
 .netlify/
 .worktrees/
+
+# Claude Code local settings — may contain personal credentials in Bash allow-lists
+.claude/settings.local.json
+
+# Internal dev planning docs (superpowers skill artifacts)
+docs/superpowers/
+
+# Internal demo scripts and working notes
+docs/demo-script-*.md
+docs/tabstack-usage-by-page.md
+
+# Local debug scripts
+scripts/debug-health.ts

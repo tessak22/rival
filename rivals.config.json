@@ -1,287 +1,58 @@
 {
   "self": {
-    "name": "Tabstack",
-    "slug": "tabstack",
-    "url": "https://tabstack.ai",
+    "name": "Your Company",
+    "slug": "your-company",
+    "url": "https://yourcompany.com",
     "manual": {
       "matrix_overrides": {
-        "managed_service_score": 10,
-        "llm_included_score": 9
+        "managed_service_score": 7,
+        "llm_included_score": 5
       }
     },
     "pages": [
-      { "label": "Homepage", "url": "https://tabstack.ai", "type": "homepage" },
-      { "label": "Pricing", "url": "https://tabstack.ai/pricing", "type": "pricing", "geo_target": "US" },
-      { "label": "Docs", "url": "https://docs.tabstack.ai", "type": "docs" },
-      { "label": "Blog", "url": "https://tabstack.ai/blog", "type": "blog" },
-      { "label": "GitHub", "url": "https://github.com/Mozilla-Ocho/tabstack-typescript", "type": "github" },
-      { "label": "Twitter/X", "url": "https://x.com/tabstack", "type": "social" },
-      { "label": "Careers", "url": "https://www.mozilla.org/en-US/careers/listings/", "type": "careers" }
+      { "label": "Homepage", "url": "https://yourcompany.com", "type": "homepage" },
+      { "label": "Pricing", "url": "https://yourcompany.com/pricing", "type": "pricing", "geo_target": "US" },
+      { "label": "Docs", "url": "https://docs.yourcompany.com", "type": "docs" },
+      { "label": "Blog", "url": "https://yourcompany.com/blog", "type": "blog" },
+      { "label": "GitHub", "url": "https://github.com/your-org/your-repo", "type": "github" },
+      { "label": "Twitter/X", "url": "https://x.com/yourcompany", "type": "social" },
+      { "label": "Careers", "url": "https://yourcompany.com/careers", "type": "careers" }
     ]
   },
   "competitors": [
     {
-      "name": "Firecrawl",
-      "slug": "firecrawl",
-      "url": "https://firecrawl.dev",
-      "manual": {
-        "matrix_overrides": {
-          "managed_service_score": 7,
-          "llm_included_score": 7
-        }
-      },
-      "pages": [
-        { "label": "Homepage", "url": "https://firecrawl.dev", "type": "homepage" },
-        { "label": "Pricing", "url": "https://firecrawl.dev/pricing", "type": "pricing", "geo_target": "US" },
-        { "label": "Changelog", "url": "https://firecrawl.dev/changelog", "type": "changelog" },
-        { "label": "Careers", "url": "https://firecrawl.dev/careers", "type": "careers" },
-        { "label": "GitHub", "url": "https://github.com/mendableai/firecrawl", "type": "github" },
-        { "label": "Docs", "url": "https://docs.firecrawl.dev", "type": "docs" },
-        { "label": "Blog", "url": "https://firecrawl.dev/blog", "type": "blog" },
-        { "label": "About", "url": "https://www.firecrawl.dev/about", "type": "profile" },
-        { "label": "Twitter/X", "url": "https://x.com/firecrawl_dev", "type": "social" },
-        {
-          "label": "Reviews",
-          "url": "https://www.producthunt.com/products/extract-by-firecrawl/reviews",
-          "type": "reviews"
-        }
-      ]
-    },
-    {
-      "name": "Browserbase",
-      "slug": "browserbase",
-      "url": "https://browserbase.com",
-      "pages": [
-        { "label": "Homepage", "url": "https://browserbase.com", "type": "homepage" },
-        { "label": "Pricing", "url": "https://browserbase.com/pricing", "type": "pricing", "geo_target": "US" },
-        { "label": "Changelog", "url": "https://browserbase.com/changelog", "type": "changelog" },
-        { "label": "Careers", "url": "https://browserbase.com/careers", "type": "careers" },
-        { "label": "GitHub", "url": "https://github.com/browserbase/stagehand", "type": "github" },
-        { "label": "Docs", "url": "https://docs.browserbase.com", "type": "docs" },
-        { "label": "Blog", "url": "https://www.browserbase.com/blog", "type": "blog" },
-        { "label": "Twitter/X", "url": "https://x.com/browserbase", "type": "social" },
-        { "label": "Reviews", "url": "https://www.producthunt.com/products/browserbase/reviews", "type": "reviews" }
-      ],
-      "manual": {
-        "matrix_overrides": {
-          "managed_service_score": 9,
-          "llm_included_score": 1
-        }
-      }
-    },
-    {
-      "name": "Browser Use",
-      "slug": "browser-use",
-      "url": "https://browser-use.com",
-      "manual": {
-        "matrix_overrides": {
-          "managed_service_score": 3,
-          "llm_included_score": 2
-        }
-      },
-      "pages": [
-        { "label": "Homepage", "url": "https://browser-use.com", "type": "homepage" },
-        { "label": "Pricing", "url": "https://browser-use.com/pricing", "type": "pricing", "geo_target": "US" },
-        { "label": "Careers", "url": "https://browser-use.com/careers", "type": "careers" },
-        { "label": "Changelog", "url": "https://browser-use.com/changelog", "type": "changelog" },
-        { "label": "GitHub", "url": "https://github.com/browser-use/browser-use", "type": "github" },
-        { "label": "Docs", "url": "https://docs.browser-use.com", "type": "docs" },
-        { "label": "Blog", "url": "https://browser-use.com/blog", "type": "blog" },
-        { "label": "Twitter/X", "url": "https://x.com/browser_use", "type": "social" },
-        { "label": "Reviews", "url": "https://www.producthunt.com/products/browser-use/reviews", "type": "reviews" }
-      ]
-    },
-    {
-      "name": "Stagehand",
-      "slug": "stagehand",
-      "url": "https://stagehand.dev",
-      "manual": {
-        "matrix_overrides": {
-          "managed_service_score": 1,
-          "llm_included_score": 4
-        }
-      },
-      "pages": [
-        { "label": "Homepage", "url": "https://stagehand.dev", "type": "homepage" },
-        { "label": "GitHub", "url": "https://github.com/browserbase/stagehand", "type": "github" },
-        { "label": "Docs", "url": "https://docs.stagehand.dev", "type": "docs" },
-        { "label": "Changelog", "url": "https://stagehand.dev/changelog", "type": "changelog" },
-        { "label": "About", "url": "https://www.browserbase.com/stagehand", "type": "profile" },
-        { "label": "Twitter/X", "url": "https://x.com/stagehanddev", "type": "social" },
-        { "label": "Reviews", "url": "https://www.producthunt.com/products/stagehand-2/reviews", "type": "reviews" }
-      ]
-    },
-    {
-      "name": "Steel",
-      "slug": "steel",
-      "matrix": false,
-      "url": "https://steel.dev",
-      "pages": [
-        { "label": "Homepage", "url": "https://steel.dev", "type": "homepage" },
-        { "label": "Pricing", "url": "https://steel.dev/pricing", "type": "pricing", "geo_target": "US" },
-        { "label": "GitHub", "url": "https://github.com/steel-dev/steel-browser", "type": "github" },
-        { "label": "Docs", "url": "https://docs.steel.dev", "type": "docs" },
-        { "label": "Changelog", "url": "https://steel.dev/changelog", "type": "changelog" },
-        { "label": "Blog", "url": "https://steel.dev/blog", "type": "blog" },
-        { "label": "Twitter/X", "url": "https://x.com/steeldotdev", "type": "social" }
-      ]
-    },
-    {
-      "name": "Playwright",
-      "slug": "playwright",
-      "url": "https://playwright.dev",
-      "manual": {
-        "matrix_overrides": {
-          "managed_service_score": 1,
-          "llm_included_score": 1
-        }
-      },
-      "pages": [
-        { "label": "Homepage", "url": "https://playwright.dev", "type": "homepage" },
-        { "label": "GitHub", "url": "https://github.com/microsoft/playwright", "type": "github" },
-        { "label": "Docs", "url": "https://playwright.dev/docs/intro", "type": "docs" },
-        { "label": "Changelog", "url": "https://github.com/microsoft/playwright/releases", "type": "changelog" },
-        { "label": "Blog", "url": "https://dev.to/playwright", "type": "blog" },
-        { "label": "About", "url": "https://playwright.dev/community/welcome", "type": "profile" },
-        { "label": "Twitter/X", "url": "https://x.com/playwrightweb", "type": "social" },
-        { "label": "Reviews", "url": "https://www.g2.com/products/playwright/reviews", "type": "reviews" }
-      ]
-    },
-    {
-      "name": "Apify",
-      "slug": "apify",
-      "url": "https://apify.com",
+      "name": "Competitor A",
+      "slug": "competitor-a",
+      "url": "https://competitor-a.com",
       "manual": {
         "matrix_overrides": {
           "managed_service_score": 8,
-          "llm_included_score": 4
+          "llm_included_score": 6
         }
       },
       "pages": [
-        { "label": "Homepage", "url": "https://apify.com", "type": "homepage" },
-        { "label": "Pricing", "url": "https://apify.com/pricing", "type": "pricing", "geo_target": "US" },
-        { "label": "Changelog", "url": "https://apify.com/change-log", "type": "changelog" },
-        { "label": "Careers", "url": "https://apify.com/jobs", "type": "careers" },
-        { "label": "GitHub", "url": "https://github.com/apify/crawlee", "type": "github" },
-        { "label": "Docs", "url": "https://docs.apify.com", "type": "docs" },
-        { "label": "Blog", "url": "https://blog.apify.com", "type": "blog" },
-        { "label": "About", "url": "https://apify.com/about", "type": "profile" },
-        { "label": "Twitter/X", "url": "https://x.com/apify", "type": "social" },
-        { "label": "Reviews", "url": "https://www.producthunt.com/products/apify/reviews", "type": "reviews" }
+        { "label": "Homepage", "url": "https://competitor-a.com", "type": "homepage" },
+        { "label": "Pricing", "url": "https://competitor-a.com/pricing", "type": "pricing", "geo_target": "US" },
+        { "label": "Docs", "url": "https://docs.competitor-a.com", "type": "docs" },
+        { "label": "Blog", "url": "https://competitor-a.com/blog", "type": "blog" },
+        { "label": "Changelog", "url": "https://competitor-a.com/changelog", "type": "changelog" },
+        { "label": "Careers", "url": "https://competitor-a.com/careers", "type": "careers" },
+        { "label": "GitHub", "url": "https://github.com/competitor-a/repo", "type": "github" },
+        { "label": "Twitter/X", "url": "https://x.com/competitor_a", "type": "social" },
+        { "label": "Reviews", "url": "https://www.producthunt.com/products/competitor-a/reviews", "type": "reviews" }
       ]
     },
     {
-      "name": "LangChain Browser Tools",
-      "slug": "langchain-browser",
-      "matrix": false,
-      "url": "https://langchain.com",
+      "name": "Competitor B",
+      "slug": "competitor-b",
+      "url": "https://competitor-b.com",
       "pages": [
-        { "label": "Homepage", "url": "https://langchain.com", "type": "homepage" },
-        { "label": "Pricing", "url": "https://www.langchain.com/pricing", "type": "pricing", "geo_target": "US" },
-        { "label": "Careers", "url": "https://www.langchain.com/careers", "type": "careers" },
-        { "label": "Changelog", "url": "https://changelog.langchain.com/", "type": "changelog" },
-        { "label": "GitHub", "url": "https://github.com/langchain-ai/langchainjs", "type": "github" },
-        { "label": "Docs", "url": "https://js.langchain.com/docs/integrations/tools/", "type": "docs" },
-        { "label": "Blog", "url": "https://blog.langchain.dev", "type": "blog" },
-        { "label": "About", "url": "https://www.langchain.com/about", "type": "profile" },
-        { "label": "Twitter/X", "url": "https://x.com/langchainai", "type": "social" },
-        { "label": "Reviews", "url": "https://www.g2.com/products/langchain/reviews", "type": "reviews" }
-      ]
-    },
-    {
-      "name": "Parallel AI",
-      "slug": "parallel-ai",
-      "matrix": false,
-      "url": "https://parallel.ai",
-      "pages": [
-        { "label": "Homepage", "url": "https://parallel.ai", "type": "homepage" },
-        { "label": "Pricing", "url": "https://parallel.ai/pricing", "type": "pricing", "geo_target": "US" },
-        { "label": "Docs", "url": "https://docs.parallel.ai/home", "type": "docs" },
-        { "label": "Blog", "url": "https://parallel.ai/blog", "type": "blog" },
-        { "label": "About", "url": "https://parallel.ai/about", "type": "profile" },
-        { "label": "Careers", "url": "https://jobs.ashbyhq.com/parallel", "type": "careers" },
-        { "label": "Changelog", "url": "https://docs.parallel.ai/resources/changelog", "type": "changelog" },
-        { "label": "GitHub", "url": "https://github.com/parallel-web", "type": "github" },
-        { "label": "Twitter/X", "url": "https://x.com/p0", "type": "social" }
-      ]
-    },
-    {
-      "name": "Exa",
-      "slug": "exa",
-      "matrix": false,
-      "url": "https://exa.ai",
-      "pages": [
-        { "label": "Homepage", "url": "https://exa.ai", "type": "homepage" },
-        { "label": "Pricing", "url": "https://exa.ai/pricing", "type": "pricing", "geo_target": "US" },
-        { "label": "Docs", "url": "https://exa.ai/docs", "type": "docs" },
-        { "label": "Blog", "url": "https://exa.ai/blog", "type": "blog" },
-        { "label": "Careers", "url": "https://exa.ai/careers", "type": "careers" },
-        { "label": "About", "url": "https://exa.ai/about", "type": "profile" },
-        { "label": "Changelog", "url": "https://exa.ai/docs/changelog", "type": "changelog" },
-        { "label": "GitHub", "url": "https://github.com/exa-labs", "type": "github" },
-        { "label": "Twitter/X", "url": "https://x.com/ExaAILabs", "type": "social" },
-        { "label": "Reviews", "url": "https://www.producthunt.com/products/exa-ai", "type": "reviews" }
-      ]
-    },
-    {
-      "name": "Perplexity",
-      "slug": "perplexity",
-      "matrix": false,
-      "url": "https://www.perplexity.ai",
-      "pages": [
-        { "label": "Homepage", "url": "https://www.perplexity.ai", "type": "homepage" },
-        { "label": "Pricing", "url": "https://www.perplexity.ai/pro", "type": "pricing", "geo_target": "US" },
-        { "label": "Docs", "url": "https://docs.perplexity.ai", "type": "docs" },
-        { "label": "Blog", "url": "https://www.perplexity.ai/hub", "type": "blog" },
-        { "label": "Careers", "url": "https://www.perplexity.ai/hub/careers", "type": "careers" },
-        { "label": "Changelog", "url": "https://www.perplexity.ai/changelog", "type": "changelog" },
-        { "label": "GitHub", "url": "https://github.com/perplexityai", "type": "github" },
-        { "label": "Twitter/X", "url": "https://x.com/perplexity_ai", "type": "social" },
-        { "label": "Reviews", "url": "https://www.producthunt.com/products/perplexity-ai", "type": "reviews" }
-      ]
-    },
-    {
-      "name": "Bright Data",
-      "slug": "brightdata",
-      "matrix": false,
-      "url": "https://brightdata.com",
-      "pages": [
-        { "label": "Homepage", "url": "https://brightdata.com", "type": "homepage" },
-        { "label": "Pricing", "url": "https://brightdata.com/pricing", "type": "pricing", "geo_target": "US" },
-        { "label": "Docs", "url": "https://docs.brightdata.com", "type": "docs" },
-        { "label": "Blog", "url": "https://brightdata.com/blog", "type": "blog" },
-        { "label": "Careers", "url": "https://brightdata.com/careers", "type": "careers" },
-        { "label": "About", "url": "https://brightdata.com/about", "type": "profile" },
-        { "label": "Changelog", "url": "https://docs.brightdata.com/release-notes", "type": "changelog" },
-        { "label": "GitHub", "url": "https://github.com/brightdata", "type": "github" },
-        { "label": "Twitter/X", "url": "https://x.com/brightdata", "type": "social" },
-        { "label": "Reviews", "url": "https://www.g2.com/products/bright-data/reviews", "type": "reviews" }
-      ]
-    },
-    {
-      "name": "Browser AI",
-      "slug": "browser-ai",
-      "matrix": false,
-      "url": "https://browser.ai",
-      "pages": [
-        { "label": "Homepage", "url": "https://browser.ai", "type": "homepage" },
-        { "label": "Pricing", "url": "https://browser.ai/pricing", "type": "pricing", "geo_target": "US" },
-        { "label": "Docs", "url": "https://docs.browser.ai/general/start", "type": "docs" },
-        { "label": "Blog", "url": "https://browser.ai/news", "type": "blog" },
-        { "label": "GitHub", "url": "https://github.com/browserai", "type": "github" }
-      ]
-    },
-    {
-      "name": "fastCRW",
-      "slug": "fastcrw",
-      "matrix": false,
-      "url": "https://fastcrw.com",
-      "pages": [
-        { "label": "Homepage", "url": "https://fastcrw.com", "type": "homepage" },
-        { "label": "Pricing", "url": "https://fastcrw.com/pricing", "type": "pricing", "geo_target": "US" },
-        { "label": "Docs", "url": "https://docs.fastcrw.com", "type": "docs" },
-        { "label": "Blog", "url": "https://fastcrw.com/blog", "type": "blog" },
-        { "label": "GitHub", "url": "https://github.com/us/crw", "type": "github" }
+        { "label": "Homepage", "url": "https://competitor-b.com", "type": "homepage" },
+        { "label": "Pricing", "url": "https://competitor-b.com/pricing", "type": "pricing", "geo_target": "US" },
+        { "label": "Docs", "url": "https://docs.competitor-b.com", "type": "docs" },
+        { "label": "Blog", "url": "https://competitor-b.com/blog", "type": "blog" },
+        { "label": "GitHub", "url": "https://github.com/competitor-b/repo", "type": "github" },
+        { "label": "Twitter/X", "url": "https://x.com/competitor_b", "type": "social" }
       ]
     }
   ],
