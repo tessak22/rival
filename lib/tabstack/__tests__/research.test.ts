@@ -367,6 +367,31 @@ describe("runResearch", () => {
     expect(result.citations[1].claim).toBe("Title B");
   });
 
+  it("falls through to data.citations when all citedPages entries have invalid URLs", async () => {
+    const { runResearch } = await import("@/lib/tabstack/research");
+    researchMock.mockResolvedValue(
+      makeStream([
+        {
+          event: "complete",
+          data: {
+            citations: [{ claim: "Valid fallback", source_url: "https://citations.com" }],
+            metadata: {
+              citedPages: [
+                { id: "v1", url: "javascript:alert(1)", title: "Bad", claims: [] },
+                { id: "v2", url: "file:///etc/passwd", title: "Also bad", claims: [] }
+              ]
+            }
+          }
+        }
+      ])
+    );
+
+    const result = await runResearch({ query: "q", mode: "fast" });
+
+    expect(result.citations).toHaveLength(1);
+    expect(result.citations[0].source_url).toBe("https://citations.com");
+  });
+
   it("rejects citedPages entries with non-http/https URLs", async () => {
     const { runResearch } = await import("@/lib/tabstack/research");
     researchMock.mockResolvedValue(

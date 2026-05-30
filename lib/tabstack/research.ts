@@ -99,7 +99,7 @@ export function extractCitations(data: unknown): ResearchCitation[] {
   if (isPlainObject(meta)) {
     const citedPages = meta["citedPages"];
     if (Array.isArray(citedPages) && citedPages.length > 0) {
-      return citedPages.flatMap((item: unknown): ResearchCitation[] => {
+      const normalized = citedPages.flatMap((item: unknown): ResearchCitation[] => {
         if (!isPlainObject(item)) return [];
         if (typeof item["url"] !== "string" || !isSafeHttpUrl(item["url"])) return [];
         const claims = Array.isArray(item["claims"]) ? item["claims"] : [];
@@ -111,6 +111,7 @@ export function extractCitations(data: unknown): ResearchCitation[] {
           }
         ];
       });
+      if (normalized.length > 0) return normalized;
     }
   }
 
