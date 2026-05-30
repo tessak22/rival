@@ -71,7 +71,8 @@ npm run dev
 
 Rival reads competitor definitions from `rivals.config.json`. The repo ships with a generic placeholder template — replace it with your own companies and competitors before running `db:seed`.
 
-For a real-world example showing all available fields, see [`rivals.config.tabstack.json`](./rivals.config.tabstack.json), which is the config used by the Tabstack team to track their own competitive landscape.
+For a real-world example showing all available fields, see [`rivals.config.tabstack.json`](./rivals.config.tabstack.json) — this is the Tabstack team's reference config, included as documentation only. The app always loads `rivals.config.json`.
+
 Supported `type` values for pages:
 
 - `pricing`
@@ -83,6 +84,10 @@ Supported `type` values for pages:
 - `profile`
 - `stack`
 - `custom`
+
+Optional top-level competitor fields:
+
+- `matrix: false` — exclude this competitor from the positioning matrix visualization (still tracked and scanned normally)
 
 Minimal example:
 

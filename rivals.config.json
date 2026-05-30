@@ -2,7 +2,7 @@
   "self": {
     "name": "Your Company",
     "slug": "your-company",
-    "url": "https://yourcompany.com",
+    "url": "https://your-company.example.com",
     "manual": {
       "matrix_overrides": {
         "managed_service_score": 7,
@@ -10,20 +10,20 @@
       }
     },
     "pages": [
-      { "label": "Homepage", "url": "https://yourcompany.com", "type": "homepage" },
-      { "label": "Pricing", "url": "https://yourcompany.com/pricing", "type": "pricing", "geo_target": "US" },
-      { "label": "Docs", "url": "https://docs.yourcompany.com", "type": "docs" },
-      { "label": "Blog", "url": "https://yourcompany.com/blog", "type": "blog" },
+      { "label": "Homepage", "url": "https://your-company.example.com", "type": "homepage" },
+      { "label": "Pricing", "url": "https://your-company.example.com/pricing", "type": "pricing", "geo_target": "US" },
+      { "label": "Docs", "url": "https://docs.your-company.example.com", "type": "docs" },
+      { "label": "Blog", "url": "https://your-company.example.com/blog", "type": "blog" },
       { "label": "GitHub", "url": "https://github.com/your-org/your-repo", "type": "github" },
       { "label": "Twitter/X", "url": "https://x.com/yourcompany", "type": "social" },
-      { "label": "Careers", "url": "https://yourcompany.com/careers", "type": "careers" }
+      { "label": "Careers", "url": "https://your-company.example.com/careers", "type": "careers" }
     ]
   },
   "competitors": [
     {
       "name": "Competitor A",
       "slug": "competitor-a",
-      "url": "https://competitor-a.com",
+      "url": "https://competitor-a.example.com",
       "manual": {
         "matrix_overrides": {
           "managed_service_score": 8,
@@ -31,13 +31,13 @@
         }
       },
       "pages": [
-        { "label": "Homepage", "url": "https://competitor-a.com", "type": "homepage" },
-        { "label": "Pricing", "url": "https://competitor-a.com/pricing", "type": "pricing", "geo_target": "US" },
-        { "label": "Docs", "url": "https://docs.competitor-a.com", "type": "docs" },
-        { "label": "Blog", "url": "https://competitor-a.com/blog", "type": "blog" },
-        { "label": "Changelog", "url": "https://competitor-a.com/changelog", "type": "changelog" },
-        { "label": "Careers", "url": "https://competitor-a.com/careers", "type": "careers" },
-        { "label": "GitHub", "url": "https://github.com/competitor-a/repo", "type": "github" },
+        { "label": "Homepage", "url": "https://competitor-a.example.com", "type": "homepage" },
+        { "label": "Pricing", "url": "https://competitor-a.example.com/pricing", "type": "pricing", "geo_target": "US" },
+        { "label": "Docs", "url": "https://docs.competitor-a.example.com", "type": "docs" },
+        { "label": "Blog", "url": "https://competitor-a.example.com/blog", "type": "blog" },
+        { "label": "Changelog", "url": "https://competitor-a.example.com/changelog", "type": "changelog" },
+        { "label": "Careers", "url": "https://competitor-a.example.com/careers", "type": "careers" },
+        { "label": "GitHub", "url": "https://github.com/your-org/competitor-a", "type": "github" },
         { "label": "Twitter/X", "url": "https://x.com/competitor_a", "type": "social" },
         { "label": "Reviews", "url": "https://www.producthunt.com/products/competitor-a/reviews", "type": "reviews" }
       ]
@@ -45,13 +45,13 @@
     {
       "name": "Competitor B",
       "slug": "competitor-b",
-      "url": "https://competitor-b.com",
+      "url": "https://competitor-b.example.com",
       "pages": [
-        { "label": "Homepage", "url": "https://competitor-b.com", "type": "homepage" },
-        { "label": "Pricing", "url": "https://competitor-b.com/pricing", "type": "pricing", "geo_target": "US" },
-        { "label": "Docs", "url": "https://docs.competitor-b.com", "type": "docs" },
-        { "label": "Blog", "url": "https://competitor-b.com/blog", "type": "blog" },
-        { "label": "GitHub", "url": "https://github.com/competitor-b/repo", "type": "github" },
+        { "label": "Homepage", "url": "https://competitor-b.example.com", "type": "homepage" },
+        { "label": "Pricing", "url": "https://competitor-b.example.com/pricing", "type": "pricing", "geo_target": "US" },
+        { "label": "Docs", "url": "https://docs.competitor-b.example.com", "type": "docs" },
+        { "label": "Blog", "url": "https://competitor-b.example.com/blog", "type": "blog" },
+        { "label": "GitHub", "url": "https://github.com/your-org/competitor-b", "type": "github" },
         { "label": "Twitter/X", "url": "https://x.com/competitor_b", "type": "social" }
       ]
     }

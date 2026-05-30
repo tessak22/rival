@@ -519,12 +519,12 @@ export function RDSFooter() {
       >
         <span>Rival · open source competitive intelligence</span>
         <a
-          href="https://github.com/tessak22/rival"
+          href="https://github.com/your-org/rival"
           target="_blank"
           rel="noopener noreferrer"
           style={{ color: "var(--ink-faint)" }}
         >
-          github.com/tessak22/rival
+          github.com/your-org/rival
         </a>
       </div>
     </div>

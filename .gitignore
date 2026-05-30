@@ -26,6 +26,7 @@ notes-local/
 
 # Claude Code local settings — may contain personal credentials in Bash allow-lists
 .claude/settings.local.json
+.claude/*.local.json
 
 # Internal dev planning docs (superpowers skill artifacts)
 docs/superpowers/
