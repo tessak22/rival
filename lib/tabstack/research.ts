@@ -84,39 +84,57 @@ export function extractCitations(data: unknown): ResearchCitation[] {
     return [];
   }
 
+  // Primary: data.citations (standard shape)
   const raw = data["citations"];
-
-  if (!Array.isArray(raw)) {
-    return [];
-  }
-
-  return raw.flatMap((item: unknown): ResearchCitation[] => {
-    if (!isPlainObject(item)) {
-      return [];
-    }
-
-    if (typeof item["source_url"] !== "string") {
-      return [];
-    }
-
-    // Validate source_url is a safe http/https URL to prevent XSS/SSRF at ingestion
-    try {
-      const parsed = new URL(item["source_url"]);
-      if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+  if (Array.isArray(raw) && raw.length > 0) {
+    return raw.flatMap((item: unknown): ResearchCitation[] => {
+      if (!isPlainObject(item)) return [];
+      if (typeof item["source_url"] !== "string") return [];
+      try {
+        const parsed = new URL(item["source_url"]);
+        if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return [];
+      } catch {
         return [];
       }
-    } catch {
-      return [];
-    }
+      return [
+        {
+          claim: typeof item["claim"] === "string" ? item["claim"] : "",
+          source_url: item["source_url"],
+          source_text: typeof item["source_text"] === "string" ? item["source_text"] : undefined
+        }
+      ];
+    });
+  }
 
-    return [
-      {
-        claim: typeof item["claim"] === "string" ? item["claim"] : "",
-        source_url: item["source_url"],
-        source_text: typeof item["source_text"] === "string" ? item["source_text"] : undefined
-      }
-    ];
-  });
+  // Fallback: data.metadata.citedPages — the shape the Tabstack API actually returns.
+  // Each entry has { id, url, title, claims[], sourceQueries[] }.
+  const meta = data["metadata"];
+  if (isPlainObject(meta)) {
+    const citedPages = meta["citedPages"];
+    if (Array.isArray(citedPages) && citedPages.length > 0) {
+      return citedPages.flatMap((item: unknown): ResearchCitation[] => {
+        if (!isPlainObject(item)) return [];
+        if (typeof item["url"] !== "string") return [];
+        try {
+          const parsed = new URL(item["url"]);
+          if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return [];
+        } catch {
+          return [];
+        }
+        const claims = Array.isArray(item["claims"]) ? item["claims"] : [];
+        const firstClaim = claims.find((c: unknown): c is string => typeof c === "string");
+        return [
+          {
+            claim: firstClaim ?? (typeof item["title"] === "string" ? item["title"] : ""),
+            source_url: item["url"],
+            source_text: undefined
+          }
+        ];
+      });
+    }
+  }
+
+  return [];
 }
 
 export function extractResult(data: unknown): unknown {
