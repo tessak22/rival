@@ -56,7 +56,7 @@
         { "label": "Pricing", "url": "https://browserbase.com/pricing", "type": "pricing", "geo_target": "US" },
         { "label": "Changelog", "url": "https://browserbase.com/changelog", "type": "changelog" },
         { "label": "Careers", "url": "https://browserbase.com/careers", "type": "careers" },
-        { "label": "GitHub", "url": "https://github.com/browserbase/stagehand", "type": "github" },
+        { "label": "GitHub", "url": "https://github.com/browserbase/sdk", "type": "github" },
         { "label": "Docs", "url": "https://docs.browserbase.com", "type": "docs" },
         { "label": "Blog", "url": "https://www.browserbase.com/blog", "type": "blog" },
         { "label": "Twitter/X", "url": "https://x.com/browserbase", "type": "social" },
@@ -201,8 +201,7 @@
         { "label": "About", "url": "https://parallel.ai/about", "type": "profile" },
         { "label": "Careers", "url": "https://jobs.ashbyhq.com/parallel", "type": "careers" },
         { "label": "Changelog", "url": "https://docs.parallel.ai/resources/changelog", "type": "changelog" },
-        { "label": "GitHub", "url": "https://github.com/parallel-web", "type": "github" },
-        { "label": "Twitter/X", "url": "https://x.com/p0", "type": "social" }
+        { "label": "GitHub", "url": "https://github.com/parallel-web", "type": "github" }
       ]
     },
     {
@@ -220,7 +219,7 @@
         { "label": "Changelog", "url": "https://exa.ai/docs/changelog", "type": "changelog" },
         { "label": "GitHub", "url": "https://github.com/exa-labs", "type": "github" },
         { "label": "Twitter/X", "url": "https://x.com/ExaAILabs", "type": "social" },
-        { "label": "Reviews", "url": "https://www.producthunt.com/products/exa-ai", "type": "reviews" }
+        { "label": "Reviews", "url": "https://www.producthunt.com/products/exa-ai/reviews", "type": "reviews" }
       ]
     },
     {
@@ -237,7 +236,7 @@
         { "label": "Changelog", "url": "https://www.perplexity.ai/changelog", "type": "changelog" },
         { "label": "GitHub", "url": "https://github.com/perplexityai", "type": "github" },
         { "label": "Twitter/X", "url": "https://x.com/perplexity_ai", "type": "social" },
-        { "label": "Reviews", "url": "https://www.producthunt.com/products/perplexity-ai", "type": "reviews" }
+        { "label": "Reviews", "url": "https://www.producthunt.com/products/perplexity-ai/reviews", "type": "reviews" }
       ]
     },
     {
@@ -280,8 +279,7 @@
         { "label": "Homepage", "url": "https://fastcrw.com", "type": "homepage" },
         { "label": "Pricing", "url": "https://fastcrw.com/pricing", "type": "pricing", "geo_target": "US" },
         { "label": "Docs", "url": "https://docs.fastcrw.com", "type": "docs" },
-        { "label": "Blog", "url": "https://fastcrw.com/blog", "type": "blog" },
-        { "label": "GitHub", "url": "https://github.com/us/crw", "type": "github" }
+        { "label": "Blog", "url": "https://fastcrw.com/blog", "type": "blog" }
       ]
     }
   ],

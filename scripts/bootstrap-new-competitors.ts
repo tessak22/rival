@@ -83,7 +83,10 @@ async function bootstrapCompetitor(competitor: {
   }
 }
 
+const BOOTSTRAP_DEADLINE_MS = parseInt(process.env.BOOTSTRAP_TIMEOUT_MS ?? "1500000"); // 25 min
+
 async function main() {
+  const startedAt = Date.now();
   const competitors = await prisma.competitor.findMany({
     include: { pages: true },
     orderBy: { slug: "asc" }
@@ -114,6 +117,13 @@ async function main() {
   );
 
   for (const competitor of toBootstrap) {
+    if (Date.now() - startedAt > BOOTSTRAP_DEADLINE_MS) {
+      const remaining = toBootstrap.slice(toBootstrap.indexOf(competitor)).map((c) => c.slug);
+      console.warn(
+        `[bootstrap] Time limit reached (${BOOTSTRAP_DEADLINE_MS / 60000} min). Skipping: ${remaining.join(", ")}. These will be picked up on the next cron run.`
+      );
+      break;
+    }
     // Re-check immediately before bootstrapping. The snapshot above can go
     // stale if a concurrent cron run or a parallel deploy writes the first
     // scan between now and this loop iteration — without this check, two
