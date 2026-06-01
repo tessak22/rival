@@ -140,7 +140,12 @@ export default async function CompetitorDetailPage({ params }: PageProps) {
 
       <DeepDivePromo name={competitor.name} slug={competitor.slug} />
 
-      {intelligenceBrief && (isSelf ? <SelfBriefSection brief={intelligenceBrief} /> : <IntelligenceBriefSection brief={intelligenceBrief} />)}
+      {intelligenceBrief &&
+        (isSelf ? (
+          <SelfBriefSection brief={intelligenceBrief} />
+        ) : (
+          <IntelligenceBriefSection brief={intelligenceBrief} />
+        ))}
 
       <HomepageSection data={homepageData} scan={homepageScan} health={healthFor(qualityByType, "homepage")} />
 
@@ -576,7 +581,9 @@ function SelfBriefSection({ brief }: { brief: Record<string, unknown> }) {
           {icp && (
             <>
               <KVLabel>ICP SUMMARY</KVLabel>
-              <p style={{ margin: "0 0 18px", fontSize: 14, lineHeight: 1.55, color: "var(--ink)", textWrap: "pretty" }}>
+              <p
+                style={{ margin: "0 0 18px", fontSize: 14, lineHeight: 1.55, color: "var(--ink)", textWrap: "pretty" }}
+              >
                 {icp}
               </p>
             </>

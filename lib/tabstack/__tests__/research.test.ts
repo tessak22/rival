@@ -303,7 +303,13 @@ describe("runResearch", () => {
             report: "Browser Use raised $17M [1].",
             metadata: {
               citedPages: [
-                { id: "v1", url: "https://browser-use.com/posts/seed-round", title: "We Raised $17M", claims: [], sourceQueries: [] }
+                {
+                  id: "v1",
+                  url: "https://browser-use.com/posts/seed-round",
+                  title: "We Raised $17M",
+                  claims: [],
+                  sourceQueries: []
+                }
               ]
             }
           }

@@ -4,15 +4,15 @@ import { getAxisScore } from "@/lib/matrix/overrides";
 import { PositioningMatrix, type MatrixPoint } from "@/components/matrix/PositioningMatrix";
 import { MatrixDownloadButton } from "@/components/matrix/MatrixDownloadButton";
 import { RDSPageShell, RDSHeader, RDSFooter, RDSEmpty, RDSKicker } from "@/components/rds";
-import rivalConfigJson from "../../rivals.config.json";
-
 export const dynamic = "force-dynamic";
 
 export default async function MatrixPage() {
   let matrixConfig: MatrixConfig;
+  let matrixExcluded = new Set<string>();
   try {
     const config = loadRivalConfig();
     matrixConfig = config.matrix ?? DEFAULT_MATRIX_CONFIG;
+    matrixExcluded = new Set(config.competitors.filter((c) => c.matrix === false).map((c) => c.slug));
   } catch (err) {
     if (err instanceof Error && (err as NodeJS.ErrnoException).code === "ENOENT") {
       matrixConfig = DEFAULT_MATRIX_CONFIG;
@@ -20,12 +20,6 @@ export default async function MatrixPage() {
       throw err;
     }
   }
-
-  const matrixExcluded = new Set(
-    (rivalConfigJson.competitors as Array<{ slug: string; matrix?: boolean }>)
-      .filter((c) => c.matrix === false)
-      .map((c) => c.slug)
-  );
 
   const competitors = await prisma.competitor.findMany({
     select: { id: true, name: true, slug: true, intelligenceBrief: true, manualData: true, isSelf: true },
