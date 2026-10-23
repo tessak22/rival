@@ -89,6 +89,53 @@ function inferPageType(rawUrl: string): string {
   return "custom";
 }
 
+function offlineFixtureResponse(rawUrl: string): Response {
+  const encoder = new TextEncoder();
+  const fixture = {
+    mode: "offline_fixture",
+    source: "Rival local fixture mode",
+    url: rawUrl,
+    note: "This is a local development fixture, not live competitive intelligence.",
+    signals: [
+      "Connect Tabstack for live page extraction and competitive signals.",
+      "Configure PostgreSQL to persist scans and history."
+    ]
+  };
+  const events = [
+    sse("scan:started", { url: rawUrl, offline: true }),
+    sse("scan:endpoint", { type: "offline_fixture" }),
+    sse("scan:complete", {
+      endpointUsed: "offline_fixture",
+      usedFallback: false,
+      diffSummary: "Offline fixture; no live comparison performed.",
+      hasChanges: false,
+      result: fixture
+    }),
+    sse("scan:brief_complete", {
+      positioning_signal: "Offline fixture mode is active.",
+      opportunity: "Configure Tabstack and PostgreSQL for live Rival workflows.",
+      watch_signal: "Do not use fixture output as a market or competitor claim."
+    })
+  ];
+
+  return new Response(
+    new ReadableStream({
+      start(controller) {
+        for (const event of events) controller.enqueue(event);
+        controller.close();
+      }
+    }),
+    {
+      headers: {
+        "content-type": "text/event-stream",
+        "cache-control": "no-cache, no-transform",
+        connection: "keep-alive",
+        "x-rival-demo-mode": "offline-fixture"
+      }
+    }
+  );
+}
+
 // x-real-ip is set by the outermost trusted proxy (e.g. nginx) and is preferred
 // because it cannot be injected by the client. x-forwarded-for is used as a
 // fallback but its first value CAN be spoofed in direct-to-app deployments.
@@ -172,6 +219,23 @@ async function releaseLock(hashedIp: string): Promise<void> {
 }
 
 export async function POST(request: NextRequest) {
+  if (process.env.RIVAL_OFFLINE_DEMO === "true") {
+    try {
+      const body = (await request.json()) as { url?: string };
+      const rawUrl = body.url?.trim() ?? "";
+      const parsedUrl = new URL(rawUrl);
+      if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+        throw new Error("Invalid URL");
+      }
+      return offlineFixtureResponse(parsedUrl.toString());
+    } catch {
+      return new Response(JSON.stringify({ error: "A valid http(s) URL is required." }), {
+        status: 400,
+        headers: { "content-type": "application/json" }
+      });
+    }
+  }
+
   const ip = getClientIp(request);
   const hashedIp = ipHash(ip);
 

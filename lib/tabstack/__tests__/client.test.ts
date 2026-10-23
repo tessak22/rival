@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { tabstackCtorMock } = vi.hoisted(() => ({
-  tabstackCtorMock: vi.fn((options: unknown) => ({ options }))
+  // Keep the mock constructible for the SDK's `new Tabstack(...)` call under
+  // Vitest 5's stricter mock/constructor interop.
+  tabstackCtorMock: vi.fn(function (options: unknown) {
+    return { options };
+  })
 }));
 
 vi.mock("@tabstack/sdk", () => ({
