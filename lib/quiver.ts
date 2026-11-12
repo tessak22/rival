@@ -15,10 +15,6 @@
 
 import { prisma } from "@/lib/db/client";
 
-function isConfigured(): boolean {
-  return Boolean(process.env.QUIVER_MCP_URL && process.env.QUIVER_MCP_SECRET);
-}
-
 function asObj(v: unknown): Record<string, unknown> | null {
   if (v && typeof v === "object" && !Array.isArray(v)) return v as Record<string, unknown>;
   return null;
@@ -184,10 +180,9 @@ async function buildReport(competitorId: string, name: string, baseUrl: string):
 }
 
 export async function pushCompetitorToQuiver(competitorId: string, name: string, baseUrl: string): Promise<void> {
-  if (!isConfigured()) return;
-
-  const url = process.env.QUIVER_MCP_URL!;
-  const secret = process.env.QUIVER_MCP_SECRET!;
+  const url = process.env.QUIVER_MCP_URL;
+  const secret = process.env.QUIVER_MCP_SECRET;
+  if (!url || !secret) return;
   const today = new Date().toISOString().slice(0, 10);
 
   try {
