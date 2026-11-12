@@ -73,7 +73,7 @@ Rival reads competitor definitions from `rivals.config.json`. The repo ships wit
 
 ### Tracking more than one product
 
-One Rival instance tracks one product: one `self`, one competitor list, one positioning matrix, one database. To track a second product, run a second deployment with its own `DATABASE_URL` (and its own `QUIVER_MCP_URL` if you push to Quiver), and set `RIVAL_CONFIG_PATH` to that product's config. Relative paths resolve from the app root. `npm run db:seed` and the app both read the same variable.
+One Rival instance tracks one product: one `self`, one competitor list, one positioning matrix, one database. To track a second product, run a second deployment with its own `DATABASE_URL` (and its own `QUIVER_MCP_URL` if you push to Quiver), and set `RIVAL_CONFIG_PATH` to that product's config. Relative paths resolve from the app root. `npm run db:seed` and the app both read the same variable. On a deployed build, keep the file in the repo root with a name matching `rivals.config*.json`: only those files are bundled with the server, so any other path fails at request time.
 
 ```bash
 RIVAL_CONFIG_PATH=rivals.config.ichabod.json npm run db:seed
