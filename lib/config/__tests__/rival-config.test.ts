@@ -126,51 +126,53 @@ describe("loadRivalConfig", () => {
 
   it("loads rivals.config.json when RIVAL_CONFIG_PATH is unset", () => {
     delete process.env.RIVAL_CONFIG_PATH;
-    expect(loadRivalConfig().self?.slug).toBe("tabstack");
+    // rivals.config.json is user-editable, so compare against its own contents, not fixed values.
+    const expected = parseRivalConfig(
+      JSON.parse(fs.readFileSync(path.join(process.cwd(), "rivals.config.json"), "utf-8"))
+    );
+    expect(loadRivalConfig()).toEqual(expected);
   });
 });
 
-describe.each(["rivals.config.json", "rivals.config.tabstack.json", "rivals.config.ichabod.json"])(
-  "shipped config %s",
-  (file) => {
-    const raw = JSON.parse(fs.readFileSync(path.join(process.cwd(), file), "utf-8"));
-    const parsed = parseRivalConfig(raw);
-    const entries = [...(parsed.self ? [parsed.self] : []), ...parsed.competitors];
-    const knownTypes = new Set([
-      "homepage",
-      "pricing",
-      "careers",
-      "changelog",
-      "docs",
-      "blog",
-      "github",
-      "social",
-      "profile",
-      "stack",
-      "reviews",
-      "custom"
-    ]);
+// rivals.config.json is left out: users replace it with their own config (see README).
+describe.each(["rivals.config.tabstack.json", "rivals.config.ichabod.json"])("shipped config %s", (file) => {
+  const raw = JSON.parse(fs.readFileSync(path.join(process.cwd(), file), "utf-8"));
+  const parsed = parseRivalConfig(raw);
+  const entries = [...(parsed.self ? [parsed.self] : []), ...parsed.competitors];
+  const knownTypes = new Set([
+    "homepage",
+    "pricing",
+    "careers",
+    "changelog",
+    "docs",
+    "blog",
+    "github",
+    "social",
+    "profile",
+    "stack",
+    "reviews",
+    "custom"
+  ]);
 
-    it("has a valid matrix block", () => {
-      expect(parsed.matrix).not.toBeNull();
-    });
+  it("has a valid matrix block", () => {
+    expect(parsed.matrix).not.toBeNull();
+  });
 
-    it("has unique slugs", () => {
-      const slugs = entries.map((e) => e.slug);
-      expect(new Set(slugs).size).toBe(slugs.length);
-    });
+  it("has unique slugs", () => {
+    const slugs = entries.map((e) => e.slug);
+    expect(new Set(slugs).size).toBe(slugs.length);
+  });
 
-    it("uses only known page types and https URLs", () => {
-      for (const entry of entries) {
-        expect(entry.url).toMatch(/^https:\/\//);
-        for (const page of entry.pages ?? []) {
-          expect(knownTypes.has(page.type), `${entry.slug}: ${page.type}`).toBe(true);
-          expect(page.url).toMatch(/^https:\/\//);
-        }
+  it("uses only known page types and https URLs", () => {
+    for (const entry of entries) {
+      expect(entry.url).toMatch(/^https:\/\//);
+      for (const page of entry.pages ?? []) {
+        expect(knownTypes.has(page.type), `${entry.slug}: ${page.type}`).toBe(true);
+        expect(page.url).toMatch(/^https:\/\//);
       }
-    });
-  }
-);
+    }
+  });
+});
 
 describe("rivals.config.ichabod.json", () => {
   const parsed = parseRivalConfig(
