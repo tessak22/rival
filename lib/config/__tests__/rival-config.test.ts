@@ -1,5 +1,8 @@
-import { describe, expect, it } from "vitest";
-import { parseRivalConfig } from "@/lib/config/rival-config";
+import fs from "node:fs";
+import path from "node:path";
+
+import { afterEach, describe, expect, it } from "vitest";
+import { loadRivalConfig, parseRivalConfig, resolveRivalConfigPath } from "@/lib/config/rival-config";
 
 describe("parseRivalConfig", () => {
   it("parses config without a self block", () => {
@@ -81,5 +84,105 @@ describe("parseRivalConfig matrix block", () => {
       }
     });
     expect(result.matrix).toBeNull();
+  });
+});
+
+describe("resolveRivalConfigPath", () => {
+  const cwd = "/srv/rival";
+
+  it("defaults to rivals.config.json in cwd when RIVAL_CONFIG_PATH is unset", () => {
+    expect(resolveRivalConfigPath({}, cwd)).toBe(path.join(cwd, "rivals.config.json"));
+  });
+
+  it("treats a blank RIVAL_CONFIG_PATH as unset", () => {
+    expect(resolveRivalConfigPath({ RIVAL_CONFIG_PATH: "  " }, cwd)).toBe(path.join(cwd, "rivals.config.json"));
+  });
+
+  it("resolves a relative RIVAL_CONFIG_PATH from cwd", () => {
+    expect(resolveRivalConfigPath({ RIVAL_CONFIG_PATH: "rivals.config.ichabod.json" }, cwd)).toBe(
+      path.join(cwd, "rivals.config.ichabod.json")
+    );
+  });
+
+  it("keeps an absolute RIVAL_CONFIG_PATH as is", () => {
+    expect(resolveRivalConfigPath({ RIVAL_CONFIG_PATH: "/etc/rival/ichabod.json" }, cwd)).toBe(
+      "/etc/rival/ichabod.json"
+    );
+  });
+});
+
+describe("loadRivalConfig", () => {
+  const original = process.env.RIVAL_CONFIG_PATH;
+  afterEach(() => {
+    if (original === undefined) delete process.env.RIVAL_CONFIG_PATH;
+    else process.env.RIVAL_CONFIG_PATH = original;
+  });
+
+  it("loads the file RIVAL_CONFIG_PATH names", () => {
+    process.env.RIVAL_CONFIG_PATH = "rivals.config.ichabod.json";
+    expect(loadRivalConfig().self?.slug).toBe("ichabod");
+  });
+
+  it("loads rivals.config.json when RIVAL_CONFIG_PATH is unset", () => {
+    delete process.env.RIVAL_CONFIG_PATH;
+    expect(loadRivalConfig().self?.slug).toBe("tabstack");
+  });
+});
+
+describe.each(["rivals.config.json", "rivals.config.tabstack.json", "rivals.config.ichabod.json"])(
+  "shipped config %s",
+  (file) => {
+    const raw = JSON.parse(fs.readFileSync(path.join(process.cwd(), file), "utf-8"));
+    const parsed = parseRivalConfig(raw);
+    const entries = [...(parsed.self ? [parsed.self] : []), ...parsed.competitors];
+    const knownTypes = new Set([
+      "homepage",
+      "pricing",
+      "careers",
+      "changelog",
+      "docs",
+      "blog",
+      "github",
+      "social",
+      "profile",
+      "stack",
+      "reviews",
+      "custom"
+    ]);
+
+    it("has a valid matrix block", () => {
+      expect(parsed.matrix).not.toBeNull();
+    });
+
+    it("has unique slugs", () => {
+      const slugs = entries.map((e) => e.slug);
+      expect(new Set(slugs).size).toBe(slugs.length);
+    });
+
+    it("uses only known page types and https URLs", () => {
+      for (const entry of entries) {
+        expect(entry.url).toMatch(/^https:\/\//);
+        for (const page of entry.pages ?? []) {
+          expect(knownTypes.has(page.type), `${entry.slug}: ${page.type}`).toBe(true);
+          expect(page.url).toMatch(/^https:\/\//);
+        }
+      }
+    });
+  }
+);
+
+describe("rivals.config.ichabod.json", () => {
+  const parsed = parseRivalConfig(
+    JSON.parse(fs.readFileSync(path.join(process.cwd(), "rivals.config.ichabod.json"), "utf-8"))
+  );
+
+  it("tracks Project Ichabod as self", () => {
+    expect(parsed.self?.name).toBe("Project Ichabod");
+  });
+
+  it("tracks the named competitors from the Ichabod competitive landscape", () => {
+    expect(parsed.competitors.map((c) => c.slug).sort()).toEqual(
+      ["browser-use", "browserbase", "browserless", "kernel", "steel"].sort()
+    );
   });
 });

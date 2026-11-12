@@ -1,0 +1,275 @@
+{
+  "self": {
+    "name": "Project Ichabod",
+    "slug": "ichabod",
+    "url": "https://projectichabod.com",
+    "pages": [
+      {
+        "label": "Puppeteer guide",
+        "url": "https://console.projectichabod.com/docs/guides/puppeteer",
+        "type": "docs"
+      }
+    ]
+  },
+  "competitors": [
+    {
+      "name": "Browserbase",
+      "slug": "browserbase",
+      "url": "https://browserbase.com",
+      "pages": [
+        {
+          "label": "Homepage",
+          "url": "https://browserbase.com",
+          "type": "homepage"
+        },
+        {
+          "label": "Pricing",
+          "url": "https://browserbase.com/pricing",
+          "type": "pricing",
+          "geo_target": "US"
+        },
+        {
+          "label": "Changelog",
+          "url": "https://browserbase.com/changelog",
+          "type": "changelog"
+        },
+        {
+          "label": "Careers",
+          "url": "https://browserbase.com/careers",
+          "type": "careers"
+        },
+        {
+          "label": "GitHub",
+          "url": "https://github.com/browserbase/sdk",
+          "type": "github"
+        },
+        {
+          "label": "Docs",
+          "url": "https://docs.browserbase.com",
+          "type": "docs"
+        },
+        {
+          "label": "Blog",
+          "url": "https://www.browserbase.com/blog",
+          "type": "blog"
+        },
+        {
+          "label": "Twitter/X",
+          "url": "https://x.com/browserbase",
+          "type": "social"
+        },
+        {
+          "label": "Reviews",
+          "url": "https://www.producthunt.com/products/browserbase/reviews",
+          "type": "reviews"
+        }
+      ]
+    },
+    {
+      "name": "Steel",
+      "slug": "steel",
+      "url": "https://steel.dev",
+      "pages": [
+        {
+          "label": "Homepage",
+          "url": "https://steel.dev",
+          "type": "homepage"
+        },
+        {
+          "label": "Pricing",
+          "url": "https://steel.dev/pricing",
+          "type": "pricing",
+          "geo_target": "US"
+        },
+        {
+          "label": "GitHub",
+          "url": "https://github.com/steel-dev/steel-browser",
+          "type": "github"
+        },
+        {
+          "label": "Docs",
+          "url": "https://docs.steel.dev",
+          "type": "docs"
+        },
+        {
+          "label": "Changelog",
+          "url": "https://steel.dev/changelog",
+          "type": "changelog"
+        },
+        {
+          "label": "Blog",
+          "url": "https://steel.dev/blog",
+          "type": "blog"
+        },
+        {
+          "label": "Twitter/X",
+          "url": "https://x.com/steeldotdev",
+          "type": "social"
+        }
+      ]
+    },
+    {
+      "name": "Browser Use",
+      "slug": "browser-use",
+      "url": "https://browser-use.com",
+      "pages": [
+        {
+          "label": "Homepage",
+          "url": "https://browser-use.com",
+          "type": "homepage"
+        },
+        {
+          "label": "Pricing",
+          "url": "https://browser-use.com/pricing",
+          "type": "pricing",
+          "geo_target": "US"
+        },
+        {
+          "label": "Careers",
+          "url": "https://browser-use.com/careers",
+          "type": "careers"
+        },
+        {
+          "label": "Changelog",
+          "url": "https://browser-use.com/changelog",
+          "type": "changelog"
+        },
+        {
+          "label": "GitHub",
+          "url": "https://github.com/browser-use/browser-use",
+          "type": "github"
+        },
+        {
+          "label": "Docs",
+          "url": "https://docs.browser-use.com",
+          "type": "docs"
+        },
+        {
+          "label": "Blog",
+          "url": "https://browser-use.com/blog",
+          "type": "blog"
+        },
+        {
+          "label": "Twitter/X",
+          "url": "https://x.com/browser_use",
+          "type": "social"
+        },
+        {
+          "label": "Reviews",
+          "url": "https://www.producthunt.com/products/browser-use/reviews",
+          "type": "reviews"
+        }
+      ]
+    },
+    {
+      "name": "Kernel",
+      "slug": "kernel",
+      "url": "https://www.kernel.sh",
+      "pages": [
+        {
+          "label": "Homepage",
+          "url": "https://www.kernel.sh",
+          "type": "homepage"
+        },
+        {
+          "label": "Pricing",
+          "url": "https://www.kernel.sh/pricing",
+          "type": "pricing",
+          "geo_target": "US"
+        },
+        {
+          "label": "Changelog",
+          "url": "https://www.kernel.sh/changelog",
+          "type": "changelog"
+        },
+        {
+          "label": "Docs",
+          "url": "https://www.kernel.sh/docs",
+          "type": "docs"
+        },
+        {
+          "label": "Blog",
+          "url": "https://www.kernel.sh/blog",
+          "type": "blog"
+        },
+        {
+          "label": "GitHub",
+          "url": "https://github.com/kernel/kernel-images",
+          "type": "github"
+        },
+        {
+          "label": "Twitter/X",
+          "url": "https://x.com/usekernel",
+          "type": "social"
+        }
+      ]
+    },
+    {
+      "name": "Browserless",
+      "slug": "browserless",
+      "url": "https://www.browserless.io",
+      "pages": [
+        {
+          "label": "Homepage",
+          "url": "https://www.browserless.io",
+          "type": "homepage"
+        },
+        {
+          "label": "Pricing",
+          "url": "https://www.browserless.io/pricing",
+          "type": "pricing",
+          "geo_target": "US"
+        },
+        {
+          "label": "Changelog",
+          "url": "https://www.browserless.io/changelog",
+          "type": "changelog"
+        },
+        {
+          "label": "Docs",
+          "url": "https://docs.browserless.io",
+          "type": "docs"
+        },
+        {
+          "label": "Blog",
+          "url": "https://www.browserless.io/blog",
+          "type": "blog"
+        },
+        {
+          "label": "GitHub",
+          "url": "https://github.com/browserless/browserless",
+          "type": "github"
+        },
+        {
+          "label": "Twitter/X",
+          "url": "https://x.com/browserless",
+          "type": "social"
+        }
+      ]
+    }
+  ],
+  "schedule": "0 9 * * 1-5",
+  "manual_stale_days": 30,
+  "matrix": {
+    "x_axis": {
+      "key": "managed_service_score",
+      "label_low": "Self-hosted",
+      "label_high": "Managed browsers"
+    },
+    "y_axis": {
+      "key": "openness_score",
+      "label_low": "Open source",
+      "label_high": "Proprietary"
+    },
+    "quadrant_labels": {
+      "top_left": "Self-hosted + Proprietary",
+      "top_right": "Managed + Proprietary",
+      "bottom_left": "Self-hosted + Open source",
+      "bottom_right": "Managed + Open source"
+    }
+  },
+  "notifications": {
+    "email": [],
+    "slack_webhook": ""
+  }
+}

@@ -71,6 +71,18 @@ npm run dev
 
 Rival reads competitor definitions from `rivals.config.json`. The repo ships with a generic placeholder template — replace it with your own companies and competitors before running `db:seed`.
 
+### Tracking more than one product
+
+One Rival instance tracks one product: one `self`, one competitor list, one positioning matrix, one database. To track a second product, run a second deployment with its own `DATABASE_URL` (and its own `QUIVER_MCP_URL` if you push to Quiver), and set `RIVAL_CONFIG_PATH` to that product's config. Relative paths resolve from the app root. `npm run db:seed` and the app both read the same variable.
+
+```bash
+RIVAL_CONFIG_PATH=rivals.config.ichabod.json npm run db:seed
+```
+
+Never point two products at the same database: seeding demotes any `self` row whose slug does not match the config, so the second product's seed would take over the first one's dashboard.
+
+[`rivals.config.ichabod.json`](./rivals.config.ichabod.json) is the config for Project Ichabod, Mozilla's hosted cloud browser for agents.
+
 For a real-world example showing all available fields, see [`rivals.config.tabstack.json`](./rivals.config.tabstack.json) — this is the Tabstack team's reference config, included as documentation only. The app always loads `rivals.config.json`.
 
 Supported `type` values for pages:

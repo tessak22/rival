@@ -132,8 +132,27 @@ export function parseRivalConfig(raw: RawConfig): ParsedRivalConfig {
   return { self, competitors, matrix };
 }
 
+export const DEFAULT_CONFIG_FILE = "rivals.config.json";
+
+/**
+ * Resolve which config file this instance reads.
+ *
+ * One Rival deployment tracks one product: one `self`, one competitor list, one
+ * matrix, one database. To track a second product, run a second deployment with
+ * its own DATABASE_URL and point RIVAL_CONFIG_PATH at that product's config
+ * (for example `rivals.config.ichabod.json`). Relative paths resolve from `cwd`.
+ */
+export function resolveRivalConfigPath(
+  env: Record<string, string | undefined> = process.env,
+  cwd: string = process.cwd()
+): string {
+  const configured = env.RIVAL_CONFIG_PATH?.trim();
+  if (!configured) return path.join(cwd, DEFAULT_CONFIG_FILE);
+  return path.isAbsolute(configured) ? configured : path.join(cwd, configured);
+}
+
 export function loadRivalConfig(): ParsedRivalConfig {
-  const configPath = path.join(process.cwd(), "rivals.config.json");
+  const configPath = resolveRivalConfigPath();
   const raw = JSON.parse(fs.readFileSync(configPath, "utf-8")) as RawConfig;
   return parseRivalConfig(raw);
 }
