@@ -1,7 +1,8 @@
 /**
  * Bootstrap a first scan cycle for any competitor with zero scans.
  *
- * Why this exists: rivals.config.json + scripts/seed.ts create the Competitor
+ * Why this exists: the config RIVAL_CONFIG_PATH names (default
+ * rivals.config.json) + scripts/seed.ts create the Competitor
  * and CompetitorPage rows, but scans only run on the weekday cron. A freshly
  * added competitor therefore has no data on the dashboard until the next cron
  * tick — up to ~24 hours. Rival exists to showcase Tabstack, so a new

@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
@@ -198,5 +199,31 @@ describe("parseRivalConfig error source", () => {
         "rivals.config.ichabod.json"
       )
     ).toThrow(/^rivals\.config\.ichabod\.json: slug collision/);
+  });
+});
+
+describe("loadRivalConfig error source", () => {
+  const original = process.env.RIVAL_CONFIG_PATH;
+  afterEach(() => {
+    if (original === undefined) delete process.env.RIVAL_CONFIG_PATH;
+    else process.env.RIVAL_CONFIG_PATH = original;
+  });
+
+  it("names the RIVAL_CONFIG_PATH file in a slug-collision error", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "rival-config-"));
+    const file = path.join(dir, "collision.json");
+    fs.writeFileSync(
+      file,
+      JSON.stringify({
+        self: { name: "X", slug: "acme", url: "https://x.co", pages: [] },
+        competitors: [{ name: "Acme", slug: "acme", url: "https://a.co", pages: [] }]
+      })
+    );
+    process.env.RIVAL_CONFIG_PATH = file;
+    try {
+      expect(() => loadRivalConfig()).toThrow(`${file}: slug collision`);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
