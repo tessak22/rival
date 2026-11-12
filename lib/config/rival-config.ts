@@ -76,6 +76,8 @@ type RawConfig = {
   };
 };
 
+export const DEFAULT_CONFIG_FILE = "rivals.config.json";
+
 const VALID_AXIS_KEYS = new Set<MatrixAxisKey>([
   "openness_score",
   "brand_trust_score",
@@ -97,7 +99,7 @@ function parseAxisConfig(raw: RawAxisConfig | undefined): MatrixAxisConfig | nul
   return { key: raw.key, label_low: raw.label_low, label_high: raw.label_high };
 }
 
-export function parseRivalConfig(raw: RawConfig): ParsedRivalConfig {
+export function parseRivalConfig(raw: RawConfig, source: string = DEFAULT_CONFIG_FILE): ParsedRivalConfig {
   const self = raw.self ?? null;
   const competitors = raw.competitors ?? [];
 
@@ -105,7 +107,7 @@ export function parseRivalConfig(raw: RawConfig): ParsedRivalConfig {
     const collision = competitors.find((c) => c.slug === self.slug);
     if (collision) {
       throw new Error(
-        `rivals.config.json: slug collision between self and competitor "${self.slug}". Choose a different slug for one of them.`
+        `${source}: slug collision between self and competitor "${self.slug}". Choose a different slug for one of them.`
       );
     }
   }
@@ -132,8 +134,6 @@ export function parseRivalConfig(raw: RawConfig): ParsedRivalConfig {
   return { self, competitors, matrix };
 }
 
-export const DEFAULT_CONFIG_FILE = "rivals.config.json";
-
 /**
  * Resolve which config file this instance reads.
  *
@@ -154,5 +154,5 @@ export function resolveRivalConfigPath(
 export function loadRivalConfig(): ParsedRivalConfig {
   const configPath = resolveRivalConfigPath();
   const raw = JSON.parse(fs.readFileSync(configPath, "utf-8")) as RawConfig;
-  return parseRivalConfig(raw);
+  return parseRivalConfig(raw, configPath);
 }

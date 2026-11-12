@@ -12,7 +12,7 @@ import {
 async function loadConfig(): Promise<ParsedRivalConfig> {
   const configPath = resolveRivalConfigPath();
   const raw = await fs.readFile(configPath, "utf8");
-  return parseRivalConfig(JSON.parse(raw));
+  return parseRivalConfig(JSON.parse(raw), configPath);
 }
 
 function toDate(value?: string): Date | null {

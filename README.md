@@ -83,7 +83,7 @@ Never point two products at the same database: seeding demotes any `self` row wh
 
 [`rivals.config.ichabod.json`](./rivals.config.ichabod.json) is the config for Project Ichabod, Mozilla's hosted cloud browser for agents.
 
-For a real-world example showing all available fields, see [`rivals.config.tabstack.json`](./rivals.config.tabstack.json) — this is the Tabstack team's reference config, included as documentation only. The app always loads `rivals.config.json`.
+For a real-world example showing all available fields, see [`rivals.config.tabstack.json`](./rivals.config.tabstack.json) — this is the Tabstack team's reference config, included as documentation only. The app loads `rivals.config.json` unless `RIVAL_CONFIG_PATH` names a different file.
 
 Supported `type` values for pages:
 

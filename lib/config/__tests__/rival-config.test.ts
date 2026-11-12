@@ -186,3 +186,17 @@ describe("rivals.config.ichabod.json", () => {
     );
   });
 });
+
+describe("parseRivalConfig error source", () => {
+  it("names the config file it was given in the slug-collision error", () => {
+    expect(() =>
+      parseRivalConfig(
+        {
+          self: { name: "Ichabod", slug: "acme", url: "https://i.co", pages: [] },
+          competitors: [{ name: "Acme", slug: "acme", url: "https://a.co", pages: [] }]
+        },
+        "rivals.config.ichabod.json"
+      )
+    ).toThrow(/^rivals\.config\.ichabod\.json: slug collision/);
+  });
+});
