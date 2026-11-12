@@ -1,15 +1,6 @@
-import fs from "node:fs/promises";
-import path from "node:path";
-
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/client";
-import { parseRivalConfig, type ParsedRivalConfig, type RivalConfigEntry } from "@/lib/config/rival-config";
-
-async function loadConfig(): Promise<ParsedRivalConfig> {
-  const configPath = path.join(process.cwd(), "rivals.config.json");
-  const raw = await fs.readFile(configPath, "utf8");
-  return parseRivalConfig(JSON.parse(raw));
-}
+import { loadRivalConfig, resolveRivalConfigPath, type RivalConfigEntry } from "@/lib/config/rival-config";
 
 function toDate(value?: string): Date | null {
   if (!value) return null;
@@ -76,13 +67,13 @@ async function upsertEntry(entry: RivalConfigEntry, isSelf: boolean) {
 
 async function main() {
   const prunePages = process.argv.includes("--prune-pages");
-  const config = await loadConfig();
+  const config = loadRivalConfig();
   const entries: Array<{ entry: RivalConfigEntry; isSelf: boolean }> = [];
   if (config.self) entries.push({ entry: config.self, isSelf: true });
   for (const c of config.competitors) entries.push({ entry: c, isSelf: false });
 
   if (entries.length === 0) {
-    console.log("No self or competitors in rivals.config.json, nothing to seed.");
+    console.log(`No self or competitors in ${resolveRivalConfigPath()}, nothing to seed.`);
     return;
   }
 

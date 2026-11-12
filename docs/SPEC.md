@@ -100,7 +100,7 @@ This is Rival's contribution back to the Tabstack ecosystem — real usage data 
 ## Two Modes
 
 ### 1. Self-hosted (personal instance)
-- Competitors defined in `rivals.config.json`
+- Competitors defined in `rivals.config.json` (or the file `RIVAL_CONFIG_PATH` names)
 - Scans run on a configurable cron schedule
 - Full history stored in Postgres with diffs between scans
 - Email + Slack notifications when changes are detected
@@ -220,7 +220,7 @@ Deep Dive results are fully logged in `api_logs` and stored in `deep_dives` with
 
 ## Config File Format
 
-`rivals.config.json` at project root:
+`rivals.config.json` at project root by default. Set `RIVAL_CONFIG_PATH` to read a different file (relative paths resolve from the app root). One deployment tracks one product: a second product needs its own deployment, its own `DATABASE_URL`, and its own config file.
 
 ```json
 {

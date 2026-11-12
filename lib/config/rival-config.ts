@@ -76,6 +76,8 @@ type RawConfig = {
   };
 };
 
+export const DEFAULT_CONFIG_FILE = "rivals.config.json";
+
 const VALID_AXIS_KEYS = new Set<MatrixAxisKey>([
   "openness_score",
   "brand_trust_score",
@@ -97,7 +99,7 @@ function parseAxisConfig(raw: RawAxisConfig | undefined): MatrixAxisConfig | nul
   return { key: raw.key, label_low: raw.label_low, label_high: raw.label_high };
 }
 
-export function parseRivalConfig(raw: RawConfig): ParsedRivalConfig {
+export function parseRivalConfig(raw: RawConfig, source: string = DEFAULT_CONFIG_FILE): ParsedRivalConfig {
   const self = raw.self ?? null;
   const competitors = raw.competitors ?? [];
 
@@ -105,7 +107,7 @@ export function parseRivalConfig(raw: RawConfig): ParsedRivalConfig {
     const collision = competitors.find((c) => c.slug === self.slug);
     if (collision) {
       throw new Error(
-        `rivals.config.json: slug collision between self and competitor "${self.slug}". Choose a different slug for one of them.`
+        `${source}: slug collision between self and competitor "${self.slug}". Choose a different slug for one of them.`
       );
     }
   }
@@ -132,8 +134,35 @@ export function parseRivalConfig(raw: RawConfig): ParsedRivalConfig {
   return { self, competitors, matrix };
 }
 
+/**
+ * Resolve which config file this instance reads.
+ *
+ * One Rival deployment tracks one product: one `self`, one competitor list, one
+ * matrix, one database. To track a second product, run a second deployment with
+ * its own DATABASE_URL and point RIVAL_CONFIG_PATH at that product's config
+ * (for example `rivals.config.ichabod.json`). Relative paths resolve from `cwd`.
+ */
+export function resolveRivalConfigPath(
+  env: Record<string, string | undefined> = process.env,
+  cwd: string = process.cwd()
+): string {
+  const configured = env.RIVAL_CONFIG_PATH?.trim();
+  if (!configured) return path.join(cwd, DEFAULT_CONFIG_FILE);
+  return path.isAbsolute(configured) ? configured : path.join(cwd, configured);
+}
+
 export function loadRivalConfig(): ParsedRivalConfig {
-  const configPath = path.join(process.cwd(), "rivals.config.json");
-  const raw = JSON.parse(fs.readFileSync(configPath, "utf-8")) as RawConfig;
-  return parseRivalConfig(raw);
+  const configPath = resolveRivalConfigPath();
+  let raw: RawConfig;
+  try {
+    raw = JSON.parse(fs.readFileSync(configPath, "utf-8")) as RawConfig;
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    // Keep the errno code (for example ENOENT) so callers can still tell a missing file apart.
+    const code = (error as NodeJS.ErrnoException).code;
+    throw Object.assign(new Error(`Could not load Rival config at ${configPath}: ${reason}`, { cause: error }), {
+      code
+    });
+  }
+  return parseRivalConfig(raw, configPath);
 }

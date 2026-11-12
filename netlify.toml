@@ -15,7 +15,10 @@
 # 1. prisma generate — regenerates the client against the current schema.
 # 2. npm run build — Next.js production build.
 # 3. scripts/seed.ts — reconciles Competitor / CompetitorPage rows with
-#    rivals.config.json (idempotent upsert by slug).
+#    the config RIVAL_CONFIG_PATH names, default rivals.config.json
+#    (idempotent upsert by slug). Each product's Netlify site must set
+#    RIVAL_CONFIG_PATH next to its own DATABASE_URL; a site without it
+#    seeds the default config.
 # 4. scripts/bootstrap-new-competitors.ts — runs a first scan cycle plus
 #    brief for any competitor that still has zero scans. Idempotent, and
 #    non-fatal by design so a Tabstack hiccup never blocks a deploy.
