@@ -14,7 +14,10 @@ export default async function MatrixPage() {
     matrixConfig = config.matrix ?? DEFAULT_MATRIX_CONFIG;
     matrixExcluded = new Set(config.competitors.filter((c) => c.matrix === false).map((c) => c.slug));
   } catch (err) {
-    if (err instanceof Error && (err as NodeJS.ErrnoException).code === "ENOENT") {
+    // Fall back only when the default rivals.config.json is absent. A RIVAL_CONFIG_PATH that names a
+    // missing file is a misconfiguration and should fail here as it does on the dashboard.
+    const usingDefaultPath = !process.env.RIVAL_CONFIG_PATH?.trim();
+    if (usingDefaultPath && err instanceof Error && (err as NodeJS.ErrnoException).code === "ENOENT") {
       matrixConfig = DEFAULT_MATRIX_CONFIG;
     } else {
       throw err;
