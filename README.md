@@ -69,7 +69,7 @@ npm run dev
 
 ## Config (`rivals.config.json`)
 
-Rival reads competitor definitions from `rivals.config.json`. The repo ships with a generic placeholder template — replace it with your own companies and competitors before running `db:seed`.
+Rival reads competitor definitions from `rivals.config.json`. The repo ships with the Tabstack team's config in that file (the same content as `rivals.config.tabstack.json`). Replace it with your own companies and competitors before running `db:seed`.
 
 ### Tracking more than one product
 
@@ -83,7 +83,7 @@ Never point two products at the same database: seeding demotes any `self` row wh
 
 [`rivals.config.ichabod.json`](./rivals.config.ichabod.json) is the config for Project Ichabod, Mozilla's hosted cloud browser for agents.
 
-For a real-world example showing all available fields, see [`rivals.config.tabstack.json`](./rivals.config.tabstack.json). This is the Tabstack team's reference config, included as documentation only. The app loads `rivals.config.json` unless `RIVAL_CONFIG_PATH` names a different file.
+[`rivals.config.tabstack.json`](./rivals.config.tabstack.json) is a reference copy of the Tabstack config that shows all available fields. The app loads `rivals.config.json` unless `RIVAL_CONFIG_PATH` names a different file.
 
 Supported `type` values for pages:
 
