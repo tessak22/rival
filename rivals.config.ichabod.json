@@ -5,6 +5,26 @@
     "url": "https://projectichabod.com",
     "pages": [
       {
+        "label": "Homepage",
+        "url": "https://projectichabod.com",
+        "type": "homepage"
+      },
+      {
+        "label": "Agents guide",
+        "url": "https://console.projectichabod.com/docs/guides/agents",
+        "type": "docs"
+      },
+      {
+        "label": "Playwright guide",
+        "url": "https://console.projectichabod.com/docs/guides/playwright",
+        "type": "docs"
+      },
+      {
+        "label": "CLI guide",
+        "url": "https://console.projectichabod.com/docs/guides/cli",
+        "type": "docs"
+      },
+      {
         "label": "Puppeteer guide",
         "url": "https://console.projectichabod.com/docs/guides/puppeteer",
         "type": "docs"

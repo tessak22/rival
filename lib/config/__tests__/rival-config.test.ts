@@ -226,4 +226,22 @@ describe("loadRivalConfig error source", () => {
       fs.rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it("names the RIVAL_CONFIG_PATH file when it does not exist", () => {
+    const file = path.join(os.tmpdir(), "rival-config-missing-" + process.pid + ".json");
+    process.env.RIVAL_CONFIG_PATH = file;
+    expect(() => loadRivalConfig()).toThrow(`Could not load Rival config at ${file}`);
+  });
+
+  it("names the RIVAL_CONFIG_PATH file when it is not valid JSON", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "rival-config-"));
+    const file = path.join(dir, "broken.json");
+    fs.writeFileSync(file, "{ not json");
+    process.env.RIVAL_CONFIG_PATH = file;
+    try {
+      expect(() => loadRivalConfig()).toThrow(`Could not load Rival config at ${file}`);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });

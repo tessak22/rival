@@ -153,6 +153,12 @@ export function resolveRivalConfigPath(
 
 export function loadRivalConfig(): ParsedRivalConfig {
   const configPath = resolveRivalConfigPath();
-  const raw = JSON.parse(fs.readFileSync(configPath, "utf-8")) as RawConfig;
+  let raw: RawConfig;
+  try {
+    raw = JSON.parse(fs.readFileSync(configPath, "utf-8")) as RawConfig;
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(`Could not load Rival config at ${configPath}: ${reason}`, { cause: error });
+  }
   return parseRivalConfig(raw, configPath);
 }
