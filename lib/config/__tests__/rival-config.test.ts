@@ -231,6 +231,7 @@ describe("loadRivalConfig error source", () => {
     const file = path.join(os.tmpdir(), "rival-config-missing-" + process.pid + ".json");
     process.env.RIVAL_CONFIG_PATH = file;
     expect(() => loadRivalConfig()).toThrow(`Could not load Rival config at ${file}`);
+    expect(() => loadRivalConfig()).toThrow(expect.objectContaining({ code: "ENOENT" }));
   });
 
   it("names the RIVAL_CONFIG_PATH file when it is not valid JSON", () => {

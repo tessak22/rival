@@ -158,7 +158,11 @@ export function loadRivalConfig(): ParsedRivalConfig {
     raw = JSON.parse(fs.readFileSync(configPath, "utf-8")) as RawConfig;
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    throw new Error(`Could not load Rival config at ${configPath}: ${reason}`, { cause: error });
+    // Keep the errno code (for example ENOENT) so callers can still tell a missing file apart.
+    const code = (error as NodeJS.ErrnoException).code;
+    throw Object.assign(new Error(`Could not load Rival config at ${configPath}: ${reason}`, { cause: error }), {
+      code
+    });
   }
   return parseRivalConfig(raw, configPath);
 }
